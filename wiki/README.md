@@ -1,3 +1,6 @@
+## Product Vision
+Concordia seeks to redefine the experience of co-living.  Rather than just a task manager, it aims to become a way to live together in fairness, awareness, and ease.  Because when home feels balanced, everything else falls into place.
+
 ## Epics
 ### Scrum
 #### As a household member, I want to create and manage tasks within a Scrum board, so that I can stay organized and coordinate responsibilities effectively.
@@ -44,3 +47,4 @@
 - As a user, I want to be invited to join groups, so that I can collaborate with other users
 - As a group member, I want to leave a group so that I no longer have access to its resources.
 - As a group member, I want the system to restrict access to my group’s data so that only authorized members can view or modify it.
+
