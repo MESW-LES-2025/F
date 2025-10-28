@@ -11,6 +11,8 @@ describe('AuthController', () => {
 		register: jest.fn(),
 		login: jest.fn(),
 		refreshToken: jest.fn(),
+		logout: jest.fn(),
+		logoutAll: jest.fn(),
 		validateUser: jest.fn(),
 	};
 
@@ -104,6 +106,58 @@ describe('AuthController', () => {
 			expect(result).toEqual(refreshResponse);
 			expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
 				refreshTokenDto.refresh_token,
+			);
+		});
+	});
+
+	describe('logout', () => {
+		const refreshTokenDto = {
+			refresh_token: 'valid_refresh_token',
+		};
+
+		it('should logout user and revoke refresh token', async () => {
+			const logoutResponse = { message: 'Successfully logged out' };
+			mockAuthService.logout.mockResolvedValue(logoutResponse);
+
+			const result = await controller.logout(refreshTokenDto);
+
+			expect(result).toEqual(logoutResponse);
+			expect(mockAuthService.logout).toHaveBeenCalledWith(
+				refreshTokenDto.refresh_token,
+			);
+		});
+
+		it('should handle logout with invalid token', async () => {
+			const logoutResponse = { message: 'Successfully logged out' };
+			mockAuthService.logout.mockResolvedValue(logoutResponse);
+
+			const result = await controller.logout({
+				refresh_token: 'invalid_token',
+			});
+
+			expect(result).toEqual(logoutResponse);
+		});
+	});
+
+	describe('logoutAll', () => {
+		const mockRequest = {
+			user: {
+				userId: 'user-id-123',
+				email: 'test@example.com',
+			},
+		};
+
+		it('should logout from all devices', async () => {
+			const logoutAllResponse = {
+				message: 'Successfully logged out from all devices',
+			};
+			mockAuthService.logoutAll.mockResolvedValue(logoutAllResponse);
+
+			const result = await controller.logoutAll(mockRequest);
+
+			expect(result).toEqual(logoutAllResponse);
+			expect(mockAuthService.logoutAll).toHaveBeenCalledWith(
+				mockRequest.user.userId,
 			);
 		});
 	});

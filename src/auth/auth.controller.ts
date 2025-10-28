@@ -50,6 +50,29 @@ export class AuthController {
 		return this.authService.refreshToken(refreshTokenDto.refresh_token);
 	}
 
+	@Post('logout')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Logout user and revoke refresh token' })
+	@ApiResponse({ status: 200, description: 'Successfully logged out' })
+	@ApiResponse({ status: 401, description: 'Unauthorized' })
+	async logout(@Body() refreshTokenDto: RefreshTokenDto) {
+		return this.authService.logout(refreshTokenDto.refresh_token);
+	}
+
+	@Post('logout-all')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Logout from all devices' })
+	@ApiResponse({
+		status: 200,
+		description: 'Successfully logged out from all devices',
+	})
+	@ApiResponse({ status: 401, description: 'Unauthorized' })
+	async logoutAll(@Request() req: any) {
+		return this.authService.logoutAll(req.user.userId);
+	}
+
 	@Get('profile')
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')

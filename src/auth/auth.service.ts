@@ -45,9 +45,9 @@ export class AuthService {
 			},
 		});
 
-		// Generate tokens
+		// Generate tokens with DB storage
 		const accessToken = this.generateToken(user.id, user.email);
-		const refreshToken = this.generateRefreshToken(user.id, user.email);
+		const refreshToken = await this.createRefreshToken(user.id);
 
 		return {
 			access_token: accessToken,
@@ -81,9 +81,9 @@ export class AuthService {
 			throw new UnauthorizedException('Invalid credentials');
 		}
 
-		// Generate tokens
+		// Generate tokens with DB storage
 		const accessToken = this.generateToken(user.id, user.email);
-		const refreshToken = this.generateRefreshToken(user.id, user.email);
+		const refreshToken = await this.createRefreshToken(user.id);
 
 		return {
 			access_token: accessToken,
@@ -103,31 +103,73 @@ export class AuthService {
 		return this.jwtService.sign(payload);
 	}
 
-	private generateRefreshToken(userId: string, email: string): string {
-		const payload = { sub: userId, email, type: 'refresh' };
-		return this.jwtService.sign(payload, { expiresIn: '30d' });
+	private async createRefreshToken(userId: string): Promise<string> {
+		// Clean up expired tokens for this user
+		await this.prisma.refreshToken.deleteMany({
+			where: {
+				userId,
+				expiresAt: { lt: new Date() },
+			},
+		});
+
+		// Generate token string
+		const payload = { sub: userId, type: 'refresh' };
+		const token = this.jwtService.sign(payload, { expiresIn: '30d' });
+
+		// Store in database
+		const expiresAt = new Date();
+		expiresAt.setDate(expiresAt.getDate() + 30);
+
+		await this.prisma.refreshToken.create({
+			data: {
+				token,
+				userId,
+				expiresAt,
+			},
+		});
+
+		return token;
 	}
 
 	async refreshToken(refreshToken: string) {
 		try {
+			// Verify JWT signature and expiration
 			const payload = this.jwtService.verify(refreshToken);
 
 			if (payload.type !== 'refresh') {
 				throw new UnauthorizedException('Invalid token type');
 			}
 
-			const user = await this.prisma.user.findUnique({
-				where: { id: payload.sub },
+			// Check if token exists and is not revoked in database
+			const storedToken = await this.prisma.refreshToken.findUnique({
+				where: { token: refreshToken },
+				include: { user: true },
 			});
 
-			if (!user) {
-				throw new UnauthorizedException('User not found');
+			if (!storedToken || storedToken.isRevoked) {
+				throw new UnauthorizedException('Token has been revoked');
 			}
 
-			const accessToken = this.generateToken(user.id, user.email);
-			const newRefreshToken = this.generateRefreshToken(
-				user.id,
-				user.email,
+			if (storedToken.expiresAt < new Date()) {
+				throw new UnauthorizedException('Token has expired');
+			}
+
+			// Revoke old refresh token (rotation)
+			await this.prisma.refreshToken.update({
+				where: { id: storedToken.id },
+				data: {
+					isRevoked: true,
+					revokedAt: new Date(),
+				},
+			});
+
+			// Generate new tokens
+			const accessToken = this.generateToken(
+				storedToken.user.id,
+				storedToken.user.email,
+			);
+			const newRefreshToken = await this.createRefreshToken(
+				storedToken.user.id,
 			);
 
 			return {
@@ -138,6 +180,46 @@ export class AuthService {
 		} catch (error) {
 			throw new UnauthorizedException('Invalid or expired refresh token');
 		}
+	}
+
+	async logout(refreshToken: string): Promise<{ message: string }> {
+		try {
+			// Find and revoke the refresh token
+			const storedToken = await this.prisma.refreshToken.findUnique({
+				where: { token: refreshToken },
+			});
+
+			if (storedToken && !storedToken.isRevoked) {
+				await this.prisma.refreshToken.update({
+					where: { id: storedToken.id },
+					data: {
+						isRevoked: true,
+						revokedAt: new Date(),
+					},
+				});
+			}
+
+			return { message: 'Successfully logged out' };
+		} catch (error) {
+			// Even if token is invalid, we consider logout successful
+			return { message: 'Successfully logged out' };
+		}
+	}
+
+	async logoutAll(userId: string): Promise<{ message: string }> {
+		// Revoke all refresh tokens for the user
+		await this.prisma.refreshToken.updateMany({
+			where: {
+				userId,
+				isRevoked: false,
+			},
+			data: {
+				isRevoked: true,
+				revokedAt: new Date(),
+			},
+		});
+
+		return { message: 'Successfully logged out from all devices' };
 	}
 
 	async validateUser(userId: string) {

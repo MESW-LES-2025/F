@@ -1,15 +1,19 @@
-# F
+# Concordia
 
 A modern NestJS REST API with JWT authentication, Prisma ORM, and PostgreSQL database.
 
 ## 🚀 Features
 
 - **JWT Authentication** with access & refresh tokens
+- **Token Revocation** with logout endpoints
+- **Refresh Token Rotation** for enhanced security
+- **Database-backed Token Management** (tracks and revokes tokens)
 - **Prisma ORM** for type-safe database access
 - **PostgreSQL** database
 - **Swagger/OpenAPI** documentation
 - **TypeScript** for type safety
 - **bcrypt** for secure password hashing
+- **Comprehensive Test Coverage**
 
 ## 📋 Prerequisites
 
@@ -112,6 +116,8 @@ All endpoints are prefixed with `/api/v1`
 | `POST` | `/api/v1/auth/register` | Register a new user | ❌ |
 | `POST` | `/api/v1/auth/login` | Login user | ❌ |
 | `POST` | `/api/v1/auth/refresh` | Refresh access token | ❌ |
+| `POST` | `/api/v1/auth/logout` | Logout (revoke refresh token) | ✅ |
+| `POST` | `/api/v1/auth/logout-all` | Logout from all devices | ✅ |
 | `GET` | `/api/v1/auth/profile` | Get current user profile | ✅ |
 
 ### Register User
@@ -174,6 +180,47 @@ All endpoints are prefixed with `/api/v1`
 }
 ```
 
+**Note:** Old refresh token is automatically revoked (token rotation).
+
+### Logout
+
+**POST** `/api/v1/auth/logout`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Body:**
+```json
+{
+  "refresh_token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully logged out"
+}
+```
+
+### Logout from All Devices
+
+**POST** `/api/v1/auth/logout-all`
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "message": "Successfully logged out from all devices"
+}
+```
+
 ### Get Profile
 
 **GET** `/api/v1/auth/profile`
@@ -200,9 +247,18 @@ Authorization: Bearer <access_token>
 1. **Register/Login** → Receive `access_token` and `refresh_token`
 2. **Use access_token** in Authorization header: `Bearer <token>`
 3. **Access token expires** in 1 hour (3600 seconds)
-4. **Refresh token expires** in 30 days
-5. **Before expiration** → Use `/refresh` endpoint to get new tokens
-6. **After 30 days** → User must login again
+4. **Refresh token** stored in database and expires in 30 days
+5. **Before expiration** → Use `/refresh` endpoint to get new tokens (old token is revoked)
+6. **Logout** → Use `/logout` to revoke refresh token
+7. **After 30 days** → User must login again
+
+### Security Features
+
+- **Token Rotation**: New refresh token issued on every refresh (old one revoked)
+- **Token Revocation**: Tokens can be invalidated via logout endpoints
+- **Database Validation**: Refresh tokens validated against database
+- **Automatic Cleanup**: Expired tokens cleaned up on new token creation
+- **Cascade Delete**: All user tokens deleted when user is deleted
 
 ## 🗄️ Database Management
 
