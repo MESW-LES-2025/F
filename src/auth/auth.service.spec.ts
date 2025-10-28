@@ -3,6 +3,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt module
 jest.mock('bcrypt', () => ({
@@ -148,8 +149,8 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if password is invalid', async () => {
-			const bcrypt = require('bcrypt');
-			bcrypt.compare.mockResolvedValueOnce(false);
+			const compareMock = jest.mocked(bcrypt.compare);
+			compareMock.mockResolvedValueOnce(false as never);
 			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
 			await expect(
@@ -163,7 +164,7 @@ describe('AuthService', () => {
 
 	describe('refreshToken', () => {
 		it('should successfully refresh tokens with token rotation', async () => {
-			const payload = {
+			const payload: { sub: string; email: string; type: string } = {
 				sub: mockUser.id,
 				email: mockUser.email,
 				type: 'refresh',
@@ -193,7 +194,7 @@ describe('AuthService', () => {
 				where: { id: mockRefreshToken.id },
 				data: {
 					isRevoked: true,
-					revokedAt: expect.any(Date),
+					revokedAt: expect.any(Date) as Date,
 				},
 			});
 		});
@@ -209,7 +210,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if token type is not refresh', async () => {
-			const payload = {
+			const payload: { sub: string; email: string; type: string } = {
 				sub: mockUser.id,
 				email: mockUser.email,
 				type: 'access',
@@ -222,7 +223,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if token is revoked', async () => {
-			const payload = {
+			const payload: { sub: string; email: string; type: string } = {
 				sub: mockUser.id,
 				email: mockUser.email,
 				type: 'refresh',
@@ -239,7 +240,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if token is expired in DB', async () => {
-			const payload = {
+			const payload: { sub: string; email: string; type: string } = {
 				sub: mockUser.id,
 				email: mockUser.email,
 				type: 'refresh',
@@ -256,7 +257,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if token not found in DB', async () => {
-			const payload = {
+			const payload: { sub: string; email: string; type: string } = {
 				sub: mockUser.id,
 				email: mockUser.email,
 				type: 'refresh',
@@ -287,7 +288,7 @@ describe('AuthService', () => {
 				where: { id: mockRefreshToken.id },
 				data: {
 					isRevoked: true,
-					revokedAt: expect.any(Date),
+					revokedAt: expect.any(Date) as Date,
 				},
 			});
 		});
@@ -309,7 +310,9 @@ describe('AuthService', () => {
 			const result = await service.logout('already_revoked_token');
 
 			expect(result).toEqual({ message: 'Successfully logged out' });
-			expect(mockPrismaService.refreshToken.update).not.toHaveBeenCalled();
+			expect(
+				mockPrismaService.refreshToken.update,
+			).not.toHaveBeenCalled();
 		});
 
 		it('should handle database errors gracefully', async () => {
@@ -343,7 +346,7 @@ describe('AuthService', () => {
 				},
 				data: {
 					isRevoked: true,
-					revokedAt: expect.any(Date),
+					revokedAt: expect.any(Date) as Date,
 				},
 			});
 		});

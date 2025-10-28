@@ -9,6 +9,12 @@ import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 
+interface JwtPayload {
+	sub: string;
+	email: string;
+	type?: string;
+}
+
 @Injectable()
 export class AuthService {
 	constructor(
@@ -134,7 +140,7 @@ export class AuthService {
 	async refreshToken(refreshToken: string) {
 		try {
 			// Verify JWT signature and expiration
-			const payload = this.jwtService.verify(refreshToken);
+			const payload = this.jwtService.verify<JwtPayload>(refreshToken);
 
 			if (payload.type !== 'refresh') {
 				throw new UnauthorizedException('Invalid token type');
@@ -177,7 +183,7 @@ export class AuthService {
 				refresh_token: newRefreshToken,
 				expires_in: 3600, // 1 hour in seconds
 			};
-		} catch (error) {
+		} catch {
 			throw new UnauthorizedException('Invalid or expired refresh token');
 		}
 	}
@@ -200,7 +206,7 @@ export class AuthService {
 			}
 
 			return { message: 'Successfully logged out' };
-		} catch (error) {
+		} catch {
 			// Even if token is invalid, we consider logout successful
 			return { message: 'Successfully logged out' };
 		}

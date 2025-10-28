@@ -69,7 +69,7 @@ export class AuthController {
 		description: 'Successfully logged out from all devices',
 	})
 	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	async logoutAll(@Request() req: any) {
+	async logoutAll(@Request() req: { user: { userId: string } }) {
 		return this.authService.logoutAll(req.user.userId);
 	}
 
@@ -79,7 +79,7 @@ export class AuthController {
 	@ApiOperation({ summary: 'Get current user profile' })
 	@ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
 	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	async getProfile(@Request() req: any) {
+	async getProfile(@Request() req: { user: { userId: string } }) {
 		return this.authService.validateUser(req.user.userId);
 	}
 }
