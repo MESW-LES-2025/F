@@ -84,7 +84,7 @@ JWT_SECRET="my-secret-key-123"
 npx prisma generate
 
 # Run migrations to create tables
-npx prisma migrate dev --name init
+npx prisma migrate dev
 ```
 
 ### 6. Start the Application
