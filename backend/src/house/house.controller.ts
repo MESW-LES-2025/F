@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Param } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Request } from '@nestjs/common';
 import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
 import { ApiOperation } from '@nestjs/swagger';
+import { UserRequest } from 'src/shared/types/user_request';
 
 @Controller('house')
 export class HouseController {
@@ -19,6 +20,14 @@ export class HouseController {
 	@Get()
 	findAll() {
 		return this.houseService.findAll();
+	}
+
+	@ApiOperation({
+		summary: 'Find all houses in the system related to the user',
+	})
+	@Get('user')
+	findAllUserHouses(@Request() req: UserRequest) {
+		return this.houseService.findAllUserHouses(req.user.userId);
 	}
 
 	@ApiOperation({ summary: 'Find a specific house' })

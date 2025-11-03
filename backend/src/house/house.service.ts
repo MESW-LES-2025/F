@@ -47,6 +47,16 @@ export class HouseService {
 		return await this.prisma.house.findMany();
 	}
 
+	async findAllUserHouses(userId: string) {
+		return await this.prisma.house.findMany({
+			where: {
+				users: {
+					some: { userId },
+				},
+			},
+		});
+	}
+
 	async findOne(id: string) {
 		return await this.prisma.house.findUnique({
 			where: { id },

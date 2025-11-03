@@ -21,8 +21,7 @@ model User {
   name             String?        @db.VarChar(100)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  houseId          String?        @db.Uuid
-  house            House?         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  houses           HouseToUser[]  
   refreshTokens    RefreshToken[]
   pantryItemsAdded PantryToItem[] 
 }
@@ -47,8 +46,20 @@ model House {
   invitationCode String
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
-  users          User[]
+  users          HouseToUser[]
   pantry         Pantry?
+}
+
+model HouseToUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  houseId   String   @db.Uuid
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  role      String? 
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, houseId]) 
 }
 
 model Pantry {

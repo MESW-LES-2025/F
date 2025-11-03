@@ -1,6 +1,3 @@
--- AlterTable
-ALTER TABLE "User" ADD COLUMN     "houseId" UUID;
-
 -- CreateTable
 CREATE TABLE "House" (
     "id" UUID NOT NULL,
@@ -10,6 +7,17 @@ CREATE TABLE "House" (
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
     CONSTRAINT "House_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "HouseToUser" (
+    "id" UUID NOT NULL,
+    "userId" UUID NOT NULL,
+    "houseId" UUID NOT NULL,
+    "role" TEXT,
+    "joinedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "HouseToUser_pkey" PRIMARY KEY ("id")
 );
 
 -- CreateTable
@@ -44,6 +52,9 @@ CREATE TABLE "PantryToItem" (
 );
 
 -- CreateIndex
+CREATE UNIQUE INDEX "HouseToUser_userId_houseId_key" ON "HouseToUser"("userId", "houseId");
+
+-- CreateIndex
 CREATE UNIQUE INDEX "Pantry_houseId_key" ON "Pantry"("houseId");
 
 -- CreateIndex
@@ -56,7 +67,10 @@ CREATE INDEX "PantryToItem_pantryId_idx" ON "PantryToItem"("pantryId");
 CREATE UNIQUE INDEX "PantryToItem_pantryId_itemId_key" ON "PantryToItem"("pantryId", "itemId");
 
 -- AddForeignKey
-ALTER TABLE "User" ADD CONSTRAINT "User_houseId_fkey" FOREIGN KEY ("houseId") REFERENCES "House"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE "HouseToUser" ADD CONSTRAINT "HouseToUser_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "HouseToUser" ADD CONSTRAINT "HouseToUser_houseId_fkey" FOREIGN KEY ("houseId") REFERENCES "House"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "Pantry" ADD CONSTRAINT "Pantry_houseId_fkey" FOREIGN KEY ("houseId") REFERENCES "House"("id") ON DELETE CASCADE ON UPDATE CASCADE;

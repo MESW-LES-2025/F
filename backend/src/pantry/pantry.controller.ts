@@ -25,7 +25,7 @@ export class PantryController {
 	}
 
 	@ApiOperation({ summary: 'Find a specific pantry' })
-	@Get(':id/:houseId')
+	@Get(':houseId/:id')
 	findOne(@Param('id') id: string, @Param('houseId') houseId: string) {
 		return this.pantryService.findOne(id, houseId);
 	}
@@ -33,7 +33,7 @@ export class PantryController {
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Update items in pantry' })
-	@Patch(':id')
+	@Patch(':houseId/:id')
 	async update(
 		@Param('id') id: string,
 		@Param('houseId') houseId: string,
