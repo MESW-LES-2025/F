@@ -23,8 +23,10 @@ import {
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Plus } from "lucide-react"
-import { users } from "@/lib/data"
-import type { Task } from "@/lib/types"
+import { createTask } from "@/lib/tasks-service"
+import type { Task, User } from "@/lib/types"
+import { useEffect } from "react"
+import { apiGet } from "@/lib/api-client"
 
 interface CreateTaskDialogProps {
   onTaskCreated?: (task: Task) => void
@@ -34,6 +36,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [users, setUsers] = useState<User[]>([])
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -77,6 +80,25 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     return !Object.values(errors).some((error) => error)
   }
 
+  // Load users when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadUsers()
+    }
+  }, [open])
+
+  const loadUsers = async () => {
+    try {
+      // TODO: Replace with actual API endpoint when users endpoint is available
+      // For now, we'll use mock data or handle it in the backend
+      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
+      setUsers(response)
+    } catch (err) {
+      console.error('Failed to load users:', err)
+      // Fallback to empty array - error will be shown when trying to create task
+    }
+  }
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
@@ -90,23 +112,13 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     setIsLoading(true)
 
     try {
-      // Find the selected user
-      const selectedUser = users.find((u) => u.id === formData.assignee)
-
-      // Create the new task
-      const newTask: Task = {
-        id: Math.random().toString(36).substr(2, 9), // Generate temporary ID
+      // Create the task via API
+      const newTask = await createTask({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        assignee: selectedUser?.name || "",
-        assigneeAvatar: selectedUser?.avatar || "",
-        status: "todo",
-        deadline: new Date(formData.deadline),
-        createdAt: new Date(),
-      }
-
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 500))
+        assigneeId: formData.assignee,
+        deadline: new Date(formData.deadline).toISOString(),
+      })
 
       // Call the callback with the new task
       onTaskCreated?.(newTask)
