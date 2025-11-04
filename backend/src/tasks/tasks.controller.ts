@@ -44,8 +44,16 @@ export class TasksController {
 
 	@Get()
 	@ApiOperation({ summary: 'Get all tasks' })
-	@ApiQuery({ name: 'assigneeId', required: false, description: 'Filter by assignee ID' })
-	@ApiQuery({ name: 'status', required: false, description: 'Filter by status (todo, doing, done)' })
+	@ApiQuery({
+		name: 'assigneeId',
+		required: false,
+		description: 'Filter by assignee ID',
+	})
+	@ApiQuery({
+		name: 'status',
+		required: false,
+		description: 'Filter by status (todo, doing, done)',
+	})
 	@ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
 	async findAll(
 		@Query('assigneeId') assigneeId?: string,
@@ -73,7 +81,10 @@ export class TasksController {
 	@ApiOperation({ summary: 'Update a task' })
 	@ApiParam({ name: 'id', description: 'Task UUID' })
 	@ApiResponse({ status: 200, description: 'Task updated successfully' })
-	@ApiResponse({ status: 403, description: 'Forbidden - no permission to update' })
+	@ApiResponse({
+		status: 403,
+		description: 'Forbidden - no permission to update',
+	})
 	@ApiResponse({ status: 404, description: 'Task not found' })
 	async update(
 		@Param('id') id: string,
@@ -87,7 +98,10 @@ export class TasksController {
 	@ApiOperation({ summary: 'Delete a task' })
 	@ApiParam({ name: 'id', description: 'Task UUID' })
 	@ApiResponse({ status: 200, description: 'Task deleted successfully' })
-	@ApiResponse({ status: 403, description: 'Forbidden - only creator can delete' })
+	@ApiResponse({
+		status: 403,
+		description: 'Forbidden - only creator can delete',
+	})
 	@ApiResponse({ status: 404, description: 'Task not found' })
 	async remove(
 		@Param('id') id: string,
