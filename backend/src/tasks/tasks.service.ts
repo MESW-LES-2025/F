@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+	Injectable,
+	NotFoundException,
+	ForbiddenException,
+} from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -112,7 +116,9 @@ export class TasksService {
 
 		// Verify user has permission (either creator or assignee)
 		if (task.createdById !== userId && task.assigneeId !== userId) {
-			throw new ForbiddenException('You do not have permission to update this task');
+			throw new ForbiddenException(
+				'You do not have permission to update this task',
+			);
 		}
 
 		// If updating assignee, verify new assignee exists
@@ -130,7 +136,9 @@ export class TasksService {
 			where: { id },
 			data: {
 				...updateTaskDto,
-				deadline: updateTaskDto.deadline ? new Date(updateTaskDto.deadline) : undefined,
+				deadline: updateTaskDto.deadline
+					? new Date(updateTaskDto.deadline)
+					: undefined,
 			},
 			include: {
 				assignee: {
@@ -160,7 +168,9 @@ export class TasksService {
 
 		// Only creator can delete
 		if (task.createdById !== userId) {
-			throw new ForbiddenException('You do not have permission to delete this task');
+			throw new ForbiddenException(
+				'You do not have permission to delete this task',
+			);
 		}
 
 		await this.prisma.task.delete({
