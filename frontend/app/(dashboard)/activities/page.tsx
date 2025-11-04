@@ -4,6 +4,8 @@ import { useState, useEffect } from "react"
 import { ActivitiesHeader } from "@/components/activities-header"
 import { ActivitiesStats } from "@/components/activities-stats"
 import { ActivitiesKanban } from "@/components/activities-kanban"
+import { EditTaskDialog } from "@/components/edit-task-dialog"
+import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { getTasks } from "@/lib/tasks-service"
 import type { Task } from "@/lib/types"
 
@@ -11,6 +13,8 @@ export default function ActivitiesPage() {
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [editingTask, setEditingTask] = useState<Task | null>(null)
+  const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
   // Load tasks on mount
   useEffect(() => {
@@ -33,6 +37,24 @@ export default function ActivitiesPage() {
 
   const handleTaskCreated = (newTask: Task) => {
     setTasks((prevTasks) => [...prevTasks, newTask])
+  }
+
+  const handleTaskUpdated = (updatedTask: Task) => {
+    setTasks((prevTasks) =>
+      prevTasks.map((task) => (task.id === updatedTask.id ? updatedTask : task))
+    )
+  }
+
+  const handleTaskDeleted = (taskId: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+  }
+
+  const handleEditTask = (task: Task) => {
+    setEditingTask(task)
+  }
+
+  const handleDeleteTask = (task: Task) => {
+    setDeletingTask(task)
   }
 
   if (isLoading) {
@@ -67,7 +89,29 @@ export default function ActivitiesPage() {
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <ActivitiesHeader onTaskCreated={handleTaskCreated} />
       <ActivitiesStats />
-      <ActivitiesKanban tasks={tasks} />
+      <ActivitiesKanban 
+        tasks={tasks} 
+        onEditTask={handleEditTask}
+        onDeleteTask={handleDeleteTask}
+      />
+
+      {/* Edit Task Dialog */}
+      {editingTask && (
+        <EditTaskDialog
+          task={editingTask}
+          open={!!editingTask}
+          onOpenChange={(open) => !open && setEditingTask(null)}
+          onTaskUpdated={handleTaskUpdated}
+        />
+      )}
+
+      {/* Delete Task Dialog */}
+      <DeleteTaskDialog
+        task={deletingTask}
+        open={!!deletingTask}
+        onOpenChange={(open) => !open && setDeletingTask(null)}
+        onTaskDeleted={handleTaskDeleted}
+      />
     </div>
   )
 }

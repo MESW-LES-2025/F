@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import {
   Dialog,
@@ -9,7 +9,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -22,26 +21,27 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus } from "lucide-react"
-import { createTask } from "@/lib/tasks-service"
-import type { Task, User } from "@/lib/types"
-import { useEffect } from "react"
+import { updateTask } from "@/lib/tasks-service"
 import { apiGet } from "@/lib/api-client"
+import type { Task, User } from "@/lib/types"
 
-interface CreateTaskDialogProps {
-  onTaskCreated?: (task: Task) => void
+interface EditTaskDialogProps {
+  task: Task
+  open: boolean
+  onOpenChange: (open: boolean) => void
+  onTaskUpdated?: (task: Task) => void
 }
 
-export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
-  const [open, setOpen] = useState(false)
+export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
   const [formData, setFormData] = useState({
-    title: "",
-    description: "",
+    title: task.title,
+    description: task.description || "",
     assignee: "",
-    deadline: "",
+    deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
+    status: task.status,
   })
 
   const [formErrors, setFormErrors] = useState({
@@ -49,6 +49,36 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     assignee: false,
     deadline: false,
   })
+
+  // Load users when dialog opens
+  useEffect(() => {
+    if (open) {
+      loadUsers()
+      // Reset form data when opening
+      setFormData({
+        title: task.title,
+        description: task.description || "",
+        assignee: "",
+        deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
+        status: task.status,
+      })
+      setFormErrors({
+        title: false,
+        assignee: false,
+        deadline: false,
+      })
+      setError(null)
+    }
+  }, [open, task])
+
+  const loadUsers = async () => {
+    try {
+      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
+      setUsers(response)
+    } catch (err) {
+      console.error('Failed to load users:', err)
+    }
+  }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -68,10 +98,14 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     }
   }
 
+  const handleStatusChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, status: value as 'todo' | 'doing' | 'done' }))
+  }
+
   const validateForm = () => {
     const errors = {
       title: !formData.title.trim(),
-      assignee: !formData.assignee,
+      assignee: false, // Assignee is optional on edit
       deadline: !formData.deadline,
     }
 
@@ -80,102 +114,63 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     return !Object.values(errors).some((error) => error)
   }
 
-  // Load users when dialog opens
-  useEffect(() => {
-    if (open) {
-      loadUsers()
-    }
-  }, [open])
-
-  const loadUsers = async () => {
-    try {
-      // TODO: Replace with actual API endpoint when users endpoint is available
-      // For now, we'll use mock data or handle it in the backend
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
-      setUsers(response)
-    } catch (err) {
-      console.error('Failed to load users:', err)
-      // Fallback to empty array - error will be shown when trying to create task
-    }
-  }
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
 
     // Validate required fields
     if (!validateForm()) {
-      setError("Please fill in all required fields (Title, Assignee, and Deadline).")
+      setError("Please fill in all required fields (Title and Deadline).")
       return
     }
 
     setIsLoading(true)
 
     try {
-      // Create the task via API
-      const newTask = await createTask({
+      // Build update payload - only include changed fields
+      const updatePayload: {
+        title: string
+        description?: string
+        assigneeId?: string
+        deadline: string
+        status: 'todo' | 'doing' | 'done'
+      } = {
         title: formData.title.trim(),
-        description: formData.description.trim() || undefined,
-        assigneeId: formData.assignee,
         deadline: new Date(formData.deadline).toISOString(),
-      })
+        status: formData.status,
+      }
 
-      // Call the callback with the new task
-      onTaskCreated?.(newTask)
+      if (formData.description.trim()) {
+        updatePayload.description = formData.description.trim()
+      }
 
-      // Reset form and close dialog
-      setFormData({
-        title: "",
-        description: "",
-        assignee: "",
-        deadline: "",
-      })
-      setFormErrors({
-        title: false,
-        assignee: false,
-        deadline: false,
-      })
-      setOpen(false)
+      if (formData.assignee) {
+        updatePayload.assigneeId = formData.assignee
+      }
+
+      // Update the task via API
+      const updatedTask = await updateTask(task.id, updatePayload)
+
+      // Call the callback with the updated task
+      onTaskUpdated?.(updatedTask)
+
+      // Close dialog
+      onOpenChange(false)
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task. Please try again.")
+      setError(err instanceof Error ? err.message : "Failed to update task. Please try again.")
     } finally {
       setIsLoading(false)
     }
   }
 
-  const handleOpenChange = (newOpen: boolean) => {
-    if (!newOpen) {
-      // Reset form when dialog closes
-      setFormData({
-        title: "",
-        description: "",
-        assignee: "",
-        deadline: "",
-      })
-      setFormErrors({
-        title: false,
-        assignee: false,
-        deadline: false,
-      })
-      setError(null)
-    }
-    setOpen(newOpen)
-  }
-
   return (
-    <Dialog open={open} onOpenChange={handleOpenChange}>
-      <DialogTrigger asChild>
-        <Button size="sm" className="bg-green-600 hover:bg-green-700 cursor-pointer">
-          <Plus className="w-4 h-4 mr-1" />
-          New Task
-        </Button>
-      </DialogTrigger>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
-            <DialogTitle>Create New Task</DialogTitle>
+            <DialogTitle>Edit Task</DialogTitle>
             <DialogDescription>
-              Add a new task to the board. All fields marked with * are required.
+              Update the task details. Fields marked with * are required.
             </DialogDescription>
           </DialogHeader>
 
@@ -217,19 +212,30 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignee">
-                Assignee <span className="text-destructive">*</span>
-              </Label>
+              <Label htmlFor="status">Status</Label>
+              <Select
+                value={formData.status}
+                onValueChange={handleStatusChange}
+              >
+                <SelectTrigger id="status">
+                  <SelectValue placeholder="Select status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="todo">To-do</SelectItem>
+                  <SelectItem value="doing">Doing</SelectItem>
+                  <SelectItem value="done">Done</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="assignee">Change Assignee (optional)</Label>
               <Select
                 value={formData.assignee}
                 onValueChange={handleAssigneeChange}
               >
-                <SelectTrigger
-                  id="assignee"
-                  aria-invalid={formErrors.assignee}
-                  className={formErrors.assignee ? "border-destructive" : ""}
-                >
-                  <SelectValue placeholder="Select a person" />
+                <SelectTrigger id="assignee">
+                  <SelectValue placeholder="Keep current assignee" />
                 </SelectTrigger>
                 <SelectContent>
                   {users.map((user) => (
@@ -239,9 +245,6 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                   ))}
                 </SelectContent>
               </Select>
-              {formErrors.assignee && (
-                <p className="text-sm text-destructive">Assignee is required</p>
-              )}
             </div>
 
             <div className="space-y-2">
@@ -268,7 +271,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
             <Button
               type="button"
               variant="outline"
-              onClick={() => setOpen(false)}
+              onClick={() => onOpenChange(false)}
               disabled={isLoading}
               className="cursor-pointer"
             >
@@ -279,7 +282,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
               className="bg-green-600 hover:bg-green-700 cursor-pointer"
               disabled={isLoading}
             >
-              {isLoading ? "Creating..." : "Create Task"}
+              {isLoading ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </form>
