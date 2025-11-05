@@ -1,16 +1,29 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { pantryItems } from "@/lib/data"
+import { pantryItems as fallbackItems } from "@/lib/data"
+import type { PantryItem } from "@/lib/types"
 import { format } from "date-fns"
 import { AlertCircle } from "lucide-react"
 
-export function PantryGrid() {
+interface PantryGridProps {
+  items?: PantryItem[]
+}
+
+export function PantryGrid({ items }: PantryGridProps) {
+  const pantryItems = items ?? fallbackItems
+
   return (
     <div>
       <h2 className="text-sm font-semibold text-gray-900 mb-4">Pantry Items</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
-        {pantryItems.map((item) => {
+      {pantryItems.length === 0 ? (
+        <div className="rounded-md border border-dashed border-gray-200 p-6 text-center text-gray-600">
+          <p className="mb-2">No pantry items found.</p>
+          <p className="text-sm">You can add items using the "Add item" form.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+          {pantryItems.map((item) => {
           const isExpiringSoon =
             item.expiryDate &&
             Math.floor((item.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) <= 7
@@ -67,7 +80,8 @@ export function PantryGrid() {
             </Card>
           )
         })}
-      </div>
+        </div>
+      )}
     </div>
   )
 }
