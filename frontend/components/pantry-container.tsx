@@ -9,9 +9,11 @@ import { PantryGrid } from "./pantry-grid"
 
 interface Props {
   items?: PantryItem[]
+  pantryHouseId?: string | undefined
+  pantryId?: string | undefined
 }
 
-export default function PantryContainer({ items }: Props) {
+export default function PantryContainer({ items, pantryHouseId, pantryId }: Props) {
   const list = items ?? []
   const [category, setCategory] = useState<string>("all")
   const [status, setStatus] = useState<string>("all")
@@ -64,7 +66,7 @@ export default function PantryContainer({ items }: Props) {
 
       <PantryStats items={filtered} />
 
-      <PantryGrid items={filtered} />
+      <PantryGrid items={filtered} pantryHouseId={pantryHouseId} pantryId={pantryId} />
     </div>
   )
 }

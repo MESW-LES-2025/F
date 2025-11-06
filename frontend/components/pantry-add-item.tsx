@@ -240,12 +240,12 @@ export default function PantryAddItem() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="L">L</SelectItem>
-                  <SelectItem value="KG">Kg</SelectItem>
-                  <SelectItem value="ML">Ml</SelectItem>
+                  <SelectItem value="KG">kg</SelectItem>
+                  <SelectItem value="ML">ml</SelectItem>
                   <SelectItem value="G">g</SelectItem>
                   <SelectItem value="UNITS">unit</SelectItem>
                   <SelectItem value="LOAF">loaf</SelectItem>
-                  <SelectItem value="JAR">jar / bottle</SelectItem>
+                  <SelectItem value="JAR">jar</SelectItem>
                 </SelectContent>
               </Select>
             </div>

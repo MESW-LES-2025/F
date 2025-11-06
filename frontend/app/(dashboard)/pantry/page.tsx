@@ -3,6 +3,8 @@ import type { PantryItem } from "@/lib/types"
 
 export default async function PantryPage() {
   let items: PantryItem[] | undefined = undefined
+  let pantryHouseId: string | undefined = undefined
+  let pantryId: string | undefined = undefined
 
   try {
     const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"
@@ -50,6 +52,8 @@ export default async function PantryPage() {
           if (pantryRes.ok) {
             const pantryData = await pantryRes.json()
                 items = mapPantryItems(pantryData?.items ?? [])
+                pantryHouseId = houseId
+                pantryId = pantry.id
             pantryFound = true
           }
         }
@@ -67,6 +71,8 @@ export default async function PantryPage() {
           if (pantryRes.ok) {
             const pantryData = await pantryRes.json()
                 items = mapPantryItems(pantryData?.items ?? [])
+                pantryHouseId = pantry.houseId
+                pantryId = pantry.id
             pantryFound = true
           }
         }
@@ -100,7 +106,7 @@ export default async function PantryPage() {
 
   return (
     <div>
-      <PantryContainer items={items} />
+        <PantryContainer items={items} pantryHouseId={pantryHouseId} pantryId={pantryId} />
     </div>
   )
 }
