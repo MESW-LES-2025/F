@@ -7,11 +7,13 @@ import {
 	Param,
 	Delete,
 	Request,
+	UseGuards,
 } from '@nestjs/common';
 import { PantryItemService } from './pantry-item.service';
 import { CreatePantryItemDto } from './dto/create-pantry-item.dto';
 import { UpdatePantryItemDto } from './dto/update-pantry-item.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { UserRequest } from 'src/shared/types/user_request';
 
 @Controller('pantry-item')
@@ -20,6 +22,8 @@ export class PantryItemController {
 	constructor(private readonly pantryItemService: PantryItemService) {}
 
 	@ApiOperation({ summary: 'Create a new pantry item' })
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@Post(':houseId')
 	create(
 		@Body() createPantryItemDto: CreatePantryItemDto,
@@ -34,6 +38,8 @@ export class PantryItemController {
 	}
 
 	@ApiOperation({ summary: 'Update a specific pantry item' })
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@Patch(':id')
 	update(
 		@Param('id') id: string,
@@ -48,12 +54,16 @@ export class PantryItemController {
 	}
 
 	@ApiOperation({ summary: 'Delete a specific pantry item' })
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@Delete(':id')
 	remove(@Param('id') id: string, @Request() req: UserRequest) {
 		return this.pantryItemService.remove(id, req.user.userId);
 	}
 
 	@ApiOperation({ summary: 'Find all pantry items created by the user' })
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@Get('user')
 	findAllUser(@Request() req: UserRequest) {
 		return this.pantryItemService.findAllUser(req.user.userId);
@@ -67,8 +77,8 @@ export class PantryItemController {
 
 	@ApiOperation({ summary: 'Find a specific pantry item' })
 	@Get(':id')
-	findOne(@Param('id') id: string, @Request() req: UserRequest) {
-		return this.pantryItemService.findOne(id, req.user.userId);
+	findOne(@Param('id') id: string) {
+		return this.pantryItemService.findOne(id);
 	}
 
 	@ApiOperation({ summary: '[ADMIN] Find all pantry items in the system' })

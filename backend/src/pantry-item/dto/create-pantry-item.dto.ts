@@ -1,4 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
+import { PANTRY_CATEGORIES, UNITS } from 'src/shared/pantry-constants';
 
 export class CreatePantryItemDto {
 	@ApiProperty({ example: 'item1', description: 'item name' })
@@ -8,8 +9,19 @@ export class CreatePantryItemDto {
 		example: 'www.api.com/image-item1',
 		description: 'item image link',
 	})
-	imageLink: string;
+	imageLink?: string;
 
-	@ApiProperty({ example: 'kg', description: 'item measurement unit' })
+	@ApiProperty({
+		example: 'GRAINS',
+		description: 'item category (enum)',
+		enum: PANTRY_CATEGORIES,
+	})
+	category?: string;
+
+	@ApiProperty({
+		example: 'KG',
+		description: 'item measurement unit (enum)',
+		enum: UNITS,
+	})
 	measurementUnit?: string;
 }
