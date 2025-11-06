@@ -69,13 +69,18 @@ export function PantryGrid({ items }: PantryGridProps) {
                 <Avatar className="w-6 h-6">
                   <AvatarImage src={item.addedByAvatar || "/placeholder.svg"} />
                   <AvatarFallback className="text-xs">
-                    {item.addedBy
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
+                    {(
+                      (item.addedBy && item.addedBy.trim()
+                        ? item.addedBy
+                            .trim()
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                        : "U")
+                    ).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="text-xs text-gray-500">Added by {item.addedBy}</span>
+                <span className="text-xs text-gray-500">Added by {item.addedBy ?? 'Unknown'}</span>
               </div>
             </Card>
           )
