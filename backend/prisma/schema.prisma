@@ -14,16 +14,17 @@ datasource db {
 }
 
 model User {
-  id               String         @id @default(uuid()) @db.Uuid
-  email            String         @unique @db.VarChar(255)
-  username         String         @unique @db.VarChar(100)
-  password         String         @db.VarChar(255)
-  name             String?        @db.VarChar(100)
-  createdAt        DateTime       @default(now())
-  updatedAt        DateTime       @updatedAt
-  houses           HouseToUser[]  
-  refreshTokens    RefreshToken[]
-  pantryItemsAdded PantryToItem[] 
+  id                 String         @id @default(uuid()) @db.Uuid
+  email              String         @unique @db.VarChar(255)
+  username           String         @unique @db.VarChar(100)
+  password           String         @db.VarChar(255)
+  name               String?        @db.VarChar(100)
+  createdAt          DateTime       @default(now())
+  updatedAt          DateTime       @updatedAt
+  houses             HouseToUser[]  
+  refreshTokens      RefreshToken[]
+  pantryItemsAdded   PantryToItem[] 
+  pantryItemsCreated PantryItem[]
 }
 
 model RefreshToken {
@@ -48,6 +49,7 @@ model House {
   updatedAt      DateTime @updatedAt
   users          HouseToUser[]
   pantry         Pantry?
+  pantryItems    PantryItem[]
 }
 
 model HouseToUser {
@@ -77,6 +79,11 @@ model PantryItem {
   name              String
   imageLink         String
   measurementUnit   String?
+  createdByUser     String   @db.Uuid
+  user              User     @relation(fields: [createdByUser], references: [id], onDelete: Cascade)
+  houseId           String   @db.Uuid
+  house             House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
   pantries          PantryToItem[]
 }
 

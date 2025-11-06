@@ -12,7 +12,11 @@ import { verifyIsString } from 'src/shared/function-verify-string';
 export class PantryItemService {
 	constructor(private prisma: PrismaService) {}
 
-	async create(createPantryItemDto: CreatePantryItemDto) {
+	async create(
+		createPantryItemDto: CreatePantryItemDto,
+		userId: string,
+		houseId: string,
+	) {
 		if (!verifyIsString(createPantryItemDto.name)) {
 			throw new UnauthorizedException(
 				'The name is not in the right format',
@@ -36,6 +40,8 @@ export class PantryItemService {
 				name: createPantryItemDto.name,
 				imageLink: createPantryItemDto.imageLink,
 				measurementUnit: createPantryItemDto.measurementUnit,
+				createdByUser: userId,
+				houseId,
 			},
 		});
 
@@ -46,13 +52,34 @@ export class PantryItemService {
 		return await this.prisma.pantryItem.findMany();
 	}
 
-	async findOne(id: string) {
-		return await this.prisma.pantryItem.findUnique({
-			where: { id },
+	async findAllUser(userId: string) {
+		return await this.prisma.pantryItem.findMany({
+			where: {
+				createdByUser: userId,
+			},
 		});
 	}
 
-	async update(id: string, updatePantryItemDto: UpdatePantryItemDto) {
+	async findAllHouse(houseId: string) {
+		return await this.prisma.pantryItem.findMany({
+			where: { houseId },
+		});
+	}
+
+	async findOne(id: string, userId: string) {
+		return await this.prisma.pantryItem.findUnique({
+			where: {
+				id,
+				createdByUser: userId,
+			},
+		});
+	}
+
+	async update(
+		id: string,
+		updatePantryItemDto: UpdatePantryItemDto,
+		userId: string,
+	) {
 		const item = await this.prisma.pantryItem.findUnique({
 			where: { id },
 		});
@@ -62,7 +89,7 @@ export class PantryItemService {
 		}
 
 		return await this.prisma.pantryItem.update({
-			where: { id },
+			where: { id, createdByUser: userId }, // user can only update items they created
 			data: {
 				name: updatePantryItemDto.name,
 				imageLink: updatePantryItemDto.imageLink,
@@ -71,7 +98,7 @@ export class PantryItemService {
 		});
 	}
 
-	async remove(id: string) {
+	async remove(id: string, userId: string) {
 		const item = await this.prisma.pantryItem.findUnique({
 			where: { id },
 		});
@@ -81,7 +108,7 @@ export class PantryItemService {
 		}
 
 		return await this.prisma.pantryItem.delete({
-			where: { id },
+			where: { id, createdByUser: userId }, // user can only delete items they created
 		});
 	}
 }
