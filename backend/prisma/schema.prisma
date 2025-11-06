@@ -1,0 +1,140 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String         @id @default(uuid()) @db.Uuid
+  email            String         @unique @db.VarChar(255)
+  username         String         @unique @db.VarChar(100)
+  password         String         @db.VarChar(255)
+  name             String?        @db.VarChar(100)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  deletedAt        DateTime?
+  houses           HouseToUser[]
+  pantryItemsAdded PantryToItem[]
+  // Pantry items created by this user
+  pantryItems      PantryItem[]
+  refreshTokens    RefreshToken[]
+  assignedTasks Task[]         @relation("AssignedTasks")
+  createdTasks  Task[]         @relation("CreatedTasks")
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique @db.VarChar(500)
+  userId    String    @db.Uuid
+  expiresAt DateTime
+  isRevoked Boolean   @default(false)
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([token])
+}
+
+model House {
+  id             String        @id @default(uuid()) @db.Uuid
+  name           String
+  invitationCode String
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  users          HouseToUser[]
+  pantry         Pantry?
+  // Pantry items associated with this house (via PantryItem.houseId)
+  pantryItems    PantryItem[]
+}
+
+model HouseToUser {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  houseId  String   @db.Uuid
+  role     String?
+  joinedAt DateTime @default(now())
+  house    House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, houseId])
+}
+
+model Pantry {
+  id        String         @id @default(uuid()) @db.Uuid
+  houseId   String         @unique @db.Uuid
+  createdAt DateTime       @default(now())
+  house     House          @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  items     PantryToItem[]
+
+  @@index([houseId])
+}
+
+model PantryItem {
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String
+  imageLink       String?
+  measurementUnit String?
+  category        PantryCategory?
+  pantries        PantryToItem[]
+
+  // New fields added by migration: link item to the creating user and house
+  createdByUser String @db.Uuid
+  houseId       String @db.Uuid
+
+  createdBy User  @relation(fields: [createdByUser], references: [id], onDelete: Cascade)
+  house     House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUser])
+  @@index([houseId])
+}
+
+model PantryToItem {
+  id             String     @id @default(uuid()) @db.Uuid
+  itemId         String     @db.Uuid
+  pantryId       String     @db.Uuid
+  modifiedByUser String     @db.Uuid
+  quantity       Float
+  updatedAt      DateTime   @updatedAt
+  expiryDate     DateTime?
+  item           PantryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
+  pantry         Pantry     @relation(fields: [pantryId], references: [id], onDelete: Cascade)
+
+  @@unique([pantryId, itemId])
+  @@index([pantryId])
+}
+
+model Task {
+  id          String   @id @default(uuid()) @db.Uuid
+  title       String   @db.VarChar(255)
+  description String?  @db.Text
+  status      String   @default("todo") @db.VarChar(20)
+  assigneeId  String   @db.Uuid
+  assignee    User     @relation("AssignedTasks", fields: [assigneeId], references: [id], onDelete: Cascade)
+  createdById String   @db.Uuid
+  createdBy   User     @relation("CreatedTasks", fields: [createdById], references: [id], onDelete: Cascade)
+  deadline    DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([assigneeId])
+  @@index([createdById])
+  @@index([status])
+}
+
+enum PantryCategory {
+  OTHER
+  GRAINS
+  DAIRY
+  VEGETABLES
+  FRUITS
+  MEAT
+  FROZEN
+  CONDIMENTS
+  BEVERAGES
+}
+
