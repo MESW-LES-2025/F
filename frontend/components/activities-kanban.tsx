@@ -1,15 +1,18 @@
 "use client"
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
 import { tasks as defaultTasks } from "@/lib/data"
-import { GripVertical } from "lucide-react"
+import { GripVertical, Pencil, Trash2 } from "lucide-react"
 import type { Task } from "@/lib/types"
 
 interface ActivitiesKanbanProps {
   tasks?: Task[]
+  onEditTask?: (task: Task) => void
+  onDeleteTask?: (task: Task) => void
 }
 
-export function ActivitiesKanban({ tasks = defaultTasks }: ActivitiesKanbanProps) {
+export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask }: ActivitiesKanbanProps) {
   const todoTasks = tasks.filter((t) => t.status === "todo")
   const doingTasks = tasks.filter((t) => t.status === "doing")
   const doneTasks = tasks.filter((t) => t.status === "done")
@@ -18,9 +21,9 @@ export function ActivitiesKanban({ tasks = defaultTasks }: ActivitiesKanbanProps
     <div>
       <h2 className="text-sm font-semibold text-gray-900 mb-4">Task Board</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" />
-        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" />
-        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" />
+        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
+        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
+        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
       </div>
     </div>
   )
@@ -30,9 +33,11 @@ interface TaskColumnProps {
   title: string
   tasks: Task[]
   bgColor: string
+  onEditTask?: (task: Task) => void
+  onDeleteTask?: (task: Task) => void
 }
 
-function TaskColumn({ title, tasks, bgColor }: TaskColumnProps) {
+function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask }: TaskColumnProps) {
   return (
     <div className={`${bgColor} rounded-lg p-4 min-h-[300px] lg:min-h-[500px]`}>
       <div className="flex items-center justify-between mb-3">
@@ -43,7 +48,7 @@ function TaskColumn({ title, tasks, bgColor }: TaskColumnProps) {
         {tasks.map((task: Task) => (
           <div
             key={task.id}
-            className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow cursor-pointer group"
+            className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
           >
             <div className="flex items-start gap-2">
               <GripVertical className="w-4 h-4 text-gray-400 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -61,17 +66,43 @@ function TaskColumn({ title, tasks, bgColor }: TaskColumnProps) {
                     })}
                   </p>
                 )}
-                <div className="flex items-center gap-2">
-                  <Avatar className="w-6 h-6">
-                    <AvatarImage src={task.assigneeAvatar || "/placeholder.svg"} />
-                    <AvatarFallback className="text-xs">
-                      {task.assignee
-                        .split(" ")
-                        .map((n: string) => n[0])
-                        .join("")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-xs text-gray-500 truncate">{task.assignee}</span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Avatar className="w-6 h-6">
+                      <AvatarImage src={task.assigneeAvatar || "/placeholder.svg"} />
+                      <AvatarFallback className="text-xs">
+                        {task.assignee
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <span className="text-xs text-gray-500 truncate">{task.assignee}</span>
+                  </div>
+                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 w-7 p-0 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onEditTask?.(task)
+                      }}
+                    >
+                      <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="flex items-center gap-1 h-7 px-2 cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        onDeleteTask?.(task)
+                      }}
+                    >
+                      <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>
