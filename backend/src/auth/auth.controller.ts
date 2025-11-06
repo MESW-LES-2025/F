@@ -17,7 +17,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { UserRequest } from 'src/shared/types/user_request';
+import { UserRequest } from '../shared/types/user_request';
 
 @ApiTags('auth')
 @Controller('auth')

@@ -1,19 +1,20 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import { CreateTaskDialog } from "@/components/create-task-dialog"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import type { Task } from "@/lib/types"
 
-export function ActivitiesHeader() {
+interface ActivitiesHeaderProps {
+  onTaskCreated?: (task: Task) => void
+}
+
+export function ActivitiesHeader({ onTaskCreated }: ActivitiesHeaderProps) {
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold text-gray-900">Activities - FEUP&apos;s Student House - C</h1>
-          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-            <Plus className="w-4 h-4 mr-1" />
-            New Task
-          </Button>
+          <CreateTaskDialog onTaskCreated={onTaskCreated} />
         </div>
 
         <div className="flex items-center gap-4">
