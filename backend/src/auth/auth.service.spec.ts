@@ -14,18 +14,76 @@ jest.mock('bcrypt', () => ({
 describe('AuthService', () => {
 	let service: AuthService;
 
-	const mockPrismaService = {
+	type UserType = typeof mockUser;
+	type RefreshTokenType = typeof mockRefreshToken;
+
+	type MockPrisma = {
 		user: {
-			findFirst: jest.fn(),
-			findUnique: jest.fn(),
-			create: jest.fn(),
+			findFirst: jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>;
+			findUnique: jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>;
+			create: jest.MockedFunction<(...args: any[]) => Promise<UserType>>;
+			update: jest.MockedFunction<
+				(...args: any[]) => Promise<UserType & Record<string, any>>
+			>;
+		};
+		refreshToken: {
+			findUnique: jest.MockedFunction<
+				(...args: any[]) => Promise<RefreshTokenType | null>
+			>;
+			create: jest.MockedFunction<
+				(...args: any[]) => Promise<RefreshTokenType>
+			>;
+			deleteMany: jest.MockedFunction<
+				(...args: any[]) => Promise<{ count: number }>
+			>;
+			update: jest.MockedFunction<
+				(
+					...args: any[]
+				) => Promise<RefreshTokenType & Record<string, any>>
+			>;
+			updateMany: jest.MockedFunction<
+				(...args: any[]) => Promise<{ count: number }>
+			>;
+		};
+	};
+
+	const mockPrismaService: MockPrisma = {
+		user: {
+			findFirst: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>,
+			findUnique: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>,
+			create: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<UserType>
+			>,
+			update: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<UserType & Record<string, any>>
+			>,
 		},
 		refreshToken: {
-			findUnique: jest.fn(),
-			create: jest.fn(),
-			deleteMany: jest.fn(),
-			update: jest.fn(),
-			updateMany: jest.fn(),
+			findUnique: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<RefreshTokenType | null>
+			>,
+			create: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<RefreshTokenType>
+			>,
+			deleteMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<{ count: number }>
+			>,
+			update: jest.fn() as jest.MockedFunction<
+				(
+					...args: any[]
+				) => Promise<RefreshTokenType & Record<string, any>>
+			>,
+			updateMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<{ count: number }>
+			>,
 		},
 	};
 
@@ -118,7 +176,7 @@ describe('AuthService', () => {
 
 	describe('login', () => {
 		it('should successfully login with valid credentials', async () => {
-			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 			mockPrismaService.refreshToken.deleteMany.mockResolvedValue({
 				count: 0,
 			});
@@ -138,7 +196,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if user not found', async () => {
-			mockPrismaService.user.findUnique.mockResolvedValue(null);
+			mockPrismaService.user.findFirst.mockResolvedValue(null);
 
 			await expect(
 				service.login({
@@ -149,9 +207,12 @@ describe('AuthService', () => {
 		});
 
 		it('should throw UnauthorizedException if password is invalid', async () => {
-			const compareMock = jest.mocked(bcrypt.compare);
-			compareMock.mockResolvedValueOnce(false as never);
-			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+			const compareMock =
+				bcrypt.compare as unknown as jest.MockedFunction<
+					(...args: any[]) => Promise<boolean>
+				>;
+			compareMock.mockResolvedValueOnce(false);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
 
 			await expect(
 				service.login({
@@ -364,21 +425,59 @@ describe('AuthService', () => {
 		});
 	});
 
-	describe('validateUser', () => {
-		it('should return user data', async () => {
-			mockPrismaService.user.findUnique.mockResolvedValue({
-				id: mockUser.id,
-				email: mockUser.email,
-				username: mockUser.username,
-				name: mockUser.name,
-				createdAt: mockUser.createdAt,
-				updatedAt: mockUser.updatedAt,
+	describe('changePassword', () => {
+		it('should change password when current password is correct', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.user.update.mockResolvedValue({
+				...mockUser,
+				password: 'newhashed',
+			});
+			mockPrismaService.refreshToken.updateMany.mockResolvedValue({
+				count: 2,
 			});
 
-			const result = await service.validateUser(mockUser.id);
+			const result = await service.changePassword(mockUser.id, {
+				currentPassword: 'currentPassword123',
+				newPassword: 'newPassword456',
+			});
 
-			expect(result).toHaveProperty('email', mockUser.email);
-			expect(result).not.toHaveProperty('password');
+			expect(result).toEqual({
+				message: 'Password changed successfully',
+			});
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+				where: { id: mockUser.id },
+				data: { password: expect.any(String) as string },
+			});
+			expect(
+				mockPrismaService.refreshToken.updateMany,
+			).toHaveBeenCalled();
+		});
+
+		it('should throw UnauthorizedException when current password is incorrect', async () => {
+			const compareMock =
+				bcrypt.compare as unknown as jest.MockedFunction<
+					(...args: any[]) => Promise<boolean>
+				>;
+			compareMock.mockResolvedValueOnce(false);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+
+			await expect(
+				service.changePassword(mockUser.id, {
+					currentPassword: 'wrong',
+					newPassword: 'new',
+				}),
+			).rejects.toThrow(UnauthorizedException);
+		});
+
+		it('should throw UnauthorizedException when user not found', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.changePassword('nonexistent-id', {
+					currentPassword: 'any',
+					newPassword: 'any',
+				}),
+			).rejects.toThrow(UnauthorizedException);
 		});
 	});
 });

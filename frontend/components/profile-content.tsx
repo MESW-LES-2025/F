@@ -127,8 +127,12 @@ export function ProfileContent() {
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg md:col-span-2">
             <Calendar className="w-5 h-5 text-muted-foreground" />
             <div>
-              <p className="text-sm text-muted-foreground">User ID</p>
-              <p className="font-medium text-xs">{user.id}</p>
+              <p className="text-sm text-muted-foreground">Member since</p>
+              <p className="font-medium text-xs">
+                {user.createdAt
+                  ? new Date(user.createdAt).toLocaleDateString()
+                  : '—'}
+              </p>
             </div>
           </div>
         </div>

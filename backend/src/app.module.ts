@@ -6,6 +6,7 @@ import { HouseModule } from './house/house.module';
 import { PantryModule } from './pantry/pantry.module';
 import { PantryItemModule } from './pantry-item/pantry-item.module';
 import { TasksModule } from './tasks/tasks.module';
+import { UserModule } from './user/user.module';
 
 @Module({
 	controllers: [AppController],
@@ -16,6 +17,7 @@ import { TasksModule } from './tasks/tasks.module';
 		PantryModule,
 		PantryItemModule,
 		TasksModule,
+		UserModule,
 	],
 })
 export class AppModule {}

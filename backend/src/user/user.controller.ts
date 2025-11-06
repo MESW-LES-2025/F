@@ -1,0 +1,46 @@
+import {
+	Controller,
+	Get,
+	Patch,
+	Delete,
+	Body,
+	UseGuards,
+	Request,
+} from '@nestjs/common';
+import { UserService } from './user.service';
+import { UpdateUserDto } from './dto/update-user.dto';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
+import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
+import { UserRequest } from 'src/shared/types/user_request';
+
+@Controller('user')
+export class UserController {
+	constructor(private readonly userService: UserService) {}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Get current authenticated user' })
+	@Get()
+	async getCurrent(@Request() req: UserRequest) {
+		return await this.userService.findOne(req.user.userId);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Update current authenticated user' })
+	@Patch()
+	async updateCurrent(
+		@Request() req: UserRequest,
+		@Body() updateUserDto: UpdateUserDto,
+	) {
+		return await this.userService.update(req.user.userId, updateUserDto);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Delete current authenticated user' })
+	@Delete()
+	async removeCurrent(@Request() req: UserRequest) {
+		return await this.userService.remove(req.user.userId);
+	}
+}

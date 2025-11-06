@@ -93,6 +93,34 @@ class AuthService {
     this.clearTokens();
   }
 
+  /**
+   * Logout from all devices / invalidate all sessions server-side
+   * Clears locally stored tokens on success or failure to ensure client is signed out
+   */
+  async logoutAllDevices(): Promise<void> {
+    try {
+      await apiPost('/auth/logout-all', {}, { requiresAuth: true });
+    } catch (error) {
+      console.error('Logout all devices failed:', error);
+      // Proceed to clear tokens locally regardless of server failure
+    }
+    this.clearTokens();
+  }
+
+  /**
+   * Change the user's password. Caller is responsible for signing out the user
+   * if they want to force re-authentication after a password change.
+   */
+  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+    try {
+      await apiPost('/auth/change-password', { currentPassword, newPassword }, { requiresAuth: true });
+    } catch (error) {
+      // Re-throw ApiError or other errors for the caller to handle
+      if (error instanceof ApiError) throw error;
+      throw error;
+    }
+  }
+
   async refreshAccessToken(): Promise<string> {
     if (!this.refreshToken) {
       throw new Error('No refresh token available');
