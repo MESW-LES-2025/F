@@ -1,7 +1,6 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Plus } from "lucide-react"
+import PantryAddItem from "./pantry-add-item"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 
 export function PantryHeader() {
@@ -10,10 +9,7 @@ export function PantryHeader() {
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-lg font-semibold text-gray-900">Pantry - FEUP&apos;s Student House - C</h1>
-          <Button size="sm" className="bg-green-600 hover:bg-green-700">
-            <Plus className="w-4 h-4 mr-1" />
-            Add Item
-          </Button>
+          <PantryAddItem />
         </div>
 
         <div className="flex items-center gap-4">
