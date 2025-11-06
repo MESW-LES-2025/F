@@ -1,4 +1,12 @@
-import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/common';
+import {
+	Controller,
+	Get,
+	Post,
+	Body,
+	Param,
+	Request,
+	UseGuards,
+} from '@nestjs/common';
 import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
 import { ApiOperation, ApiBearerAuth } from '@nestjs/swagger';

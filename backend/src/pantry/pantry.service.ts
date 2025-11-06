@@ -14,8 +14,7 @@ export class PantryService {
 					houseId,
 				},
 			});
-		} catch (e) {
-
+		} catch {
 			return false;
 		}
 

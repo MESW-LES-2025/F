@@ -135,7 +135,9 @@ describe('PantryItemService', () => {
 			const result = await service.findAllHouse('house999');
 
 			expect(mockPrismaService.pantryItem.findMany).toHaveBeenCalledWith({
-				where: { pantries: { some: { pantry: { houseId: 'house999' } } } },
+				where: {
+					pantries: { some: { pantry: { houseId: 'house999' } } },
+				},
 			});
 			expect(result).toEqual([mockItem]);
 		});
