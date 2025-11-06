@@ -2,7 +2,7 @@ import { Controller, Get, Post, Body, Param, Request } from '@nestjs/common';
 import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
 import { ApiOperation } from '@nestjs/swagger';
-import { UserRequest } from 'src/shared/types/user_request';
+import { UserRequest } from '../shared/types/user_request';
 
 @Controller('house')
 export class HouseController {

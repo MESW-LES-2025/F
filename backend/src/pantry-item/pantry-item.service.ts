@@ -5,8 +5,8 @@ import {
 } from '@nestjs/common';
 import { CreatePantryItemDto } from './dto/create-pantry-item.dto';
 import { UpdatePantryItemDto } from './dto/update-pantry-item.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
-import { verifyIsString } from 'src/shared/function-verify-string';
+import { PrismaService } from '../prisma/prisma.service';
+import { verifyIsString } from '../shared/function-verify-string';
 
 @Injectable()
 export class PantryItemService {
