@@ -1,16 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import {
-	NotFoundException,
-	ForbiddenException,
-} from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
 import { CreateTaskDto, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 describe('TasksService', () => {
 	let service: TasksService;
-	let prismaService: PrismaService;
 
 	const mockPrismaService = {
 		task: {
@@ -23,13 +19,6 @@ describe('TasksService', () => {
 		user: {
 			findUnique: jest.fn(),
 		},
-	};
-
-	const mockUser = {
-		id: 'user-123',
-		name: 'John Doe',
-		email: 'john@example.com',
-		username: 'johndoe',
 	};
 
 	const mockAssignee = {
@@ -75,7 +64,6 @@ describe('TasksService', () => {
 		}).compile();
 
 		service = module.get<TasksService>(TasksService);
-		prismaService = module.get<PrismaService>(PrismaService);
 
 		jest.clearAllMocks();
 	});
@@ -158,8 +146,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						status: 'todo',
-					}),
-				}),
+					}) as Record<string, unknown>,
+				}) as Record<string, unknown>,
 			);
 		});
 
@@ -173,8 +161,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: new Date('2025-12-31T23:59:59.000Z'),
-					}),
-				}),
+					}) as Record<string, unknown>,
+				}) as Record<string, unknown>,
 			);
 		});
 	});
@@ -336,9 +324,7 @@ describe('TasksService', () => {
 			).rejects.toThrow(ForbiddenException);
 			await expect(
 				service.update('task-123', updateTaskDto, 'unauthorized-user'),
-			).rejects.toThrow(
-				'You do not have permission to update this task',
-			);
+			).rejects.toThrow('You do not have permission to update this task');
 
 			expect(mockPrismaService.task.update).not.toHaveBeenCalled();
 		});
@@ -399,8 +385,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: new Date('2026-06-15T12:00:00.000Z'),
-					}),
-				}),
+					}) as Record<string, unknown>,
+				}) as Record<string, unknown>,
 			);
 		});
 
@@ -418,8 +404,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: undefined,
-					}),
-				}),
+					}) as Record<string, unknown>,
+				}) as Record<string, unknown>,
 			);
 		});
 	});
@@ -445,9 +431,7 @@ describe('TasksService', () => {
 			).rejects.toThrow(ForbiddenException);
 			await expect(
 				service.remove('task-123', 'user-456'),
-			).rejects.toThrow(
-				'You do not have permission to delete this task',
-			);
+			).rejects.toThrow('You do not have permission to delete this task');
 
 			expect(mockPrismaService.task.delete).not.toHaveBeenCalled();
 		});
