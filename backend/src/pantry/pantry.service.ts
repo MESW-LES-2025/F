@@ -67,21 +67,24 @@ export class PantryService {
 		updatePantryDto: UpdatePantryDto;
 		userId: string;
 	}) {
-			let pantry = await this.prisma.pantry.findFirst({
-				where: { id, houseId },
-				select: {
-					id: true,
-					items: true,
-				},
-			});
+		let pantry = await this.prisma.pantry.findFirst({
+			where: { id, houseId },
+			select: {
+				id: true,
+				items: true,
+			},
+		});
 		if (!pantry) {
 			// If a pantry record doesn't exist for this house, try to create one (helps dev setups)
 			const created = await this.create(houseId);
 			if (created) {
 				// re-fetch the pantry
-				const newPantry = await this.prisma.pantry.findFirst({ where: { id, houseId }, select: { id: true, items: true } });
+				const newPantry = await this.prisma.pantry.findFirst({
+					where: { id, houseId },
+					select: { id: true, items: true },
+				});
 				if (newPantry) {
-					pantry = newPantry as any;
+					pantry = newPantry;
 				}
 			}
 
@@ -107,73 +110,92 @@ export class PantryService {
 
 		if (itemsToUpdate) {
 			await Promise.all(
-				itemsToUpdate.map(
-					async (i) => {
-						// If quantity is zero or less, remove the pantry association (delete PantryToItem)
-						if (typeof i.quantity === 'number' && i.quantity <= 0) {
-							try {
-								return await this.prisma.pantryToItem.delete({
-									where: {
-										pantryId_itemId: {
-											pantryId: pantry.id,
-											itemId: i.itemId,
-										},
+				itemsToUpdate.map(async (i) => {
+					// If quantity is zero or less, remove the pantry association (delete PantryToItem)
+					if (typeof i.quantity === 'number' && i.quantity <= 0) {
+						try {
+							return await this.prisma.pantryToItem.delete({
+								where: {
+									pantryId_itemId: {
+										pantryId: pantry.id,
+										itemId: i.itemId,
 									},
-								})
-							} catch (err) {
-								console.error('[pantry.update] failed deleting PantryToItem for', i, 'error:', err);
-								throw err;
-							}
-						}
-
-						const updateData: any = {
-							quantity: i.quantity,
-							modifiedByUser: userId,
-						}
-						if (i.expiryDate) {
-							updateData.expiryDate = new Date(i.expiryDate as any)
-						}
-						return await this.prisma.pantryToItem.update({
-							where: {
-								pantryId_itemId: {
-									pantryId: pantry.id,
-									itemId: i.itemId,
 								},
+							});
+						} catch (err) {
+							console.error(
+								'[pantry.update] failed deleting PantryToItem for',
+								i,
+								'error:',
+								err,
+							);
+							throw err;
+						}
+					}
+
+					const updateData: {
+						quantity: number;
+						modifiedByUser: string;
+						expiryDate?: Date;
+					} = {
+						quantity: i.quantity,
+						modifiedByUser: userId,
+					};
+					if (i.expiryDate) {
+						updateData.expiryDate = new Date(i.expiryDate);
+					}
+					return await this.prisma.pantryToItem.update({
+						where: {
+							pantryId_itemId: {
+								pantryId: pantry.id,
+								itemId: i.itemId,
 							},
-							data: updateData,
-						})
-					},
-				),
+						},
+						data: updateData,
+					});
+				}),
 			);
 		}
 
 		const itemsToCreate = updatePantryDto.items
 			.filter((i) => !existingItemIds.includes(i.itemId))
 			// ignore items with non-positive quantity
-			.filter((i) => typeof i.quantity === 'number' ? i.quantity > 0 : true)
+			.filter((i) =>
+				typeof i.quantity === 'number' ? i.quantity > 0 : true,
+			)
 			.map((i) => {
-				const base: any = {
+				const base: {
+					pantryId: string;
+					itemId: string;
+					quantity: number;
+					modifiedByUser: string;
+					expiryDate?: Date;
+				} = {
 					pantryId: pantry.id,
 					itemId: i.itemId,
 					quantity: i.quantity,
 					modifiedByUser: userId,
-				}
+				};
 				if (i.expiryDate) {
-					base.expiryDate = new Date(i.expiryDate as any)
+					base.expiryDate = new Date(i.expiryDate);
 				}
-				return base
-			})
-
+				return base;
+			});
 
 		if (itemsToCreate.length > 0) {
 			// Create items one-by-one to surface any DB errors and avoid silent skips
-			const createdRows = [] as any[];
 			for (const entry of itemsToCreate) {
 				try {
-					const created = await this.prisma.pantryToItem.create({ data: entry });
-					createdRows.push(created);
+					await this.prisma.pantryToItem.create({
+						data: entry,
+					});
 				} catch (err) {
-					console.error('[pantry.update] failed creating PantryToItem for', entry, 'error:', err);
+					console.error(
+						'[pantry.update] failed creating PantryToItem for',
+						entry,
+						'error:',
+						err,
+					);
 					throw err;
 				}
 			}

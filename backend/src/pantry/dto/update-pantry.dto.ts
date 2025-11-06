@@ -18,6 +18,10 @@ export class UpdateItemDto {
 	@ApiProperty({ example: 1, description: 'pantry item quantity' })
 	quantity: number;
 
-	@ApiProperty({ example: '2025-12-31', description: 'optional expiry date for this pantry entry', required: false })
+	@ApiProperty({
+		example: '2025-12-31',
+		description: 'optional expiry date for this pantry entry',
+		required: false,
+	})
 	expiryDate?: string;
 }

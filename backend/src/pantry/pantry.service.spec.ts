@@ -11,10 +11,13 @@ describe('PantryService', () => {
 			create: jest.fn(),
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
+			findFirst: jest.fn(),
 		},
 		pantryToItem: {
 			findMany: jest.fn(),
 			update: jest.fn(),
+			create: jest.fn(),
+			delete: jest.fn(),
 			createMany: jest.fn(),
 		},
 	};
@@ -75,12 +78,12 @@ describe('PantryService', () => {
 	describe('findOne', () => {
 		it('should return a specific pantry', async () => {
 			const mockPantry = { id: 'p1' };
-			mockPrisma.pantry.findUnique.mockResolvedValue(mockPantry);
+			mockPrisma.pantry.findFirst.mockResolvedValue(mockPantry);
 
 			const result = await service.findOne('p1', 'h1');
 
 			expect(result).toEqual(mockPantry);
-			expect(mockPrisma.pantry.findUnique).toHaveBeenCalledWith({
+			expect(mockPrisma.pantry.findFirst).toHaveBeenCalledWith({
 				where: { id: 'p1', houseId: 'h1' },
 				select: {
 					id: true,
@@ -89,12 +92,18 @@ describe('PantryService', () => {
 						select: {
 							quantity: true,
 							modifiedByUser: true,
+							expiryDate: true,
 							item: {
 								select: {
 									id: true,
+									name: true,
 									measurementUnit: true,
 									imageLink: true,
+									category: true,
 								},
+							},
+							user: {
+								select: { id: true, name: true },
 							},
 						},
 					},
@@ -117,7 +126,7 @@ describe('PantryService', () => {
 		};
 
 		it('should throw if pantry does not exist', async () => {
-			mockPrisma.pantry.findUnique.mockResolvedValue(null);
+			mockPrisma.pantry.findFirst.mockResolvedValue(null);
 
 			await expect(service.update(params)).rejects.toThrow(
 				NotFoundException,
@@ -125,7 +134,7 @@ describe('PantryService', () => {
 		});
 
 		it('should throw if updatePantryDto has no items', async () => {
-			mockPrisma.pantry.findUnique.mockResolvedValue({
+			mockPrisma.pantry.findFirst.mockResolvedValue({
 				id: 'p1',
 				items: [],
 			});
@@ -139,7 +148,7 @@ describe('PantryService', () => {
 		});
 
 		it('should update existing items and create new ones', async () => {
-			mockPrisma.pantry.findUnique.mockResolvedValue({
+			mockPrisma.pantry.findFirst.mockResolvedValue({
 				id: 'p1',
 				items: [],
 			});
@@ -149,24 +158,24 @@ describe('PantryService', () => {
 			]);
 
 			mockPrisma.pantryToItem.update.mockResolvedValue({});
-			mockPrisma.pantryToItem.createMany.mockResolvedValue({});
+			mockPrisma.pantryToItem.create.mockResolvedValue({});
 
 			const mockReturn = { id: 'p1', house: {} };
-			mockPrisma.pantry.findUnique.mockResolvedValueOnce({
+			mockPrisma.pantry.findFirst.mockResolvedValueOnce({
 				id: 'p1',
 				items: [],
 			});
-			mockPrisma.pantry.findUnique.mockResolvedValueOnce(mockReturn);
+			mockPrisma.pantry.findFirst.mockResolvedValueOnce(mockReturn);
 
 			const result = await service.update(params);
 
 			expect(mockPrisma.pantryToItem.update).toHaveBeenCalledTimes(1);
-			expect(mockPrisma.pantryToItem.createMany).toHaveBeenCalledTimes(1);
+			expect(mockPrisma.pantryToItem.create).toHaveBeenCalledTimes(1);
 			expect(result).toEqual(mockReturn);
 		});
 
 		it('should only update existing items when no new ones are provided', async () => {
-			mockPrisma.pantry.findUnique.mockResolvedValue({
+			mockPrisma.pantry.findFirst.mockResolvedValue({
 				id: 'pantry123',
 				items: [],
 			});
@@ -205,7 +214,7 @@ describe('PantryService', () => {
 				data: { quantity: 10, modifiedByUser: 'user123' },
 			});
 
-			expect(mockPrisma.pantryToItem.createMany).not.toHaveBeenCalled();
+			expect(mockPrisma.pantryToItem.create).not.toHaveBeenCalled();
 		});
 	});
 });

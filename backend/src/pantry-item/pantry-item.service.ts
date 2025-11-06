@@ -61,8 +61,8 @@ export class PantryItemService {
 		}
 
 		// Attach the creating user and house to satisfy DB constraints
-		if (_userId) data.createdByUser = _userId
-		if (_houseId) data.houseId = _houseId
+		if (_userId) data.createdByUser = _userId;
+		if (_houseId) data.houseId = _houseId;
 
 		const item = await this.prisma.pantryItem.create({
 			data: data as unknown as Prisma.PantryItemCreateInput,
@@ -78,7 +78,7 @@ export class PantryItemService {
 	async findAllUser(userId: string) {
 		// Return pantry items created by the given user (new schema adds createdByUser)
 		return await this.prisma.pantryItem.findMany({
-			where: { createdByUser: userId } as any,
+			where: { createdByUser: userId },
 		});
 	}
 
@@ -91,8 +91,8 @@ export class PantryItemService {
 
 	async findOne(id: string, _userId?: string) {
 		if (_userId) {
-			return await this.prisma.pantryItem.findUnique({
-				where: { id, createdByUser: _userId } as any,
+			return await this.prisma.pantryItem.findFirst({
+				where: { id, createdByUser: _userId },
 			});
 		}
 		return await this.prisma.pantryItem.findUnique({ where: { id } });
@@ -103,7 +103,9 @@ export class PantryItemService {
 		updatePantryItemDto: UpdatePantryItemDto,
 		_userId: string,
 	) {
-		const item = await this.prisma.pantryItem.findUnique({ where: { id, createdByUser: _userId } as any });
+		const item = await this.prisma.pantryItem.findFirst({
+			where: { id, createdByUser: _userId },
+		});
 
 		if (!item) {
 			throw new NotFoundException('The item was not found');
@@ -118,7 +120,7 @@ export class PantryItemService {
 			data.measurementUnit = updatePantryItemDto.measurementUnit;
 
 		const updated = await this.prisma.pantryItem.update({
-			where: { id, createdByUser: _userId } as any,
+			where: { id },
 			data: data as unknown as Prisma.PantryItemUpdateInput,
 		});
 
@@ -126,12 +128,16 @@ export class PantryItemService {
 	}
 
 	async remove(id: string, _userId: string) {
-		const item = await this.prisma.pantryItem.findUnique({ where: { id, createdByUser: _userId } as any });
+		const item = await this.prisma.pantryItem.findFirst({
+			where: { id, createdByUser: _userId },
+		});
 
 		if (!item) {
 			throw new NotFoundException('The item was not found');
 		}
 
-		return await this.prisma.pantryItem.delete({ where: { id, createdByUser: _userId } as any });
+		return await this.prisma.pantryItem.delete({
+			where: { id },
+		});
 	}
 }

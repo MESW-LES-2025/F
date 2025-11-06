@@ -16,6 +16,7 @@ describe('PantryItemService', () => {
 			create: jest.fn(),
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
+			findFirst: jest.fn(),
 			update: jest.fn(),
 			delete: jest.fn(),
 		},
@@ -68,6 +69,8 @@ describe('PantryItemService', () => {
 					name: 'Rice',
 					imageLink: 'img.png',
 					measurementUnit: 'kg',
+					createdByUser: 'user123',
+					houseId: 'house999',
 				},
 			});
 			expect(result).toEqual(mockItem);
@@ -122,7 +125,7 @@ describe('PantryItemService', () => {
 			const result = await service.findAllUser('user123');
 
 			expect(mockPrismaService.pantryItem.findMany).toHaveBeenCalledWith({
-				where: { pantries: { some: { modifiedByUser: 'user123' } } },
+				where: { createdByUser: 'user123' },
 			});
 			expect(result).toEqual([mockItem]);
 		});
@@ -160,7 +163,7 @@ describe('PantryItemService', () => {
 
 	describe('update', () => {
 		it('should update a pantry item', async () => {
-			mockPrismaService.pantryItem.findUnique.mockResolvedValue(mockItem);
+			mockPrismaService.pantryItem.findFirst.mockResolvedValue(mockItem);
 			mockPrismaService.pantryItem.update.mockResolvedValue({
 				...mockItem,
 				name: 'Updated',
@@ -188,7 +191,7 @@ describe('PantryItemService', () => {
 		});
 
 		it('should throw NotFoundException if the item does not exist', async () => {
-			mockPrismaService.pantryItem.findUnique.mockResolvedValue(null);
+			mockPrismaService.pantryItem.findFirst.mockResolvedValue(null);
 
 			await expect(
 				service.update(
@@ -202,7 +205,7 @@ describe('PantryItemService', () => {
 
 	describe('remove', () => {
 		it('should delete a pantry item', async () => {
-			mockPrismaService.pantryItem.findUnique.mockResolvedValue(mockItem);
+			mockPrismaService.pantryItem.findFirst.mockResolvedValue(mockItem);
 			mockPrismaService.pantryItem.delete.mockResolvedValue(mockItem);
 
 			const result = await service.remove('item1', 'user123');
@@ -214,7 +217,7 @@ describe('PantryItemService', () => {
 		});
 
 		it('should throw NotFoundException if the item does not exist', async () => {
-			mockPrismaService.pantryItem.findUnique.mockResolvedValue(null);
+			mockPrismaService.pantryItem.findFirst.mockResolvedValue(null);
 
 			await expect(service.remove('bad-id', 'user123')).rejects.toThrow(
 				NotFoundException,
