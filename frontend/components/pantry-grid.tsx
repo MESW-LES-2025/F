@@ -45,7 +45,10 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
   const [formCategory, setFormCategory] = useState<string>("OTHER")
   const [formQuantity, setFormQuantity] = useState<number | string>(0)
   const [formExpiry, setFormExpiry] = useState<string>("")
-  const [confirmRemoving, setConfirmRemoving] = useState(false)
+  
+  const [zeroConfirmOpen, setZeroConfirmOpen] = useState(false)
+  const [zeroConfirmAction, setZeroConfirmAction] = useState<(() => Promise<void>) | null>(null)
+  const [zeroConfirmMessage, setZeroConfirmMessage] = useState<string>('')
 
   useEffect(() => {
     setLocalItems(items ?? [])
@@ -119,6 +122,24 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
                         // step logic: >100 -> 10, >=20 -> 5, <20 -> 1
                         const step = originalQty > 100 ? 10 : originalQty >= 20 ? 5 : 1
                         const newQty = Math.max(0, originalQty - step)
+                        if (newQty === 0) {
+                          // confirm removal instead of immediately setting to zero
+                          setZeroConfirmMessage(`Do you want to remove "${item.name}" from the pantry?`)
+                          setZeroConfirmAction(() => async () => {
+                            try {
+                              await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: item.id, quantity: 0 }] }, { requiresAuth: true })
+                              toast({ title: 'Removed', description: 'Item removed from pantry.' })
+                              setLocalItems((prev) => prev.filter((it) => it.id !== item.id))
+                            } catch (err) {
+                              toast({ title: 'Remove failed', description: String(err) })
+                              // keep original quantity
+                              setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: originalQty, lowStock: Number(originalQty) <= 1 } : it))
+                            }
+                          })
+                          setZeroConfirmOpen(true)
+                          return
+                        }
+
                         // optimistic update (also recalc lowStock)
                         setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: newQty, lowStock: Number(newQty) <= 1 } : it))
                         try {
@@ -152,17 +173,39 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
                               return
                             }
                             const originalQty = item.quantity
-                            setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: parsed, lowStock: Number(parsed) <= 1 } : it))
-                            setEditingId(null)
-                            try {
-                              if (!pantryHouseId || !pantryId) throw new Error('pantry id missing')
-                              await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: item.id, quantity: parsed }] }, { requiresAuth: true })
-                              toast({ title: 'Quantity updated', description: 'Item quantity saved.' })
-                            } catch (err) {
-                              // revert
-                              setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: originalQty, lowStock: Number(originalQty) <= 1 } : it))
-                              toast({ title: 'Update failed', description: String(err) })
-                            }
+                              // If parsed is zero, ask for confirmation instead of immediately saving
+                              if (parsed === 0) {
+                                setZeroConfirmMessage(`Do you want to remove "${item.name}" from the pantry?`)
+                                setZeroConfirmAction(() => async () => {
+                                  try {
+                                    if (!pantryHouseId || !pantryId) throw new Error('pantry id missing')
+                                    await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: item.id, quantity: 0 }] }, { requiresAuth: true })
+                                    toast({ title: 'Removed', description: 'Item removed from pantry.' })
+                                    setLocalItems((prev) => prev.filter((it) => it.id !== item.id))
+                                  } catch (err) {
+                                    toast({ title: 'Remove failed', description: String(err) })
+                                    // revert
+                                    setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: originalQty, lowStock: Number(originalQty) <= 1 } : it))
+                                  } finally {
+                                    setEditingId(null)
+                                    setEditingValue("")
+                                  }
+                                })
+                                setZeroConfirmOpen(true)
+                                return
+                              }
+
+                              setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: parsed, lowStock: Number(parsed) <= 1 } : it))
+                              setEditingId(null)
+                              try {
+                                if (!pantryHouseId || !pantryId) throw new Error('pantry id missing')
+                                await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: item.id, quantity: parsed }] }, { requiresAuth: true })
+                                toast({ title: 'Quantity updated', description: 'Item quantity saved.' })
+                              } catch (err) {
+                                // revert
+                                setLocalItems((prev) => prev.map((it) => it.id === item.id ? { ...it, quantity: originalQty, lowStock: Number(originalQty) <= 1 } : it))
+                                toast({ title: 'Update failed', description: String(err) })
+                              }
                           }}>Save</UiButton>
                           <UiButton variant="ghost" size="sm" onClick={() => { setEditingId(null); setEditingValue("") }}>Cancel</UiButton>
                         </div>
@@ -254,7 +297,7 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
       )}
 
       {/* Edit / remove dialog */}
-  <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setDialogItem(null); setConfirmRemoving(false) } else setDialogOpen(true) }}>
+  <Dialog open={dialogOpen} onOpenChange={(open) => { if (!open) { setDialogOpen(false); setDialogItem(null) } else setDialogOpen(true) }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit pantry item</DialogTitle>
@@ -365,6 +408,31 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
                   try {
                     if (pantryHouseId && pantryId) {
                       const qty = Number(formQuantity)
+                      // if qty is zero, ask for confirmation before removing
+                      if (qty === 0) {
+                        setZeroConfirmMessage(`Do you want to remove "${dialogItem.name}" from the pantry?`)
+                        setZeroConfirmAction(() => async () => {
+                          try {
+                            // ensure catalog update attempted
+                            try {
+                              await apiPatch(`/pantry-item/${dialogItem.id}`, { name: formName, measurementUnit: formUnit, category: formCategory }, { requiresAuth: true })
+                            } catch (e) {
+                              // ignore catalog update errors here
+                            }
+                            await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: dialogItem.id, quantity: 0, expiryDate: formExpiry || undefined }] }, { requiresAuth: true })
+                            toast({ title: 'Removed', description: 'Item removed from pantry.' })
+                            setLocalItems((prev) => prev.filter((it) => it.id !== dialogItem.id))
+                            // close edit dialog as the item is removed
+                            setDialogOpen(false)
+                            setDialogItem(null)
+                          } catch (err) {
+                            toast({ title: 'Remove failed', description: String(err) })
+                          }
+                        })
+                        setZeroConfirmOpen(true)
+                        return
+                      }
+
                       await apiPatch(`/pantry/${pantryHouseId}/${pantryId}`, { items: [{ itemId: dialogItem.id, quantity: qty, expiryDate: formExpiry || undefined }] }, { requiresAuth: true })
                       toast({ title: 'Saved', description: 'Item updated in pantry.' })
                       // refresh local item (recalc lowStock)
@@ -377,6 +445,29 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
                   setDialogItem(null)
                 }}>Save</UiButton>
               </div>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Confirm zero-quantity removal dialog */}
+      <Dialog open={zeroConfirmOpen} onOpenChange={(open) => { if (!open) { setZeroConfirmOpen(false); setZeroConfirmAction(null) } else setZeroConfirmOpen(true) }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Remove item</DialogTitle>
+            <DialogDescription>{zeroConfirmMessage || 'Do you want to remove this item from the pantry?'}</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <div className="flex gap-2 w-full justify-end">
+              <UiButton variant="ghost" onClick={() => { setZeroConfirmOpen(false); setZeroConfirmAction(null) }}>Cancel</UiButton>
+              <UiButton variant="destructive" onClick={async () => {
+                if (zeroConfirmAction) {
+                  const action = zeroConfirmAction
+                  setZeroConfirmAction(null)
+                  await action()
+                }
+                setZeroConfirmOpen(false)
+              }}>Remove</UiButton>
             </div>
           </DialogFooter>
         </DialogContent>
