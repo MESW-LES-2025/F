@@ -31,9 +31,9 @@ export default function PantryAddItem() {
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState<number | undefined>(undefined)
-  const [unit, setUnit] = useState("unit")
+  const [unit, setUnit] = useState("UNITS")
   const [expiry, setExpiry] = useState("")
-  const [category, setCategory] = useState("pantry")
+  const [category, setCategory] = useState("OTHER")
 
   const [houses, setHouses] = useState<Array<{ id: string; name?: string }>>([])
   const [houseId, setHouseId] = useState("")
@@ -116,17 +116,52 @@ export default function PantryAddItem() {
         name: name.trim(),
         measurementUnit: String(unit).trim(),
         imageLink: 'https://via.placeholder.com/150',
+        category: String(category).
+          trim?.() ?? category,
       }
 
-      const created: any = await apiPost('/pantry-item', body)
+      // Create pantry item under the selected house (backend expects POST /pantry-item/:houseId)
+      const created: any = await apiPost(`/pantry-item/${resolvedHouseId}`, body, { requiresAuth: true })
 
-      const resolvedPantryId = pantryMap[resolvedHouseId]
+      // DEBUG: log created id and pantry mapping to help trace missing PantryToItem rows
+      console.debug('[pantry-add] created item', created)
+      console.debug('[pantry-add] pantryMap (houseId -> pantryId)', pantryMap)
+
+      let resolvedPantryId = pantryMap[resolvedHouseId]
+      console.debug('[pantry-add] resolvedHouseId', resolvedHouseId, 'resolvedPantryId', resolvedPantryId)
+
+      // If we don't have a pantry mapping (possible in dev after migrations), re-fetch pantries once and retry
+      if (!resolvedPantryId) {
+        try {
+          const refreshed: any = await apiGet('/pantry')
+          if (Array.isArray(refreshed)) {
+            const map: Record<string, string> = {}
+            refreshed.forEach((p: any) => {
+              if (p.houseId && p.id) map[p.houseId] = p.id
+            })
+            setPantryMap(map)
+            resolvedPantryId = map[resolvedHouseId]
+            console.debug('[pantry-add] refreshed pantryMap', map)
+          }
+        } catch (err) {
+          console.error('Failed to refresh pantries', err)
+        }
+      }
 
       if (!resolvedPantryId) {
+        console.warn('[pantry-add] Pantry not found for house', resolvedHouseId)
         toast({ title: 'Pantry not found', description: 'Could not find a pantry for the selected house.' })
       } else {
         try {
-          await apiPatch(`/pantry/${resolvedHouseId}/${resolvedPantryId}`, { items: [{ itemId: created.id, quantity: Number(quantity) }] }, { requiresAuth: true })
+          const patchBodyItem: any = { itemId: created.id, quantity: Number(quantity) }
+          if (expiry) patchBodyItem.expiryDate = expiry
+
+          const patchResp: any = await apiPatch(
+              `/pantry/${resolvedHouseId}/${resolvedPantryId}`,
+              { items: [patchBodyItem] },
+              { requiresAuth: true },
+            )
+          console.debug('[pantry-add] patch response', patchResp)
           toast({ title: 'Added to pantry', description: 'The item was added to the pantry with the given quantity.' })
         } catch (err: any) {
           console.error('Failed to add to pantry', err)
@@ -134,10 +169,10 @@ export default function PantryAddItem() {
         }
       }
 
-      setOpen(false)
-      setName("")
-      setUnit('unit')
-      setExpiry("")
+  setOpen(false)
+  setName("")
+  setUnit('UNITS')
+  setExpiry("")
       setQuantity(undefined)
       setHouseId("")
 
@@ -205,14 +240,12 @@ export default function PantryAddItem() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="L">L</SelectItem>
-                  <SelectItem value="kg">Kg</SelectItem>
-                  <SelectItem value="ml">Ml</SelectItem>
-                  <SelectItem value="g">g</SelectItem>
-                  <SelectItem value="unit">unit</SelectItem>
-                  <SelectItem value="loaf">loaf</SelectItem>
-                  <SelectItem value="bottle">bottle</SelectItem>
-                  <SelectItem value="box">box</SelectItem>
-                  <SelectItem value="other">other</SelectItem>
+                  <SelectItem value="KG">Kg</SelectItem>
+                  <SelectItem value="ML">Ml</SelectItem>
+                  <SelectItem value="G">g</SelectItem>
+                  <SelectItem value="UNITS">unit</SelectItem>
+                  <SelectItem value="LOAF">loaf</SelectItem>
+                  <SelectItem value="JAR">jar / bottle</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -237,14 +270,15 @@ export default function PantryAddItem() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="dairy">Dairy</SelectItem>
-                    <SelectItem value="vegetables">Vegetables</SelectItem>
-                    <SelectItem value="pantry">Pantry</SelectItem>
-                    <SelectItem value="beverages">Beverages</SelectItem>
-                    <SelectItem value="meat">Meat</SelectItem>
-                    <SelectItem value="household">Household</SelectItem>
-                    <SelectItem value="frozen">Frozen</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="OTHER">Pantry / Other</SelectItem>
+                    <SelectItem value="GRAINS">Grains</SelectItem>
+                    <SelectItem value="DAIRY">Dairy</SelectItem>
+                    <SelectItem value="VEGETABLES">Vegetables</SelectItem>
+                    <SelectItem value="FRUITS">Fruits</SelectItem>
+                    <SelectItem value="MEAT">Meat</SelectItem>
+                    <SelectItem value="FROZEN">Frozen</SelectItem>
+                    <SelectItem value="CONDIMENTS">Household / Condiments</SelectItem>
+                    <SelectItem value="BEVERAGES">Beverages</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

@@ -1,7 +1,6 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card } from "@/components/ui/card"
-import { pantryItems as fallbackItems } from "@/lib/data"
 import type { PantryItem } from "@/lib/types"
 import { format } from "date-fns"
 import { AlertCircle } from "lucide-react"
@@ -11,7 +10,7 @@ interface PantryGridProps {
 }
 
 export function PantryGrid({ items }: PantryGridProps) {
-  const pantryItems = items ?? fallbackItems
+  const pantryItems = items ?? []
 
   return (
     <div>
@@ -24,9 +23,21 @@ export function PantryGrid({ items }: PantryGridProps) {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
           {pantryItems.map((item) => {
-          const isExpiringSoon =
-            item.expiryDate &&
-            Math.floor((item.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) <= 7
+          const now = new Date()
+          const daysUntilExpiry = item.expiryDate
+            ? Math.ceil((item.expiryDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24))
+            : undefined
+
+          // expiry state: expired, urgent (<=3d), soon (<=7d), later
+          const expiryState = daysUntilExpiry === undefined
+            ? 'none'
+            : daysUntilExpiry < 0
+            ? 'expired'
+            : daysUntilExpiry <= 3
+            ? 'urgent'
+            : daysUntilExpiry <= 7
+            ? 'soon'
+            : 'later'
 
           return (
             <Card key={item.id} className="p-4 bg-white border border-gray-200 hover:shadow-md transition-shadow">
@@ -51,8 +62,16 @@ export function PantryGrid({ items }: PantryGridProps) {
                 {item.expiryDate && (
                   <div className="flex items-center justify-between text-sm">
                     <span className="text-gray-600">Expires:</span>
-                    <span className={`font-medium ${isExpiringSoon ? "text-red-600" : "text-gray-900"}`}>
-                      {format(item.expiryDate, "MMM d, yyyy")}
+                    <span className={`font-medium ${expiryState === 'expired' || expiryState === 'urgent' ? 'text-red-600' : expiryState === 'soon' ? 'text-orange-600' : 'text-gray-900'}`}>
+                      {expiryState === 'expired' ? (
+                        `Expired - ${Math.abs(daysUntilExpiry ?? 0)} day${Math.abs(daysUntilExpiry ?? 0) !== 1 ? 's' : ''} ago`
+                      ) : expiryState === 'urgent' ? (
+                        `Expires in ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} - use soon`
+                      ) : expiryState === 'soon' ? (
+                        `Nearly due - ${daysUntilExpiry} day${daysUntilExpiry !== 1 ? 's' : ''} left`
+                      ) : (
+                        `Expires on ${format(item.expiryDate, "MMM d, yyyy")}`
+                      )}
                     </span>
                   </div>
                 )}
@@ -60,7 +79,9 @@ export function PantryGrid({ items }: PantryGridProps) {
                 {item.lowStock && (
                   <div className="flex items-center gap-1 text-xs text-orange-600 bg-orange-50 px-2 py-1 rounded">
                     <AlertCircle className="w-3 h-3" />
-                    <span>Low stock - restock soon</span>
+                    <span>
+                      {item.quantity <= 1 ? `Only ${item.quantity} left — restock soon` : `Low stock — ${item.quantity} left`}
+                    </span>
                   </div>
                 )}
               </div>
