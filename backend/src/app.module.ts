@@ -10,6 +10,12 @@ import { TasksModule } from './tasks/tasks.module';
 @Module({
 	controllers: [AppController],
 	providers: [AppService],
-	imports: [AuthModule, HouseModule, PantryModule, PantryItemModule, TasksModule],
+	imports: [
+		AuthModule,
+		HouseModule,
+		PantryModule,
+		PantryItemModule,
+		TasksModule,
+	],
 })
 export class AppModule {}
