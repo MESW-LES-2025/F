@@ -18,6 +18,8 @@ model User {
   deletedAt        DateTime?
   houses           HouseToUser[]
   pantryItemsAdded PantryToItem[]
+  // Pantry items created by this user
+  pantryItems      PantryItem[]
   refreshTokens    RefreshToken[]
   assignedTasks Task[]         @relation("AssignedTasks")
   createdTasks  Task[]         @relation("CreatedTasks")
@@ -45,6 +47,8 @@ model House {
   updatedAt      DateTime      @updatedAt
   users          HouseToUser[]
   pantry         Pantry?
+  // Pantry items associated with this house (via PantryItem.houseId)
+  pantryItems    PantryItem[]
 }
 
 model HouseToUser {
@@ -76,6 +80,16 @@ model PantryItem {
   measurementUnit String?
   category        PantryCategory?
   pantries        PantryToItem[]
+
+  // New fields added by migration: link item to the creating user and house
+  createdByUser String @db.Uuid
+  houseId       String @db.Uuid
+
+  createdBy User  @relation(fields: [createdByUser], references: [id], onDelete: Cascade)
+  house     House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUser])
+  @@index([houseId])
 }
 
 model PantryToItem {

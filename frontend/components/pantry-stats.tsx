@@ -1,17 +1,23 @@
 import { Card } from "@/components/ui/card"
-import { pantryItems } from "@/lib/data"
+import type { PantryItem } from "@/lib/types"
 import { Package, AlertTriangle, Calendar } from "lucide-react"
 
-export function PantryStats() {
-  const totalItems = pantryItems.length
-  const lowStockItems = pantryItems.filter((item) => item.lowStock).length
-  const expiringItems = pantryItems.filter((item) => {
+interface PantryStatsProps {
+  items?: PantryItem[]
+}
+
+export function PantryStats({ items }: PantryStatsProps) {
+  const list = items ?? []
+
+  const totalItems = list.length
+  const lowStockItems = list.filter((item) => item.lowStock).length
+  const expiringItems = list.filter((item) => {
     if (!item.expiryDate) return false
     const daysUntilExpiry = Math.floor((item.expiryDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
     return daysUntilExpiry <= 7 && daysUntilExpiry >= 0
   }).length
 
-  const categories = [...new Set(pantryItems.map((item) => item.category))].length
+  const categories = [...new Set(list.map((item) => item.category))].length
 
   return (
     <div className="grid grid-cols-4 gap-4">
