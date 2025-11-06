@@ -1,9 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -21,77 +15,104 @@ model User {
   name             String?        @db.VarChar(100)
   createdAt        DateTime       @default(now())
   updatedAt        DateTime       @updatedAt
-  houses           HouseToUser[]  
+  houses           HouseToUser[]
+  pantryItemsAdded PantryToItem[]
+  // Pantry items created by this user
+  pantryItems      PantryItem[]
   refreshTokens    RefreshToken[]
-  pantryItemsAdded PantryToItem[] 
 }
 
 model RefreshToken {
-  id        String   @id @default(uuid()) @db.Uuid
-  token     String   @unique @db.VarChar(500)
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id        String    @id @default(uuid()) @db.Uuid
+  token     String    @unique @db.VarChar(500)
+  userId    String    @db.Uuid
   expiresAt DateTime
-  isRevoked Boolean  @default(false)
-  createdAt DateTime @default(now())
+  isRevoked Boolean   @default(false)
+  createdAt DateTime  @default(now())
   revokedAt DateTime?
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([token])
 }
 
 model House {
-  id             String   @id @default(uuid()) @db.Uuid
+  id             String        @id @default(uuid()) @db.Uuid
   name           String
   invitationCode String
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
   users          HouseToUser[]
   pantry         Pantry?
+  // Pantry items associated with this house (via PantryItem.houseId)
+  pantryItems    PantryItem[]
 }
 
 model HouseToUser {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String   @db.Uuid
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  houseId   String   @db.Uuid
-  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
-  role      String? 
-  joinedAt  DateTime @default(now())
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @db.Uuid
+  houseId  String   @db.Uuid
+  role     String?
+  joinedAt DateTime @default(now())
+  house    House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([userId, houseId]) 
+  @@unique([userId, houseId])
 }
 
 model Pantry {
-  id        String   @id @default(uuid()) @db.Uuid
-  houseId   String   @unique @db.Uuid
-  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id        String         @id @default(uuid()) @db.Uuid
+  houseId   String         @unique @db.Uuid
+  createdAt DateTime       @default(now())
+  house     House          @relation(fields: [houseId], references: [id], onDelete: Cascade)
   items     PantryToItem[]
 
   @@index([houseId])
 }
 
 model PantryItem {
-  id                String   @id @default(uuid()) @db.Uuid
-  name              String
-  imageLink         String
-  measurementUnit   String?
-  pantries          PantryToItem[]
+  id              String          @id @default(uuid()) @db.Uuid
+  name            String
+  imageLink       String?
+  measurementUnit String?
+  category        PantryCategory?
+  pantries        PantryToItem[]
+
+  // New fields added by migration: link item to the creating user and house
+  createdByUser String @db.Uuid
+  houseId       String @db.Uuid
+
+  createdBy User  @relation(fields: [createdByUser], references: [id], onDelete: Cascade)
+  house     House @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([createdByUser])
+  @@index([houseId])
 }
 
 model PantryToItem {
-  id                String      @id @default(uuid()) @db.Uuid
-  itemId            String      @db.Uuid
-  item              PantryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
-  pantryId          String      @db.Uuid
-  pantry            Pantry      @relation(fields: [pantryId], references: [id], onDelete: Cascade)
-  modifiedByUser    String      @db.Uuid
-  user              User        @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
-  quantity          Float
-  updatedAt         DateTime    @updatedAt
+  id             String     @id @default(uuid()) @db.Uuid
+  itemId         String     @db.Uuid
+  pantryId       String     @db.Uuid
+  modifiedByUser String     @db.Uuid
+  quantity       Float
+  updatedAt      DateTime   @updatedAt
+  expiryDate     DateTime?
+  item           PantryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  user           User       @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
+  pantry         Pantry     @relation(fields: [pantryId], references: [id], onDelete: Cascade)
 
   @@unique([pantryId, itemId])
   @@index([pantryId])
 }
 
+enum PantryCategory {
+  OTHER
+  GRAINS
+  DAIRY
+  VEGETABLES
+  FRUITS
+  MEAT
+  FROZEN
+  CONDIMENTS
+  BEVERAGES
+}
