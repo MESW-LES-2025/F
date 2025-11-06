@@ -14,14 +14,16 @@ datasource db {
 }
 
 model User {
-  id            String         @id @default(uuid()) @db.Uuid
-  email         String         @unique @db.VarChar(255)
-  username      String         @unique @db.VarChar(100)
-  password      String         @db.VarChar(255)
-  name          String?        @db.VarChar(100)
-  createdAt     DateTime       @default(now())
-  updatedAt     DateTime       @updatedAt
-  refreshTokens RefreshToken[]
+  id               String         @id @default(uuid()) @db.Uuid
+  email            String         @unique @db.VarChar(255)
+  username         String         @unique @db.VarChar(100)
+  password         String         @db.VarChar(255)
+  name             String?        @db.VarChar(100)
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+  houses           HouseToUser[]  
+  refreshTokens    RefreshToken[]
+  pantryItemsAdded PantryToItem[] 
   assignedTasks Task[]         @relation("AssignedTasks")
   createdTasks  Task[]         @relation("CreatedTasks")
 }
@@ -38,6 +40,61 @@ model RefreshToken {
 
   @@index([userId])
   @@index([token])
+}
+
+model House {
+  id             String   @id @default(uuid()) @db.Uuid
+  name           String
+  invitationCode String
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  users          HouseToUser[]
+  pantry         Pantry?
+}
+
+model HouseToUser {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String   @db.Uuid
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  houseId   String   @db.Uuid
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  role      String? 
+  joinedAt  DateTime @default(now())
+
+  @@unique([userId, houseId]) 
+}
+
+model Pantry {
+  id        String   @id @default(uuid()) @db.Uuid
+  houseId   String   @unique @db.Uuid
+  house     House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  items     PantryToItem[]
+
+  @@index([houseId])
+}
+
+model PantryItem {
+  id                String   @id @default(uuid()) @db.Uuid
+  name              String
+  imageLink         String
+  measurementUnit   String?
+  pantries          PantryToItem[]
+}
+
+model PantryToItem {
+  id                String      @id @default(uuid()) @db.Uuid
+  itemId            String      @db.Uuid
+  item              PantryItem  @relation(fields: [itemId], references: [id], onDelete: Cascade)
+  pantryId          String      @db.Uuid
+  pantry            Pantry      @relation(fields: [pantryId], references: [id], onDelete: Cascade)
+  modifiedByUser    String      @db.Uuid
+  user              User        @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
+  quantity          Float
+  updatedAt         DateTime    @updatedAt
+
+  @@unique([pantryId, itemId])
+  @@index([pantryId])
 }
 
 model Task {

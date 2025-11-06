@@ -17,6 +17,7 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { UserRequest } from '../shared/types/user_request';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -69,7 +70,7 @@ export class AuthController {
 		description: 'Successfully logged out from all devices',
 	})
 	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	async logoutAll(@Request() req: { user: { userId: string } }) {
+	async logoutAll(@Request() req: UserRequest) {
 		return this.authService.logoutAll(req.user.userId);
 	}
 
@@ -79,7 +80,7 @@ export class AuthController {
 	@ApiOperation({ summary: 'Get current user profile' })
 	@ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
 	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	async getProfile(@Request() req: { user: { userId: string } }) {
+	async getProfile(@Request() req: UserRequest) {
 		return this.authService.validateUser(req.user.userId);
 	}
 }
