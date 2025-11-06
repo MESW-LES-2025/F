@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { PantryItemService } from './pantry-item.service';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 jest.mock('src/shared/function-verify-string', () => ({
 	verifyIsString: (value: any) =>
@@ -68,8 +68,6 @@ describe('PantryItemService', () => {
 					name: 'Rice',
 					imageLink: 'img.png',
 					measurementUnit: 'kg',
-					createdByUser: 'user123',
-					houseId: 'house999',
 				},
 			});
 			expect(result).toEqual(mockItem);
@@ -124,7 +122,7 @@ describe('PantryItemService', () => {
 			const result = await service.findAllUser('user123');
 
 			expect(mockPrismaService.pantryItem.findMany).toHaveBeenCalledWith({
-				where: { createdByUser: 'user123' },
+				where: { pantries: { some: { modifiedByUser: 'user123' } } },
 			});
 			expect(result).toEqual([mockItem]);
 		});
@@ -137,7 +135,9 @@ describe('PantryItemService', () => {
 			const result = await service.findAllHouse('house999');
 
 			expect(mockPrismaService.pantryItem.findMany).toHaveBeenCalledWith({
-				where: { houseId: 'house999' },
+				where: {
+					pantries: { some: { pantry: { houseId: 'house999' } } },
+				},
 			});
 			expect(result).toEqual([mockItem]);
 		});
@@ -147,12 +147,12 @@ describe('PantryItemService', () => {
 		it('should return a pantry item', async () => {
 			mockPrismaService.pantryItem.findUnique.mockResolvedValue(mockItem);
 
-			const result = await service.findOne('item1', 'user123');
+			const result = await service.findOne('item1');
 
 			expect(
 				mockPrismaService.pantryItem.findUnique,
 			).toHaveBeenCalledWith({
-				where: { id: 'item1', createdByUser: 'user123' },
+				where: { id: 'item1' },
 			});
 			expect(result).toEqual(mockItem);
 		});
@@ -177,7 +177,7 @@ describe('PantryItemService', () => {
 			);
 
 			expect(mockPrismaService.pantryItem.update).toHaveBeenCalledWith({
-				where: { id: 'item1', createdByUser: 'user123' },
+				where: { id: 'item1' },
 				data: {
 					name: 'Updated',
 					imageLink: 'img.png',
@@ -208,7 +208,7 @@ describe('PantryItemService', () => {
 			const result = await service.remove('item1', 'user123');
 
 			expect(mockPrismaService.pantryItem.delete).toHaveBeenCalledWith({
-				where: { id: 'item1', createdByUser: 'user123' },
+				where: { id: 'item1' },
 			});
 			expect(result).toEqual(mockItem);
 		});

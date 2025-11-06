@@ -10,8 +10,8 @@ import {
 import { PantryService } from './pantry.service';
 import { UpdatePantryDto } from './dto/update-pantry.dto';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
-import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { UserRequest } from 'src/shared/types/user_request';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { UserRequest } from '../shared/types/user_request';
 
 @Controller('pantry')
 export class PantryController {

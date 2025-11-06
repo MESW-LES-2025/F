@@ -11,7 +11,7 @@ import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
 import { ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
-import { UserRequest } from 'src/shared/types/user_request';
+import { UserRequest } from '../shared/types/user_request';
 
 @Controller('house')
 export class HouseController {

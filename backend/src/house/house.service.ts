@@ -4,10 +4,10 @@ import {
 	UnauthorizedException,
 } from '@nestjs/common';
 import { CreateHouseDto } from './dto/create-house.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
-import { PantryService } from 'src/pantry/pantry.service';
-import { verifyIsString } from 'src/shared/function-verify-string';
+import { PantryService } from '../pantry/pantry.service';
+import { verifyIsString } from '../shared/function-verify-string';
 
 @Injectable()
 export class HouseService {

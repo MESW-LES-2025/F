@@ -8,6 +8,7 @@ import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 interface JwtPayload {
 	sub: string;
@@ -27,9 +28,7 @@ export class AuthService {
 
 		// Check if user already exists
 		const existingUser = await this.prisma.user.findFirst({
-			where: {
-				OR: [{ email }, { username }],
-			},
+			where: { OR: [{ email }, { username }], deletedAt: null },
 		});
 
 		if (existingUser) {
@@ -72,8 +71,8 @@ export class AuthService {
 		const { email, password } = loginDto;
 
 		// Find user
-		const user = await this.prisma.user.findUnique({
-			where: { email },
+		const user = await this.prisma.user.findFirst({
+			where: { email, deletedAt: null },
 		});
 
 		if (!user) {
@@ -228,17 +227,36 @@ export class AuthService {
 		return { message: 'Successfully logged out from all devices' };
 	}
 
-	async validateUser(userId: string) {
-		return this.prisma.user.findUnique({
-			where: { id: userId },
-			select: {
-				id: true,
-				email: true,
-				username: true,
-				name: true,
-				createdAt: true,
-				updatedAt: true,
-			},
+	async changePassword(userId: string, dto: ChangePasswordDto) {
+		const { currentPassword, newPassword } = dto;
+
+		// Find user
+		const user = await this.prisma.user.findFirst({
+			where: { id: userId, deletedAt: null },
 		});
+		if (!user) {
+			throw new UnauthorizedException('User not found');
+		}
+
+		// Verify current password
+		const isMatch = await bcrypt.compare(currentPassword, user.password);
+		if (!isMatch) {
+			throw new UnauthorizedException('Current password is incorrect');
+		}
+
+		// Hash new password and update
+		const hashed = await bcrypt.hash(newPassword, 10);
+		await this.prisma.user.update({
+			where: { id: userId },
+			data: { password: hashed },
+		});
+
+		// Revoke all refresh tokens so user must re-login on other devices
+		await this.prisma.refreshToken.updateMany({
+			where: { userId, isRevoked: false },
+			data: { isRevoked: true, revokedAt: new Date() },
+		});
+
+		return { message: 'Password changed successfully' };
 	}
 }

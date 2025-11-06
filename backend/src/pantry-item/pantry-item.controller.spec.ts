@@ -133,12 +133,11 @@ describe('PantryItemController', () => {
 		it('should return one pantry item', async () => {
 			mockPantryItemService.findOne.mockResolvedValue('one-item');
 
-			const result = await controller.findOne('item789', mockRequest);
+			const result = await controller.findOne('item789');
 
 			expect(result).toBe('one-item');
 			expect(mockPantryItemService.findOne).toHaveBeenCalledWith(
 				'item789',
-				'user123',
 			);
 		});
 	});
