@@ -1,5 +1,5 @@
 {
-  "name": "Concordia-Backend",
+  "name": "concordia-backend",
   "version": "0.0.1",
   "description": "",
   "author": "",
@@ -79,5 +79,9 @@
     ],
     "coverageDirectory": "../coverage",
     "testEnvironment": "node"
+    ,
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    }
   }
 }

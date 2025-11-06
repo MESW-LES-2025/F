@@ -119,7 +119,6 @@ All endpoints are prefixed with `/api/v1`
 | `POST` | `/api/v1/auth/refresh` | Refresh access token | ❌ |
 | `POST` | `/api/v1/auth/logout` | Logout (revoke refresh token) | ✅ |
 | `POST` | `/api/v1/auth/logout-all` | Logout from all devices | ✅ |
-| `GET` | `/api/v1/auth/profile` | Get current user profile | ✅ |
 
 ### Register User
 
@@ -219,27 +218,6 @@ Authorization: Bearer <access_token>
 ```json
 {
   "message": "Successfully logged out from all devices"
-}
-```
-
-### Get Profile
-
-**GET** `/api/v1/auth/profile`
-
-**Headers:**
-```
-Authorization: Bearer <access_token>
-```
-
-**Response:**
-```json
-{
-  "id": "uuid",
-  "email": "user@example.com",
-  "username": "johndoe",
-  "name": "John Doe",
-  "createdAt": "2025-10-24T10:00:00.000Z",
-  "updatedAt": "2025-10-24T10:00:00.000Z"
 }
 ```
 

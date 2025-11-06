@@ -1,11 +1,4 @@
-import {
-	Controller,
-	Post,
-	Body,
-	Get,
-	UseGuards,
-	Request,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
 import {
 	ApiTags,
 	ApiOperation,
@@ -16,6 +9,7 @@ import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserRequest } from 'src/shared/types/user_request';
 
@@ -74,13 +68,14 @@ export class AuthController {
 		return this.authService.logoutAll(req.user.userId);
 	}
 
-	@Get('profile')
+	@Post('change-password')
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')
-	@ApiOperation({ summary: 'Get current user profile' })
-	@ApiResponse({ status: 200, description: 'Profile retrieved successfully' })
-	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	async getProfile(@Request() req: UserRequest) {
-		return this.authService.validateUser(req.user.userId);
+	@ApiOperation({ summary: 'Change password for authenticated user' })
+	async changePassword(
+		@Request() req: UserRequest,
+		@Body() dto: ChangePasswordDto,
+	) {
+		return this.authService.changePassword(req.user.userId, dto);
 	}
 }
