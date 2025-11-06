@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdatePantryDto } from './dto/update-pantry.dto';
-import { PrismaService } from 'src/prisma/prisma.service';
+import { PrismaService } from '../prisma/prisma.service';
 
 @Injectable()
 export class PantryService {
@@ -15,7 +15,7 @@ export class PantryService {
 				},
 			});
 		} catch (e) {
-			console.log(e);
+
 			return false;
 		}
 

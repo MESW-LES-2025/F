@@ -1,8 +1,9 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect, type ChangeEvent } from "react"
 import { useRouter } from "next/navigation"
 import { Settings, Bell, Globe, Shield, Trash2, LogOut } from "lucide-react"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
@@ -10,14 +11,26 @@ import { Switch } from "@/components/ui/switch"
 import { Card } from "@/components/ui/card"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { useAuth } from "@/lib/auth-context"
-import { apiPost } from "@/lib/api-client"
+import { profileService } from "@/lib/profile-service"
 
 export default function SettingsPage() {
   const router = useRouter()
-  const { logout, user } = useAuth()
+  const { logout, user, changePassword, logoutAllDevices, updateUser } = useAuth()
+  const [name, setName] = useState('')
+  const [email, setEmail] = useState('')
+  const [username, setUsername] = useState('')
+  const [isSaving, setIsSaving] = useState(false)
   const [isLoggingOut, setIsLoggingOut] = useState(false)
   const [logoutAllLoading, setLogoutAllLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [currentPassword, setCurrentPassword] = useState("")
+  const [newPassword, setNewPassword] = useState("")
+  const [confirmPassword, setConfirmPassword] = useState("")
+  const [changingPassword, setChangingPassword] = useState(false)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false)
+  const [deleting, setDeleting] = useState(false)
+  const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const handleLogout = async () => {
     setError(null)
@@ -38,10 +51,9 @@ export default function SettingsPage() {
     setError(null)
     setLogoutAllLoading(true)
     try {
-      await apiPost('/auth/logout-all', {}, { requiresAuth: true })
+      await logoutAllDevices()
 
-      // Clear local storage and redirect
-      await logout()
+      // Redirect to login after clearing tokens
       router.push("/login")
     } catch (err) {
       setError(err instanceof Error ? err.message : "Failed to logout from all devices")
@@ -49,6 +61,13 @@ export default function SettingsPage() {
       setLogoutAllLoading(false)
     }
   }
+  useEffect(() => {
+    if (user) {
+      setName(user.name ?? '')
+      setEmail(user.email ?? '')
+      setUsername(user.username ?? '')
+    }
+  }, [user])
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <div className="space-y-2">
@@ -67,13 +86,42 @@ export default function SettingsPage() {
           <div className="space-y-4">
             <div className="grid gap-2">
               <Label htmlFor="name">Full Name</Label>
-              <Input id="name" defaultValue="Sam Wheeler" />
+              <Input id="name" value={name} onChange={(e: ChangeEvent<HTMLInputElement>) => setName(e.target.value)} />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="email">Email</Label>
-              <Input id="email" type="email" defaultValue="sam@example.com" />
+              <Input id="email" type="email" value={email} onChange={(e: ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)} />
             </div>
-            <Button>Save Changes</Button>
+            <div className="grid gap-2">
+              <Label htmlFor="username">Username</Label>
+              <Input id="username" value={username} onChange={(e: ChangeEvent<HTMLInputElement>) => setUsername(e.target.value)} />
+            </div>
+            <Button
+              onClick={async () => {
+                setError(null)
+                setSuccessMessage(null)
+
+                if (!name || !email || !username) {
+                  setError('Please fill in all fields')
+                  return
+                }
+
+                setIsSaving(true)
+                try {
+                  const updated = await profileService.updateProfile({ name, email, username })
+                  setSuccessMessage('Profile updated successfully')
+                  // Update auth context and session cache
+                  try { updateUser(updated) } catch (e) { /* ignore */ }
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to update profile')
+                } finally {
+                  setIsSaving(false)
+                }
+              }}
+              disabled={isSaving}
+            >
+              {isSaving ? 'Saving...' : 'Save Changes'}
+            </Button>
           </div>
         </Card>
 
@@ -144,19 +192,79 @@ export default function SettingsPage() {
           </div>
 
           <div className="space-y-4">
+            {/* show success or error messages for password change */}
+            {successMessage && (
+              <Alert>
+                <AlertDescription>{successMessage}</AlertDescription>
+              </Alert>
+            )}
+
+            {error && (
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="grid gap-2">
               <Label htmlFor="current-password">Current Password</Label>
-              <Input id="current-password" type="password" />
+              <Input
+                id="current-password"
+                type="password"
+                value={currentPassword}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setCurrentPassword(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="new-password">New Password</Label>
-              <Input id="new-password" type="password" />
+              <Input
+                id="new-password"
+                type="password"
+                value={newPassword}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setNewPassword(e.target.value)}
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="confirm-password">Confirm New Password</Label>
-              <Input id="confirm-password" type="password" />
+              <Input
+                id="confirm-password"
+                type="password"
+                value={confirmPassword}
+                onChange={(e: ChangeEvent<HTMLInputElement>) => setConfirmPassword(e.target.value)}
+              />
             </div>
-            <Button>Update Password</Button>
+            <Button
+              onClick={async () => {
+                setError(null)
+                setSuccessMessage(null)
+
+                if (!currentPassword || !newPassword || !confirmPassword) {
+                  setError("Please fill in all password fields")
+                  return
+                }
+
+                if (newPassword !== confirmPassword) {
+                  setError("New passwords do not match")
+                  return
+                }
+
+                setChangingPassword(true)
+                try {
+                  await changePassword(currentPassword, newPassword)
+                  setSuccessMessage('Password updated successfully. You will be logged out to re-authenticate.')
+
+                  // force logout so user re-authenticates with the new password
+                  await logout()
+                  router.push('/login')
+                } catch (err) {
+                  setError(err instanceof Error ? err.message : 'Failed to update password')
+                } finally {
+                  setChangingPassword(false)
+                }
+              }}
+              disabled={changingPassword}
+            >
+              {changingPassword ? 'Updating...' : 'Update Password'}
+            </Button>
           </div>
         </Card>
 
@@ -212,9 +320,56 @@ export default function SettingsPage() {
                 <Label className="text-destructive">Delete Account</Label>
                 <p className="text-sm text-muted-foreground">Permanently delete your account and all data</p>
               </div>
-              <Button variant="destructive" size="sm">
-                Delete Account
-              </Button>
+              <div>
+                <Button variant="destructive" size="sm" onClick={() => setDeleteDialogOpen(true)} disabled={deleting}>
+                  Delete Account
+                </Button>
+
+                <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+                  <DialogContent>
+                    <DialogHeader>
+                      <DialogTitle>Delete account</DialogTitle>
+                      <DialogDescription>
+                        This action is permanent and will remove all your data. This cannot be undone.
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    {deleteError && (
+                      <Alert variant="destructive">
+                        <AlertDescription>{deleteError}</AlertDescription>
+                      </Alert>
+                    )}
+
+                    <DialogFooter>
+                      <Button variant="outline" onClick={() => setDeleteDialogOpen(false)} disabled={deleting}>
+                        Cancel
+                      </Button>
+                      <Button
+                        variant="destructive"
+                        onClick={async () => {
+                          setError(null)
+                          setDeleteError(null)
+                          setDeleting(true)
+                          try {
+                            await profileService.deleteAccount()
+                            // ensure auth state cleared
+                            try { await logout() } catch (e) { /* ignore */ }
+                            router.push('/login')
+                          } catch (err) {
+                            setDeleteError(err instanceof Error ? err.message : 'Failed to delete account')
+                          } finally {
+                            setDeleting(false)
+                            setDeleteDialogOpen(false)
+                          }
+                        }}
+                        disabled={deleting}
+                      >
+                        {deleting ? 'Deleting...' : 'Delete account'}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
+              </div>
             </div>
           </div>
         </Card>

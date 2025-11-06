@@ -8,9 +8,11 @@ export interface AuthResponse {
 export interface Task {
   id: string
   title: string
+  description?: string
   assignee: string
   assigneeAvatar: string
   status: "todo" | "doing" | "done"
+  deadline?: Date
   createdAt: Date
 }
 
@@ -40,6 +42,8 @@ export interface PantryItem {
 export interface User {
   id: string
   email: string
-  username: string
+  username?: string
   name: string
+  avatar?: string
+  createdAt?: string
 }
