@@ -1,7 +1,8 @@
-import { Controller, Get, Post, Body, Param, Request } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Request, UseGuards } from '@nestjs/common';
 import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
-import { ApiOperation } from '@nestjs/swagger';
+import { ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
+import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { UserRequest } from '../shared/types/user_request';
 
 @Controller('house')
@@ -25,6 +26,8 @@ export class HouseController {
 	@ApiOperation({
 		summary: 'Find all houses in the system related to the user',
 	})
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@Get('user')
 	findAllUserHouses(@Request() req: UserRequest) {
 		return this.houseService.findAllUserHouses(req.user.userId);

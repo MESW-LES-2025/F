@@ -15,7 +15,7 @@ export class PantryService {
 				},
 			});
 		} catch (e) {
-			console.log(e);
+
 			return false;
 		}
 
