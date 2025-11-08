@@ -6,7 +6,11 @@ import {
 	Body,
 	UseGuards,
 	Request,
+	Post,
+	UseInterceptors,
+	UploadedFile,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -42,5 +46,21 @@ export class UserController {
 	@Delete()
 	async removeCurrent(@Request() req: UserRequest) {
 		return await this.userService.remove(req.user.userId);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Upload or replace user avatar image' })
+	@Post('upload-image')
+	@UseInterceptors(
+		FileInterceptor('file', {
+			limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+		}),
+	)
+	async uploadImage(
+		@Request() req: UserRequest,
+		@UploadedFile() file: Express.Multer.File,
+	) {
+		return await this.userService.uploadImage(req.user.userId, file);
 	}
 }

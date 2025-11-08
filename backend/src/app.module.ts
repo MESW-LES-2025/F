@@ -7,11 +7,14 @@ import { PantryModule } from './pantry/pantry.module';
 import { PantryItemModule } from './pantry-item/pantry-item.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UserModule } from './user/user.module';
+import { MulterModule } from '@nestjs/platform-express';
+import * as multer from 'multer';
 
 @Module({
 	controllers: [AppController],
 	providers: [AppService],
 	imports: [
+		MulterModule.register({ storage: multer.memoryStorage() }),
 		AuthModule,
 		HouseModule,
 		PantryModule,

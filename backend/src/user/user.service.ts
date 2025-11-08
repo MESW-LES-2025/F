@@ -1,10 +1,15 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ImageService } from 'src/shared/image/image.service';
+import { MulterFile } from 'src/shared/types/multer_file';
 
 @Injectable()
 export class UserService {
-	constructor(private prisma: PrismaService) {}
+	constructor(
+		private prisma: PrismaService,
+		private imageService: ImageService,
+	) {}
 
 	async findOne(id: string) {
 		const user = await this.prisma.user.findFirst({
@@ -14,6 +19,7 @@ export class UserService {
 				email: true,
 				username: true,
 				name: true,
+				imageUrl: true,
 				createdAt: true,
 				updatedAt: true,
 			},
@@ -78,5 +84,43 @@ export class UserService {
 		});
 
 		return { success: true };
+	}
+
+	// Upload or replace user image
+	async uploadImage(userId: string, file: MulterFile) {
+		const user = await this.prisma.user.findUnique({
+			where: { id: userId },
+		});
+		if (!user || user.deletedAt)
+			throw new NotFoundException('User not found');
+
+		// Upload new image to Cloudinary
+		const { url, publicId } = await this.imageService.uploadImage(
+			file,
+			'users',
+		);
+
+		const oldPublicId = user.imagePublicId;
+
+		// Save URL and publicId in DB
+		const updatedUser = await this.prisma.user.update({
+			where: { id: userId },
+			data: { imageUrl: url, imagePublicId: publicId },
+			select: {
+				id: true,
+				email: true,
+				username: true,
+				name: true,
+				imageUrl: true,
+				createdAt: true,
+				updatedAt: true,
+			},
+		});
+
+		if (oldPublicId) {
+			await this.imageService.deleteImage(oldPublicId);
+		}
+
+		return updatedUser;
 	}
 }
