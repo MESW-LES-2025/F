@@ -8,6 +8,8 @@ on:
   push:
     branches:
       - main
+    paths:
+      - "frontend/**"   # Only trigger when files in /frontend change
 
 jobs:
   deploy:
