@@ -4,6 +4,8 @@ on:
   push:
     branches:
       - "**"
+    paths:
+      - "backend/**"   # Only trigger when files in /backend change
 
 jobs:
   test-backend:

@@ -15,6 +15,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Enable Corepack (pnpm)
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
       - name: Install Vercel CLI
         run: npm i -g vercel@latest
 
