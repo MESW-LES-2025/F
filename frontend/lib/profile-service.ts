@@ -1,5 +1,5 @@
 import type { User } from './types'
-import { apiGet } from './api-client'
+import { apiGet, apiUpload } from './api-client'
 import { apiDelete } from './api-client'
 import { apiPatch } from './api-client'
 import { authService } from './auth-service'
@@ -37,6 +37,16 @@ class ProfileService {
    */
   async updateProfile(payload: { name?: string; email?: string; username?: string }): Promise<User> {
     return apiPatch<User>('/user', payload, { requiresAuth: true })
+  }
+
+  /**
+   * Upload a profile image for the current user.
+   */
+  async uploadImage(file: File): Promise<User> {
+    const formData = new FormData()
+    formData.append('file', file)
+    
+    return apiUpload<User>('/user/upload-image', formData, { requiresAuth: true })
   }
 }
 

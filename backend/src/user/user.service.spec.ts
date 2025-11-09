@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { PrismaService } from 'src/prisma/prisma.service';
+import { ImageService } from 'src/shared/image/image.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 
 describe('UserService', () => {
@@ -12,6 +13,7 @@ describe('UserService', () => {
 		email: 'test@example.com',
 		username: 'tester',
 		name: 'Tester',
+		imageUrl: null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 	};
@@ -50,11 +52,17 @@ describe('UserService', () => {
 		},
 	};
 
+	const mockImageService = {
+		uploadImage: jest.fn(),
+		deleteImage: jest.fn(),
+	};
+
 	beforeEach(async () => {
 		const module: TestingModule = await Test.createTestingModule({
 			providers: [
 				UserService,
 				{ provide: PrismaService, useValue: mockPrismaService },
+				{ provide: ImageService, useValue: mockImageService },
 			],
 		}).compile();
 

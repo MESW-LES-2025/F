@@ -121,7 +121,7 @@ export function AppSidebar() {
             className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-md transition-colors"
           >
             <Avatar className="w-8 h-8">
-              <AvatarImage src="/sam-wheeler.jpg" />
+              <AvatarImage src={user?.imageUrl || '/placeholder-user.jpg'} />
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

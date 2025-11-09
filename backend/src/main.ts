@@ -5,9 +5,30 @@ import { AppModule } from './app.module';
 async function bootstrap() {
 	const app = await NestFactory.create(AppModule);
 
+	// Parse the environment variable for CORS origin pattern
+	const corsOriginPattern = process.env.CORS_ORIGIN;
+
+	// Convert the placeholder * into a proper regex
+	const regex = corsOriginPattern
+		? new RegExp('^' + corsOriginPattern.replace(/\*/g, '.*') + '$')
+		: null;
+
+	const fallbackOrigin = 'http://localhost:8080';
+
 	// CORS configuration
 	app.enableCors({
-		origin: process.env.CORS_ORIGIN || 'http://localhost:8080',
+		origin: (
+			origin: string | undefined,
+			callback: (err: Error | null, allow?: boolean) => void,
+		) => {
+			if (!origin) return callback(null, true);
+			if (regex?.test(origin)) return callback(null, true);
+			if (origin === fallbackOrigin) return callback(null, true);
+			return callback(
+				new Error(`CORS not allowed for origin: ${origin}`),
+				false,
+			);
+		},
 		credentials: true,
 		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
