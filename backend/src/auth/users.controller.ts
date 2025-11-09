@@ -26,6 +26,7 @@ export class UsersController {
 				email: true,
 				username: true,
 				name: true,
+				imageUrl: true,
 			},
 			orderBy: {
 				name: 'asc',

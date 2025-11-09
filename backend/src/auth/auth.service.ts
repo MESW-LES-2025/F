@@ -63,6 +63,7 @@ export class AuthService {
 				email: user.email,
 				username: user.username,
 				name: user.name,
+				imageUrl: user.imageUrl,
 			},
 		};
 	}
@@ -99,6 +100,7 @@ export class AuthService {
 				email: user.email,
 				username: user.username,
 				name: user.name,
+				imageUrl: user.imageUrl,
 			},
 		};
 	}

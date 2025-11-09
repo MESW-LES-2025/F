@@ -2,7 +2,11 @@
 
 A Next.js application for the Concordia project.
 
+<<<<<<< HEAD
 Current Production URL: https://concordia-smoky.vercel.app/ 
+=======
+Current Production URL: https://concordia-smoky.vercel.app/
+>>>>>>> 1fa60cee9e07ef4c5acc4760f26fd6de81669eb5
 
 ## Getting Started
 
