@@ -36,11 +36,9 @@ COPY --from=builder /app/prisma ./prisma
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
-# Generate Prisma Client in production
-RUN npx prisma generate
-
 # Expose port
 EXPOSE 3000
 
 # Start application
-CMD ["npm", "run", "start:prod"]
+CMD npx prisma migrate deploy && npm run start:prod
+

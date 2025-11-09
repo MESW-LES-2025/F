@@ -1,0 +1,30 @@
+name: Frontend Deploy (Production)
+
+env:
+  VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+  VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "frontend/**"   # Only trigger when files in /frontend change
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Enable Corepack (pnpm)
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install Vercel CLI
+        run: npm i -g vercel@latest
+
+      - name: Pull env vars
+        run: vercel pull --yes --environment=production --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build & Deploy Prod
+        run: vercel build --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} && vercel deploy --prebuilt --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
