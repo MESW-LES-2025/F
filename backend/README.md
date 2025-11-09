@@ -1,6 +1,6 @@
 # Concordia
 
-A modern NestJS REST API with JWT authentication, Prisma ORM, and PostgreSQL database.
+A modern NestJS REST API with JWT Authentication, Prisma ORM, and PostgreSQL database.
 
 ## 🚀 Features
 
