@@ -27,6 +27,9 @@ jobs:
         run: |
           cd backend
           npm ci
+    
+      - name: Set dummy DATABASE_URL for Prisma
+        run: echo "DATABASE_URL=postgresql://dummy:dummy@localhost:5432/dummy?schema=public" >> $GITHUB_ENV
 
       - name: Generate Prisma Client
         run: |
