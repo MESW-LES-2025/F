@@ -33,6 +33,9 @@ RUN npm ci --omit=dev
 # Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
 
+# Copy generated Prisma client
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
 
