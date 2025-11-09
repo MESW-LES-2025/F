@@ -2,6 +2,8 @@
 
 A modern NestJS REST API with JWT authentication, Prisma ORM, and PostgreSQL database.
 
+Current Production URL: https://concordia-smoky.vercel.app/
+
 ## 🚀 Features
 
 - **JWT Authentication** with access & refresh tokens
