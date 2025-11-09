@@ -70,12 +70,8 @@ jobs:
         run: |
           curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
 
-      - name: Authenticate with Render
+      - name: Deploy to Render Prod
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
-        run: |
-          render login
-
-      - name: Deploy to Render Prod
         run: |
           render deploy service ${{ secrets.RENDER_PROD_SERVICE_ID }}
