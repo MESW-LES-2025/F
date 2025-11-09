@@ -2,6 +2,8 @@
 
 A full-stack home management application built with Next.js and NestJS.
 
+Current Production URL: https://concordia-smoky.vercel.app/
+
 ## Documentation
 
 - [Backend README](./backend/README.md) - API endpoints and architecture

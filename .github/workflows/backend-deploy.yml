@@ -1,9 +1,11 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline - Backend Production
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "backend/**"   # Only trigger when files in /backend change
 
 jobs:
   test-backend:
@@ -58,7 +60,14 @@ jobs:
           cd backend
           docker build -t concordia-backend:latest .
 
-      - name: Test Docker image
+      - name: Install Render CLI
         run: |
-          docker images concordia-backend:latest
-          echo "✅ Backend Docker image built successfully"
+          curl -fsSL https://raw.githubusercontent.com/render-oss/cli/refs/heads/main/bin/install.sh | sh
+
+      - name: Login to Render CLI
+        run: |
+          render login --api-key ${{ secrets.RENDER_API_KEY }}
+
+      - name: Deploy to Render Prod
+        run: |
+          render deploy service ${{ secrets.RENDER_PROD_SERVICE_ID }}
