@@ -33,14 +33,16 @@ RUN npm ci --omit=dev
 # Copy Prisma schema for migrations
 COPY --from=builder /app/prisma ./prisma
 
+# Copy generated Prisma client
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+
 # Copy built application from builder
 COPY --from=builder /app/dist ./dist
-
-# Generate Prisma Client in production
-RUN npx prisma generate
 
 # Expose port
 EXPOSE 3000
 
 # Start application
-CMD ["npm", "run", "start:prod"]
+CMD npx prisma migrate deploy && npm run start:prod
+
