@@ -12,6 +12,9 @@ jobs:
     name: Run Lint
     runs-on: ubuntu-latest
 
+    # Skip this job on main and develop, because its already covered in other workflows
+    if: github.ref != 'refs/heads/main' && github.ref != 'refs/heads/develop'
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4

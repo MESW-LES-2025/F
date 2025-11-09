@@ -1,9 +1,11 @@
-name: CI/CD Pipeline
+name: CI/CD Pipeline - Backend Production
 
 on:
   push:
     branches:
       - main
+    paths:
+      - "backend/**"   # Only trigger when files in /backend change
 
 jobs:
   test-backend:
@@ -58,7 +60,21 @@ jobs:
           cd backend
           docker build -t concordia-backend:latest .
 
-      - name: Test Docker image
+  deploy-backend:
+    name: Deploy Backend to Cloud
+    runs-on: ubuntu-latest
+    needs: build-backend
+
+    steps:
+      - name: Install Render CLI
         run: |
-          docker images concordia-backend:latest
-          echo "✅ Backend Docker image built successfully"
+          curl -L https://github.com/render-oss/cli/releases/download/v1.1.0/cli_1.1.0_linux_amd64.zip -o render.zip
+          unzip render.zip
+          sudo mv cli_v1.1.0 /usr/local/bin/render
+
+      - name: Deploy to Render Prod
+        env:
+          RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          CI: true
+        run: |
+          render deploys create ${{ secrets.RENDER_PROD_SERVICE_ID }} --output json --confirm
