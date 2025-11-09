@@ -1,19 +1,25 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useRef } from 'react'
 import { User, Mail, Phone, MapPin, Calendar, Edit2, Camera } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
+import { useToast } from '@/hooks/use-toast'
+import { useAuth } from '@/lib/auth-context'
 import { profileService } from '@/lib/profile-service'
 import type { User as UserType } from '@/lib/types'
 
 export function ProfileContent() {
   const [user, setUser] = useState<UserType | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isUploading, setIsUploading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const fileInputRef = useRef<HTMLInputElement>(null)
+  const { toast } = useToast()
+  const { updateUser } = useAuth()
 
   useEffect(() => {
     const fetchProfile = async () => {
@@ -32,6 +38,60 @@ export function ProfileContent() {
 
     fetchProfile()
   }, [])
+
+  const handleImageClick = () => {
+    fileInputRef.current?.click()
+  }
+
+  const handleImageChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0]
+    if (!file) return
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: 'Invalid file type',
+        description: 'Please select an image file',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    // Validate file size (e.g., max 5MB)
+    const maxSize = 5 * 1024 * 1024 // 5MB in bytes
+    if (file.size > maxSize) {
+      toast({
+        title: 'File too large',
+        description: 'Please select an image smaller than 5MB',
+        variant: 'destructive',
+      })
+      return
+    }
+
+    try {
+      setIsUploading(true)
+      const updatedUser = await profileService.uploadImage(file)
+      setUser(updatedUser)
+      updateUser(updatedUser) // Update global auth context so sidebar reflects the change
+      toast({
+        title: 'Success',
+        description: 'Profile image updated successfully',
+      })
+    } catch (err) {
+      toast({
+        title: 'Upload failed',
+        description: err instanceof Error ? err.message : 'Failed to upload image',
+        variant: 'destructive',
+      })
+      console.error('Failed to upload image:', err)
+    } finally {
+      setIsUploading(false)
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = ''
+      }
+    }
+  }
 
   if (isLoading) {
     return (
@@ -71,12 +131,23 @@ export function ProfileContent() {
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
           <div className="relative group">
             <Avatar className="w-24 h-24">
-              <AvatarImage src="/placeholder-user.jpg" alt={user.name} />
+              <AvatarImage src={user.imageUrl || '/placeholder-user.jpg'} alt={user.name} />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
-            <button className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity">
+            <button 
+              onClick={handleImageClick}
+              disabled={isUploading}
+              className="absolute inset-0 flex items-center justify-center bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity disabled:opacity-50 disabled:cursor-not-allowed"
+            >
               <Camera className="w-6 h-6 text-white" />
             </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="hidden"
+            />
           </div>
 
           <div className="flex-1 space-y-2">
@@ -85,12 +156,6 @@ export function ProfileContent() {
               <Badge variant="secondary">User</Badge>
             </div>
             <p className="text-muted-foreground">{user.email}</p>
-            <div className="flex gap-2 pt-2">
-              <Button size="sm">
-                <Edit2 className="w-4 h-4 mr-2" />
-                Edit Profile
-              </Button>
-            </div>
           </div>
         </div>
       </Card>

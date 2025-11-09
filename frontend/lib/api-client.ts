@@ -385,6 +385,100 @@ export async function apiDelete<T = unknown>(
 }
 
 /**
+ * Upload file with multipart/form-data
+ */
+export async function apiUpload<T = unknown>(
+  endpoint: string,
+  formData: FormData,
+  options: Omit<RequestOptions, 'body'> = {}
+): Promise<T> {
+  const {
+    requiresAuth = false,
+    params,
+    method = 'POST',
+    headers = {},
+    ...restOptions
+  } = options;
+
+  try {
+    // Build headers (do NOT set Content-Type for FormData - browser will set it with boundary)
+    const requestHeaders: Record<string, string> = {};
+    
+    // Add custom headers if provided
+    if (headers) {
+      Object.entries(headers).forEach(([key, value]) => {
+        if (typeof value === 'string') {
+          requestHeaders[key] = value;
+        }
+      });
+    }
+
+    // Add authorization if required
+    if (requiresAuth) {
+      const token = getAccessToken();
+      if (!token) {
+        throw new ApiError(401, 'Authentication required. Please log in.');
+      }
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
+    // Build URL with query parameters
+    const url = buildUrl(endpoint, params);
+
+    // Make request
+    const response = await fetch(url, {
+      method,
+      headers: requestHeaders,
+      body: formData,
+      ...restOptions,
+    });
+
+    // Parse response
+    let responseData: unknown;
+    try {
+      responseData = await response.json();
+    } catch {
+      responseData = null;
+    }
+
+    // Handle error responses
+    if (!response.ok) {
+      // 401 Unauthorized - try to refresh token and retry once
+      if (response.status === 401 && requiresAuth) {
+        console.log('Token expired, attempting to refresh...');
+        
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          // Retry request with new token
+          console.log('Token refreshed, retrying request...');
+          return apiUpload<T>(endpoint, formData, options);
+        } else {
+          // Refresh failed, redirect to login
+          console.error('Token refresh failed, redirecting to login');
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+          throw new ApiError(401, 'Session expired. Please log in again.');
+        }
+      }
+
+      const errorMessage = 
+        (responseData as Record<string, unknown>)?.message ||
+        getErrorMessage(response.status, undefined, responseData);
+      
+      throw new ApiError(response.status, String(errorMessage), responseData);
+    }
+
+    return responseData as T;
+  } catch (error) {
+    if (error instanceof ApiError) {
+      throw error;
+    }
+    handleNetworkError(error);
+  }
+}
+
+/**
  * Export base request function for advanced use cases
  */
 export { request as apiRequest };
@@ -395,5 +489,6 @@ export default {
   put: apiPut,
   patch: apiPatch,
   delete: apiDelete,
+  upload: apiUpload,
   request,
 };

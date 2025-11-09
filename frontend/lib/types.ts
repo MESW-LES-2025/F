@@ -45,5 +45,6 @@ export interface User {
   username?: string
   name: string
   avatar?: string
+  imageUrl?: string
   createdAt?: string
 }
