@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+	NotFoundException,
+	ForbiddenException,
+	BadRequestException,
+} from '@nestjs/common';
 import { CreateTaskDto, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -18,6 +22,9 @@ describe('TasksService', () => {
 		},
 		user: {
 			findUnique: jest.fn(),
+		},
+		houseToUser: {
+			findMany: jest.fn(),
 		},
 	};
 
@@ -80,8 +87,15 @@ describe('TasksService', () => {
 			deadline: '2025-12-31T23:59:59.000Z',
 		};
 
-		it('should create a task successfully', async () => {
+		it('should create a task successfully when users are in the same house', async () => {
 			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
+			// Mock that both users share house-1
+			mockPrismaService.houseToUser.findMany
+				.mockResolvedValueOnce([
+					{ houseId: 'house-1' },
+					{ houseId: 'house-2' },
+				])
+				.mockResolvedValueOnce([{ houseId: 'house-1' }]);
 			mockPrismaService.task.create.mockResolvedValue(mockTask);
 
 			const result = await service.create(createTaskDto, 'user-123');
@@ -90,6 +104,9 @@ describe('TasksService', () => {
 			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
 				where: { id: 'user-456' },
 			});
+			expect(
+				mockPrismaService.houseToUser.findMany,
+			).toHaveBeenCalledTimes(2);
 			expect(mockPrismaService.task.create).toHaveBeenCalledWith({
 				data: {
 					title: createTaskDto.title,
@@ -136,8 +153,37 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.create).not.toHaveBeenCalled();
 		});
 
+		it('should throw BadRequestException when users are not in the same house', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
+			// Mock that users are in different houses
+			mockPrismaService.houseToUser.findMany
+				.mockResolvedValueOnce([{ houseId: 'house-1' }])
+				.mockResolvedValueOnce([{ houseId: 'house-2' }]);
+
+			await expect(
+				service.create(createTaskDto, 'user-123'),
+			).rejects.toThrow(BadRequestException);
+			await expect(
+				service.create(createTaskDto, 'user-123'),
+			).rejects.toThrow(
+				'Cannot assign task to user from different house',
+			);
+
+			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+				where: { id: 'user-456' },
+			});
+			expect(
+				mockPrismaService.houseToUser.findMany,
+			).toHaveBeenCalledTimes(2);
+			expect(mockPrismaService.task.create).not.toHaveBeenCalled();
+		});
+
 		it('should set status to todo by default', async () => {
 			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
+			// Mock that both users share house-1
+			mockPrismaService.houseToUser.findMany
+				.mockResolvedValueOnce([{ houseId: 'house-1' }])
+				.mockResolvedValueOnce([{ houseId: 'house-1' }]);
 			mockPrismaService.task.create.mockResolvedValue(mockTask);
 
 			await service.create(createTaskDto, 'user-123');
@@ -341,6 +387,10 @@ describe('TasksService', () => {
 				email: 'new@example.com',
 				username: 'newuser',
 			});
+			// Mock that both users share house-1
+			mockPrismaService.houseToUser.findMany
+				.mockResolvedValueOnce([{ houseId: 'house-1' }])
+				.mockResolvedValueOnce([{ houseId: 'house-1' }]);
 			mockPrismaService.task.update.mockResolvedValue({
 				...mockTask,
 				assigneeId: 'new-user-789',
@@ -351,6 +401,9 @@ describe('TasksService', () => {
 			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
 				where: { id: 'new-user-789' },
 			});
+			expect(
+				mockPrismaService.houseToUser.findMany,
+			).toHaveBeenCalledTimes(2);
 		});
 
 		it('should throw NotFoundException when new assignee does not exist', async () => {
@@ -367,6 +420,35 @@ describe('TasksService', () => {
 			await expect(
 				service.update('task-123', updateWithNewAssignee, 'user-123'),
 			).rejects.toThrow('Assignee user not found');
+
+			expect(mockPrismaService.task.update).not.toHaveBeenCalled();
+		});
+
+		it('should throw BadRequestException when new assignee is not in the same house', async () => {
+			const updateWithNewAssignee: UpdateTaskDto = {
+				assigneeId: 'new-user-789',
+			};
+
+			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.user.findUnique.mockResolvedValue({
+				id: 'new-user-789',
+				name: 'New User',
+				email: 'new@example.com',
+				username: 'newuser',
+			});
+			// Mock that users are in different houses
+			mockPrismaService.houseToUser.findMany
+				.mockResolvedValueOnce([{ houseId: 'house-1' }])
+				.mockResolvedValueOnce([{ houseId: 'house-2' }]);
+
+			await expect(
+				service.update('task-123', updateWithNewAssignee, 'user-123'),
+			).rejects.toThrow(BadRequestException);
+			await expect(
+				service.update('task-123', updateWithNewAssignee, 'user-123'),
+			).rejects.toThrow(
+				'Cannot assign task to user from different house',
+			);
 
 			expect(mockPrismaService.task.update).not.toHaveBeenCalled();
 		});

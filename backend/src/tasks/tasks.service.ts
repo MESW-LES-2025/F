@@ -2,6 +2,7 @@ import {
 	Injectable,
 	NotFoundException,
 	ForbiddenException,
+	BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -10,6 +11,48 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @Injectable()
 export class TasksService {
 	constructor(private prisma: PrismaService) {}
+
+	/**
+	 * Helper method to get houses shared by two users
+	 */
+	private async getSharedHouses(
+		userId1: string,
+		userId2: string,
+	): Promise<string[]> {
+		const user1Houses = await this.prisma.houseToUser.findMany({
+			where: { userId: userId1 },
+			select: { houseId: true },
+		});
+
+		const user2Houses = await this.prisma.houseToUser.findMany({
+			where: { userId: userId2 },
+			select: { houseId: true },
+		});
+
+		const user1HouseIds = user1Houses.map((h) => h.houseId);
+		const user2HouseIds = user2Houses.map((h) => h.houseId);
+
+		// Find intersection of house IDs
+		return user1HouseIds.filter((houseId) =>
+			user2HouseIds.includes(houseId),
+		);
+	}
+
+	/**
+	 * Validate that two users belong to the same house
+	 */
+	private async validateSameHouse(
+		userId1: string,
+		userId2: string,
+	): Promise<void> {
+		const sharedHouses = await this.getSharedHouses(userId1, userId2);
+
+		if (sharedHouses.length === 0) {
+			throw new BadRequestException(
+				'Cannot assign task to user from different house. Users must belong to the same house.',
+			);
+		}
+	}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
 		const { title, description, assigneeId, deadline } = createTaskDto;
@@ -22,6 +65,9 @@ export class TasksService {
 		if (!assignee) {
 			throw new NotFoundException('Assignee user not found');
 		}
+
+		// Validate that creator and assignee belong to the same house
+		await this.validateSameHouse(createdById, assigneeId);
 
 		const task = await this.prisma.task.create({
 			data: {
@@ -121,7 +167,7 @@ export class TasksService {
 			);
 		}
 
-		// If updating assignee, verify new assignee exists
+		// If updating assignee, verify new assignee exists and is in the same house
 		if (updateTaskDto.assigneeId) {
 			const assignee = await this.prisma.user.findUnique({
 				where: { id: updateTaskDto.assigneeId },
@@ -130,6 +176,9 @@ export class TasksService {
 			if (!assignee) {
 				throw new NotFoundException('Assignee user not found');
 			}
+
+			// Validate that the user updating the task and the new assignee belong to the same house
+			await this.validateSameHouse(userId, updateTaskDto.assigneeId);
 		}
 
 		const updatedTask = await this.prisma.task.update({
