@@ -3,6 +3,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ImageService } from 'src/shared/image/image.service';
 import { MulterFile } from 'src/shared/types/multer_file';
+import { JoinHouseDto } from './dto/join-house.dto';
 
 @Injectable()
 export class UserService {
@@ -122,5 +123,22 @@ export class UserService {
 		}
 
 		return updatedUser;
+	}
+
+	async joinHouseWithCode(userId: string, dto: JoinHouseDto) {
+		const house = await this.prisma.house.findFirst({
+			where: { invitationCode: dto.inviteCode },
+		});
+
+		if (!house) {
+			throw new NotFoundException('House with code not found');
+		}
+
+		return await this.prisma.houseToUser.create({
+			data: {
+				houseId: house.id,
+				userId,
+			},
+		});
 	}
 }

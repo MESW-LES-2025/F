@@ -162,4 +162,8 @@ describe('UserService', () => {
 			);
 		});
 	});
+
+	describe('join house', () => {
+		// to-do
+	});
 });

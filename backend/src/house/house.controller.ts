@@ -17,11 +17,10 @@ import { UserRequest } from '../shared/types/user_request';
 export class HouseController {
 	constructor(private readonly houseService: HouseService) {}
 
-	// To-do: we need to add a security here so only admin users can see this
-	@ApiOperation({ summary: '[ADMIN] Create a new house' })
+	@ApiOperation({ summary: 'Create a new house' })
 	@Post()
-	create(@Body() createHouseDto: CreateHouseDto) {
-		return this.houseService.create(createHouseDto);
+	create(@Body() createHouseDto: CreateHouseDto, @Request() req: UserRequest) {
+		return this.houseService.create(createHouseDto, req.user.userId);
 	}
 
 	// To-do: we need to add a security here so only admin users can see this
