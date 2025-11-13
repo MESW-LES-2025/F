@@ -6,7 +6,8 @@ import { ActivitiesStats } from "@/components/activities-stats"
 import { ActivitiesKanban } from "@/components/activities-kanban"
 import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { DeleteTaskDialog } from "@/components/delete-task-dialog"
-import { getTasks } from "@/lib/tasks-service"
+import { getTasks, updateTask } from "@/lib/tasks-service"
+import { toast } from "@/hooks/use-toast"
 import type { Task } from "@/lib/types"
 
 export default function ActivitiesPage() {
@@ -47,6 +48,21 @@ export default function ActivitiesPage() {
 
   const handleTaskDeleted = (taskId: string) => {
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+  }
+
+  const handleStatusChange = async (taskId: string, status: 'todo' | 'doing' | 'done') => {
+    const prev = tasks
+    // optimistic UI
+    setTasks((prevTasks) => prevTasks.map((t) => (t.id === taskId ? { ...t, status } : t)))
+
+    try {
+      const updated = await updateTask(taskId, { status })
+      setTasks((prevTasks) => prevTasks.map((t) => (t.id === updated.id ? updated : t)))
+      toast({ title: 'Task updated', description: 'Status updated.' })
+    } catch (err) {
+      setTasks(prev)
+      toast({ title: 'Update failed', description: String((err as any)?.message || 'Could not update task') })
+    }
   }
 
   const handleEditTask = (task: Task) => {
@@ -93,6 +109,7 @@ export default function ActivitiesPage() {
         tasks={tasks} 
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
+        onChangeStatus={handleStatusChange}
       />
 
       {/* Edit Task Dialog */}

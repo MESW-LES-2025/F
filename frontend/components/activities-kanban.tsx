@@ -10,9 +10,10 @@ interface ActivitiesKanbanProps {
   tasks?: Task[]
   onEditTask?: (task: Task) => void
   onDeleteTask?: (task: Task) => void
+  onChangeStatus?: (taskId: string, status: 'todo' | 'doing' | 'done') => void
 }
 
-export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask }: ActivitiesKanbanProps) {
+export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask, onChangeStatus }: ActivitiesKanbanProps) {
   const todoTasks = tasks.filter((t) => t.status === "todo")
   const doingTasks = tasks.filter((t) => t.status === "doing")
   const doneTasks = tasks.filter((t) => t.status === "done")
@@ -21,9 +22,9 @@ export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTas
     <div>
       <h2 className="text-sm font-semibold text-gray-900 mb-4">Task Board</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
-        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
-        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" onEditTask={onEditTask} onDeleteTask={onDeleteTask} />
+        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" status="todo" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
+        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" status="doing" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
+        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" status="done" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
       </div>
     </div>
   )
@@ -33,13 +34,26 @@ interface TaskColumnProps {
   title: string
   tasks: Task[]
   bgColor: string
+  status?: 'todo' | 'doing' | 'done'
   onEditTask?: (task: Task) => void
   onDeleteTask?: (task: Task) => void
+  onChangeStatus?: (taskId: string, status: 'todo' | 'doing' | 'done') => void
 }
 
-function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask }: TaskColumnProps) {
+function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, onChangeStatus }: TaskColumnProps) {
+  const handleDragOver = (e: any) => {
+    e.preventDefault()
+  }
+
+  const handleDrop = (e: any) => {
+    e.preventDefault()
+    const id = e.dataTransfer.getData('text/plain')
+    if (!id) return
+    if (onChangeStatus && status) onChangeStatus(id, status)
+  }
+
   return (
-    <div className={`${bgColor} rounded-lg p-4 min-h-[300px] lg:min-h-[500px]`}>
+    <div onDragOver={handleDragOver} onDrop={handleDrop} className={`${bgColor} rounded-lg p-4 min-h-[300px] lg:min-h-[500px]`}>
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-sm font-semibold text-gray-900">{title}</h3>
         <span className="text-xs font-medium text-gray-600 bg-white px-2 py-1 rounded">{tasks.length}</span>
@@ -48,6 +62,10 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask }: TaskCol
         {tasks.map((task: Task) => (
           <div
             key={task.id}
+            draggable
+            onDragStart={(e) => {
+              e.dataTransfer.setData('text/plain', task.id)
+            }}
             className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
           >
             <div className="flex items-start gap-2">
