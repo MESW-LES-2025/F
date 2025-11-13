@@ -114,11 +114,35 @@ export class TasksService {
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
 		const task = await this.findOne(id);
 
-		// Verify user has permission (either creator or assignee)
+		// Verify user has permission (creator, assignee), or shares a house with creator/assignee
 		if (task.createdById !== userId && task.assigneeId !== userId) {
-			throw new ForbiddenException(
-				'You do not have permission to update this task',
-			);
+			// get house memberships for acting user
+			const userHouses = await this.prisma.houseToUser.findMany({
+				where: { userId },
+				select: { houseId: true },
+			});
+			const userHouseIds = new Set(userHouses.map((h) => h.houseId));
+
+			const creatorHouses = await this.prisma.houseToUser.findMany({
+				where: { userId: task.createdById },
+				select: { houseId: true },
+			});
+			const sharesWithCreator = creatorHouses.some((ch) => userHouseIds.has(ch.houseId));
+
+			let sharesWithAssignee = false;
+			if (task.assigneeId && task.assigneeId !== task.createdById) {
+				const assigneeHouses = await this.prisma.houseToUser.findMany({
+					where: { userId: task.assigneeId },
+					select: { houseId: true },
+				});
+				sharesWithAssignee = assigneeHouses.some((ah) => userHouseIds.has(ah.houseId));
+			}
+
+			if (!sharesWithCreator && !sharesWithAssignee) {
+				throw new ForbiddenException(
+					'You do not have permission to update this task',
+				);
+			}
 		}
 
 		// If updating assignee, verify new assignee exists

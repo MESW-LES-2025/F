@@ -22,17 +22,22 @@ export default function ActivitiesPage() {
     loadTasks()
   }, [])
 
-  const loadTasks = async () => {
+  const loadTasks = async (background = false) => {
     try {
-      setIsLoading(true)
-      setError(null)
+      if (!background) {
+        setIsLoading(true)
+        setError(null)
+      }
+
       const fetchedTasks = await getTasks()
       setTasks(fetchedTasks)
     } catch (err) {
       console.error('Failed to load tasks:', err)
-      setError('Failed to load tasks. Please try again.')
+      if (!background) {
+        setError('Failed to load tasks. Please try again.')
+      }
     } finally {
-      setIsLoading(false)
+      if (!background) setIsLoading(false)
     }
   }
 
@@ -90,7 +95,7 @@ export default function ActivitiesPage() {
           <div className="text-center">
             <p className="text-red-500 mb-4">{error}</p>
             <button
-              onClick={loadTasks}
+              onClick={() => loadTasks(false)}
               className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
             >
               Retry
@@ -104,7 +109,7 @@ export default function ActivitiesPage() {
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
       <ActivitiesHeader onTaskCreated={handleTaskCreated} />
-      <ActivitiesStats />
+  <ActivitiesStats tasks={tasks} />
       <ActivitiesKanban 
         tasks={tasks} 
         onEditTask={handleEditTask}
