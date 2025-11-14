@@ -1,6 +1,6 @@
 # Concordia Frontend
 
-A Next.js application for the Concordia Project.
+A Next.js application for the Concordia Project
 
 Current Production URL: https://concordia-smoky.vercel.app/
 
