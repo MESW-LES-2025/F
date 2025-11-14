@@ -16,6 +16,10 @@ export default function ActivitiesPage() {
   const [error, setError] = useState<string | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
+  // Filters
+  const [timeframe, setTimeframe] = useState<string>("all")
+  const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
+  const [statusFilter, setStatusFilter] = useState<string>("all")
 
   // Load tasks on mount
   useEffect(() => {
@@ -78,6 +82,46 @@ export default function ActivitiesPage() {
     setDeletingTask(task)
   }
 
+  const assignees = Array.from(new Set(tasks.map((t) => t.assignee).filter(Boolean)))
+
+  const inTimeframe = (deadline: any, tf: string) => {
+    if (tf === "all") return true
+    if (!deadline) return false
+    const d = new Date(deadline)
+    const now = new Date()
+
+    const sameDay = (a: Date, b: Date) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate()
+
+    if (tf === "today") {
+      return sameDay(d, now)
+    }
+
+    if (tf === "this-week") {
+      // week starting Monday
+      const day = now.getDay() || 7
+      const monday = new Date(now)
+      monday.setDate(now.getDate() - (day - 1))
+      monday.setHours(0, 0, 0, 0)
+      const sunday = new Date(monday)
+      sunday.setDate(monday.getDate() + 6)
+      sunday.setHours(23, 59, 59, 999)
+      return d >= monday && d <= sunday
+    }
+
+    if (tf === "this-month") {
+      return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth()
+    }
+
+    return true
+  }
+
+  const filteredTasks = tasks.filter((t) => {
+    if (statusFilter !== "all" && t.status !== statusFilter) return false
+    if (assigneeFilter !== "all" && t.assignee !== assigneeFilter) return false
+    if (!inTimeframe(t.deadline, timeframe)) return false
+    return true
+  })
+
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
@@ -108,10 +152,20 @@ export default function ActivitiesPage() {
 
   return (
     <div className="p-4 md:p-6 lg:p-8 space-y-6">
-      <ActivitiesHeader onTaskCreated={handleTaskCreated} />
-  <ActivitiesStats tasks={tasks} />
+      <ActivitiesHeader
+        onTaskCreated={handleTaskCreated}
+        timeframe={timeframe}
+        assignee={assigneeFilter}
+        status={statusFilter}
+        assignees={assignees}
+        onTimeframeChange={(v) => setTimeframe(v)}
+        onAssigneeChange={(v) => setAssigneeFilter(v)}
+        onStatusChange={(v) => setStatusFilter(v)}
+      />
+      <ActivitiesStats tasks={filteredTasks} />
+
       <ActivitiesKanban 
-        tasks={tasks} 
+        tasks={filteredTasks} 
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
         onChangeStatus={handleStatusChange}
