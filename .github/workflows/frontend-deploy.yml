@@ -38,7 +38,3 @@ jobs:
 
       - name: Alias to $VERCEL_PROD_DOMAIN
         run: vercel alias set "${{ steps.deploy.outputs.deploy-url }}" "${{ env.VERCEL_PROD_DOMAIN }}" --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Success
-        run: |
-          echo "Deployed to: https://${{ env.VERCEL_PROD_DOMAIN }}" >> $GITHUB_STEP_SUMMARY
