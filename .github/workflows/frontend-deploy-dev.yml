@@ -31,4 +31,4 @@ jobs:
 
       # Deploy to Development
       - name: Deploy to Development
-        run: vercel deploy --prebuilt --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel deploy --prebuilt --target development --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
