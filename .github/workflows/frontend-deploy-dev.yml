@@ -1,4 +1,4 @@
-name: Frontend Deploy (Development → $VERCEL_DEV_DOMAIN)
+name: Frontend Deploy (Development)
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
@@ -36,10 +36,6 @@ jobs:
           DEPLOY_URL=$(vercel deploy --prebuilt --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1)
           echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
-      - name: Alias to $VERCEL_DEV_DOMAIN
+      - name: Alias to Dev Domain
         run: |
           vercel alias set ${{ steps.deploy.outputs.deploy-url }} ${{ env.VERCEL_DEV_DOMAIN }} --token=${{ secrets.VERCEL_TOKEN }}
-
-      - name: Success
-        run: |
-          echo "Deployed to: https://${{ env.VERCEL_DEV_DOMAIN }}" >> $GITHUB_STEP_SUMMARY
