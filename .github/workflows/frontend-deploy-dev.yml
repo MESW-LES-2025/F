@@ -1,15 +1,16 @@
-name: Frontend Deploy (Development)
+name: Frontend Deploy (Development → $VERCEL_DEV_DOMAIN)
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_DEV_DOMAIN: ${{ secrets.VERCEL_DEV_DOMAIN }}
 
 on:
   push:
     branches:
       - develop
     paths:
-      - "frontend/**"   # Only trigger when files in /frontend change
+      - "frontend/**"
 
 jobs:
   deploy:
@@ -29,6 +30,13 @@ jobs:
       - name: Build
         run: vercel build --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
 
-      # Deploy to Development
-      - name: Deploy to Development
-        run: vercel deploy --prebuilt --target development --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to $VERCEL_DEV_DOMAIN
+        run: |
+          vercel deploy --prebuilt \
+            --domains ${{ env.VERCEL_DEV_DOMAIN }} \
+            --cwd ./frontend \
+            --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Success
+        run: |
+          echo "Deployed to: https://${{ env.VERCEL_DEV_DOMAIN }}" >> $GITHUB_STEP_SUMMARY
