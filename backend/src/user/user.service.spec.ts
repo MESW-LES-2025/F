@@ -4,6 +4,8 @@ import { UserService } from './user.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ImageService } from 'src/shared/image/image.service';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { MulterFile } from 'src/shared/types/multer_file';
+import { Readable } from 'stream';
 
 describe('UserService', () => {
 	let service: UserService;
@@ -13,7 +15,9 @@ describe('UserService', () => {
 		email: 'test@example.com',
 		username: 'tester',
 		name: 'Tester',
-		imageUrl: null,
+		imageUrl: null as string | null,
+		imagePublicId: null as string | null,
+		deletedAt: null as Date | null,
 		createdAt: new Date(),
 		updatedAt: new Date(),
 	};
@@ -23,6 +27,9 @@ describe('UserService', () => {
 	type MockPrisma = {
 		user: {
 			findFirst: jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>;
+			findUnique: jest.MockedFunction<
 				(...args: any[]) => Promise<UserType | null>
 			>;
 			update: jest.MockedFunction<
@@ -39,6 +46,9 @@ describe('UserService', () => {
 	const mockPrismaService: MockPrisma = {
 		user: {
 			findFirst: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<UserType | null>
+			>,
+			findUnique: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<UserType | null>
 			>,
 			update: jest.fn() as jest.MockedFunction<
@@ -160,6 +170,100 @@ describe('UserService', () => {
 			await expect(service.remove('no-id')).rejects.toThrow(
 				NotFoundException,
 			);
+		});
+	});
+
+	describe('uploadImage', () => {
+		const mockFile: MulterFile = {
+			buffer: Buffer.from('test'),
+			originalname: 'test.jpg',
+			mimetype: 'image/jpeg',
+			size: 1024,
+			encoding: '7bit',
+			fieldname: 'file',
+			destination: '/tmp',
+			filename: 'test.jpg',
+			path: '/tmp/test.jpg',
+			stream: new Readable(),
+		};
+
+		it('uploads image successfully and returns updated user', async () => {
+			const userWithImage = {
+				...mockUser,
+				imageUrl: 'https://cloudinary.com/old-image.jpg',
+				imagePublicId: 'old-public-id',
+			};
+			mockPrismaService.user.findUnique.mockResolvedValue(userWithImage);
+			mockImageService.uploadImage.mockResolvedValue({
+				url: 'https://cloudinary.com/new-image.jpg',
+				publicId: 'new-public-id',
+			});
+			const updatedUser = {
+				...mockUser,
+				imageUrl: 'https://cloudinary.com/new-image.jpg',
+			};
+			mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+			const result = await service.uploadImage(mockUser.id, mockFile);
+
+			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
+				where: { id: mockUser.id },
+			});
+			expect(mockImageService.uploadImage).toHaveBeenCalledWith(
+				mockFile,
+				'users',
+			);
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+				where: { id: mockUser.id },
+				data: {
+					imageUrl: 'https://cloudinary.com/new-image.jpg',
+					imagePublicId: 'new-public-id',
+				},
+				select: expect.any(Object) as unknown as object,
+			});
+			expect(mockImageService.deleteImage).toHaveBeenCalledWith(
+				'old-public-id',
+			);
+			expect(result).toEqual(updatedUser);
+		});
+
+		it('uploads image without deleting old image when user has no previous image', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+			mockImageService.uploadImage.mockResolvedValue({
+				url: 'https://cloudinary.com/new-image.jpg',
+				publicId: 'new-public-id',
+			});
+			const updatedUser = {
+				...mockUser,
+				imageUrl: 'https://cloudinary.com/new-image.jpg',
+			};
+			mockPrismaService.user.update.mockResolvedValue(updatedUser);
+
+			const result = await service.uploadImage(mockUser.id, mockFile);
+
+			expect(mockImageService.uploadImage).toHaveBeenCalledWith(
+				mockFile,
+				'users',
+			);
+			expect(mockImageService.deleteImage).not.toHaveBeenCalled();
+			expect(result).toEqual(updatedUser);
+		});
+
+		it('throws NotFoundException when user not found', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.uploadImage('no-id', mockFile),
+			).rejects.toThrow(NotFoundException);
+		});
+
+		it('throws NotFoundException when user is deleted', async () => {
+			const deletedUser = { ...mockUser, deletedAt: new Date() };
+			mockPrismaService.user.findUnique.mockResolvedValue(deletedUser);
+
+			await expect(
+				service.uploadImage(mockUser.id, mockFile),
+			).rejects.toThrow(NotFoundException);
 		});
 	});
 
