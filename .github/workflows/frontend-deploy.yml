@@ -33,7 +33,7 @@ jobs:
       - name: Deploy to Production
         id: deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --prebuilt --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1 | xargs)  # Capture last line (URL)
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1)
           echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
       - name: Alias to $VERCEL_PROD_DOMAIN

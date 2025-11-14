@@ -10,7 +10,7 @@ on:
     branches:
       - develop
     paths:
-      - "frontend/**"
+      - "frontend/**"   # Only trigger when files in /frontend change
 
 jobs:
   deploy:
@@ -37,5 +37,4 @@ jobs:
           echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
 
       - name: Alias to Dev Domain
-        run: |
-          vercel alias set ${{ steps.deploy.outputs.deploy-url }} ${{ env.VERCEL_DEV_DOMAIN }} --token=${{ secrets.VERCEL_TOKEN }}
+        run: vercel alias set ${{ steps.deploy.outputs.deploy-url }} ${{ env.VERCEL_DEV_DOMAIN }} --token=${{ secrets.VERCEL_TOKEN }}
