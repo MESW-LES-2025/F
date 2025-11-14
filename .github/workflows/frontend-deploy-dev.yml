@@ -30,12 +30,15 @@ jobs:
       - name: Build
         run: vercel build --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy to $VERCEL_DEV_DOMAIN
+      - name: Deploy to Development
+        id: deploy 
         run: |
-          vercel deploy --prebuilt \
-            --domains ${{ env.VERCEL_DEV_DOMAIN }} \
-            --cwd ./frontend \
-            --token=${{ secrets.VERCEL_TOKEN }}
+          DEPLOY_URL=$(vercel deploy --prebuilt --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1)
+          echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+
+      - name: Alias to $VERCEL_DEV_DOMAIN
+        run: |
+          vercel alias set ${{ steps.deploy.outputs.deploy-url }} ${{ env.VERCEL_DEV_DOMAIN }} --token=${{ secrets.VERCEL_TOKEN }}
 
       - name: Success
         run: |
