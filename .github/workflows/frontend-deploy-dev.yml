@@ -1,8 +1,9 @@
-name: Frontend Deploy (Preview)
+name: Frontend Deploy (Development)
 
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_DEV_DOMAIN: ${{ secrets.VERCEL_DEV_DOMAIN }}
 
 on:
   push:
@@ -29,5 +30,11 @@ jobs:
       - name: Build
         run: vercel build --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Deploy Preview
-        run: vercel deploy --prebuilt --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Deploy to Development
+        id: deploy 
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1)
+          echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+
+      - name: Alias to Dev Domain
+        run: vercel alias set ${{ steps.deploy.outputs.deploy-url }} ${{ env.VERCEL_DEV_DOMAIN }} --token=${{ secrets.VERCEL_TOKEN }}

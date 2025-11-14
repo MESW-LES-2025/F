@@ -3,6 +3,7 @@ name: Frontend Deploy (Production)
 env:
   VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+  VERCEL_PROD_DOMAIN: ${{ secrets.VERCEL_PROD_DOMAIN }}
 
 on:
   push:
@@ -26,5 +27,14 @@ jobs:
       - name: Pull env vars
         run: vercel pull --yes --environment=production --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
 
-      - name: Build & Deploy Prod
-        run: vercel build --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} && vercel deploy --prebuilt --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+      - name: Build
+        run: vercel build --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy to Production
+        id: deploy
+        run: |
+          DEPLOY_URL=$(vercel deploy --prebuilt --prod --cwd ./frontend --token=${{ secrets.VERCEL_TOKEN }} | tail -1)
+          echo "deploy-url=$DEPLOY_URL" >> $GITHUB_OUTPUT
+
+      - name: Alias to Production Domain
+        run: vercel alias set "${{ steps.deploy.outputs.deploy-url }}" "${{ env.VERCEL_PROD_DOMAIN }}" --token=${{ secrets.VERCEL_TOKEN }}
