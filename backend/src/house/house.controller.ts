@@ -17,6 +17,8 @@ import { UserRequest } from '../shared/types/user_request';
 export class HouseController {
 	constructor(private readonly houseService: HouseService) {}
 
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Create a new house' })
 	@Post()
 	create(@Body() createHouseDto: CreateHouseDto, @Request() req: UserRequest) {

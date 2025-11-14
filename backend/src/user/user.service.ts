@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+	BadRequestException,
+	Injectable,
+	NotFoundException,
+} from '@nestjs/common';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ImageService } from 'src/shared/image/image.service';
@@ -126,6 +130,10 @@ export class UserService {
 	}
 
 	async joinHouseWithCode(userId: string, dto: JoinHouseDto) {
+		if (!dto.inviteCode) {
+			throw new BadRequestException('Code not sent');
+		}
+
 		const house = await this.prisma.house.findFirst({
 			where: { invitationCode: dto.inviteCode },
 		});
@@ -134,11 +142,24 @@ export class UserService {
 			throw new NotFoundException('House with code not found');
 		}
 
-		return await this.prisma.houseToUser.create({
+		const existingUser = await this.prisma.houseToUser.findFirst({
+			where: {
+				houseId: house.id,
+				userId,
+			},
+		});
+
+		if (existingUser) {
+			throw new BadRequestException('The user is already in the house');
+		}
+
+		const houseToUser = await this.prisma.houseToUser.create({
 			data: {
 				houseId: house.id,
 				userId,
 			},
 		});
+
+		return houseToUser ? true : false;
 	}
 }
