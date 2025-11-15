@@ -27,6 +27,17 @@ class HouseService {
 
     return house;
   }
+
+  /**
+   * Find a specific house
+   */
+  async findOne(id: string): Promise<House> {
+    const house = await apiGet<House>(`/house/${id}`, {
+      requiresAuth: true,
+    });
+
+    return house;
+  }
 }
 
 export const houseService = new HouseService();
