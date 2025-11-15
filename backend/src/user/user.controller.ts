@@ -73,6 +73,9 @@ export class UserController {
 		@Request() req: UserRequest,
 		@Body() joinHouseDto: JoinHouseDto,
 	) {
-		return await this.userService.joinHouseWithCode(req.user.userId, joinHouseDto);
+		return await this.userService.joinHouseWithCode(
+			req.user.userId,
+			joinHouseDto,
+		);
 	}
 }

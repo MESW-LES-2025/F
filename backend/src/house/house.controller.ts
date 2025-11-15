@@ -21,7 +21,10 @@ export class HouseController {
 	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Create a new house' })
 	@Post()
-	create(@Body() createHouseDto: CreateHouseDto, @Request() req: UserRequest) {
+	create(
+		@Body() createHouseDto: CreateHouseDto,
+		@Request() req: UserRequest,
+	) {
 		return this.houseService.create(createHouseDto, req.user.userId);
 	}
 

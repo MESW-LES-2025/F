@@ -2,8 +2,8 @@
 
 import { useState } from "react"
 import Link from "next/link"
-import { useRouter, usePathname } from "next/navigation"
-import { Home, Zap, Users, Calendar, Lightbulb, Settings, UserPlus, Menu, X, LogOut } from "lucide-react"
+import { usePathname } from "next/navigation"
+import { Home, Zap, Users, Calendar, Lightbulb, Settings, UserPlus, Menu, X, HousePlus } from "lucide-react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -14,6 +14,7 @@ const navigation = [
   { name: "Expenses", href: "/expenses", icon: Zap },
   { name: "Pantry", href: "/pantry", icon: Users },
   { name: "Activities", href: "/activities", icon: Calendar },
+  { name: "House", href: "/house", icon: HousePlus },
 ]
 
 const support = [

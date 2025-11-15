@@ -160,6 +160,12 @@ export class UserService {
 			},
 		});
 
-		return houseToUser ? true : false;
+		return houseToUser
+			? {
+					houseId: houseToUser.houseId,
+				}
+			: {
+					houseId: null,
+				};
 	}
 }
