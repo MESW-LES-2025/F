@@ -59,7 +59,10 @@ describe('HouseController', () => {
 			const result = await controller.create(dto, req);
 
 			expect(result).toBe('created');
-			expect(mockService.create).toHaveBeenCalledWith(dto, req.user.userId);
+			expect(mockService.create).toHaveBeenCalledWith(
+				dto,
+				req.user.userId,
+			);
 		});
 	});
 

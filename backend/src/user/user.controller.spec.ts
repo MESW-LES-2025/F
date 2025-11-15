@@ -4,6 +4,7 @@ import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRequest } from 'src/shared/types/user_request';
 import { HouseService } from 'src/house/house.service';
+import { House } from '@prisma/client';
 
 describe('UserController', () => {
 	let controller: UserController;
@@ -21,14 +22,24 @@ describe('UserController', () => {
 		findOne: jest.fn().mockResolvedValue(mockUser),
 		update: jest.fn().mockResolvedValue({ ...mockUser, name: 'Updated' }),
 		remove: jest.fn().mockResolvedValue({ success: true }),
-		joinHouseWithCode: jest.fn().mockResolvedValue({ houseId: 'house-id-1' }),
+		joinHouseWithCode: jest
+			.fn()
+			.mockResolvedValue({ houseId: 'house-id-1' }),
 	};
 
 	const mockHouseService = {
 		create: jest
+			.fn<Promise<House>, [{ name: string }]>()
+			.mockResolvedValue({
+				id: 'house-id-1',
+				name: 'My House',
+				invitationCode: 'INVITE123',
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			} as House),
+		join: jest
 			.fn()
-			.mockResolvedValue({ id: 'house-id-1', inviteCode: 'INVITE123' }),
-		join: jest.fn().mockResolvedValue({ success: true }),
+			.mockResolvedValue({ success: true } as { success: boolean }),
 	};
 
 	beforeEach(async () => {
@@ -73,11 +84,19 @@ describe('UserController', () => {
 	it('joinHouse should join a house and return the house id', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
 
-		const newHouse = await mockHouseService.create({ name: 'My House' });
-		const inviteCode = newHouse.inviteCode;
+		const newHouse: House = await mockHouseService.create({
+			name: 'My House',
+		});
+		const inviteCode = newHouse.invitationCode;
 
-		const result = await controller.joinHouse(req, { inviteCode });
-		expect(mockUserService.joinHouseWithCode).toHaveBeenCalledWith(mockUser.id, { inviteCode });
+		const result: { houseId: string | null } = await controller.joinHouse(
+			req,
+			{ inviteCode },
+		);
+		expect(mockUserService.joinHouseWithCode).toHaveBeenCalledWith(
+			mockUser.id,
+			{ inviteCode },
+		);
 		expect(result).toEqual({ houseId: 'house-id-1' });
 	});
 });
