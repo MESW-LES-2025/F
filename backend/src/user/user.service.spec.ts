@@ -1,11 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotFoundException } from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { UserService } from './user.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { ImageService } from 'src/shared/image/image.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { MulterFile } from 'src/shared/types/multer_file';
 import { Readable } from 'stream';
+import { House, HouseToUser } from '@prisma/client';
 
 describe('UserService', () => {
 	let service: UserService;
@@ -41,6 +42,22 @@ describe('UserService', () => {
 				(...args: any[]) => Promise<{ count: number }>
 			>;
 		};
+		house: {
+			findFirst: jest.MockedFunction<
+				(...args: any[]) => Promise<House | null>
+			>;
+		};
+		houseToUser: {
+			findFirst: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>;
+			findUnique: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>;
+			create: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>;
+		};
 	};
 
 	const mockPrismaService: MockPrisma = {
@@ -58,6 +75,22 @@ describe('UserService', () => {
 		refreshToken: {
 			updateMany: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<{ count: number }>
+			>,
+		},
+		house: {
+			findFirst: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<House | null>
+			>,
+		},
+		houseToUser: {
+			findFirst: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			findUnique: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			create: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 		},
 	};
@@ -267,7 +300,100 @@ describe('UserService', () => {
 		});
 	});
 
-	describe('join house', () => {
-		// to-do
+	describe('joinHouseWithCode', () => {
+		const mockHouse = {
+			id: 'house-id-1',
+			invitationCode: 'INVITE123',
+			name: 'Test House',
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+
+		const mockHouseToUser = {
+			id: 'house-to-user-id-1',
+			houseId: mockHouse.id,
+			userId: mockUser.id,
+			role: '',
+			joinedAt: new Date(),
+		};
+
+		it('throws BadRequestException if no code is sent', async () => {
+			await expect(
+				service.joinHouseWithCode(mockUser.id, {
+					inviteCode: '',
+				}),
+			).rejects.toThrow(BadRequestException);
+		});
+
+		it('throws NotFoundException if house with code does not exist', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.joinHouseWithCode(mockUser.id, {
+					inviteCode: 'INVALID',
+				}),
+			).rejects.toThrow(NotFoundException);
+
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: { invitationCode: 'INVALID' },
+			});
+		});
+
+		it('throws BadRequestException if user is already in the house', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockHouseToUser,
+			);
+
+			await expect(
+				service.joinHouseWithCode(mockUser.id, {
+					inviteCode: 'ABC123',
+				}),
+			).rejects.toThrow(BadRequestException);
+
+			expect(
+				mockPrismaService.houseToUser.findFirst,
+			).toHaveBeenCalledWith({
+				where: { houseId: mockHouse.id, userId: mockUser.id },
+			});
+		});
+
+		it('adds user to house if everything is correct', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+			mockPrismaService.houseToUser.create.mockResolvedValue(
+				mockHouseToUser,
+			);
+
+			const result = await service.joinHouseWithCode(mockUser.id, {
+				inviteCode: 'ABC123',
+			});
+
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: { invitationCode: 'ABC123' },
+			});
+			expect(
+				mockPrismaService.houseToUser.findFirst,
+			).toHaveBeenCalledWith({
+				where: { houseId: mockHouse.id, userId: mockUser.id },
+			});
+			expect(mockPrismaService.houseToUser.create).toHaveBeenCalledWith({
+				data: { houseId: mockHouse.id, userId: mockUser.id },
+			});
+
+			expect(result).toEqual({ houseId: 'house-id-1' });
+		});
+
+		it('returns houseId null if create fails', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+			mockPrismaService.houseToUser.create.mockResolvedValue(null);
+
+			const result = await service.joinHouseWithCode(mockUser.id, {
+				inviteCode: 'ABC123',
+			});
+
+			expect(result).toEqual({ houseId: null });
+		});
 	});
 });

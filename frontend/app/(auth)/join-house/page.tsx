@@ -16,9 +16,9 @@ export default function SettingsPage() {
       </div>
 
       <div className="grid gap-6">
-        <JoinHouseForm />
+        <JoinHouseForm isRegister={true} />
 
-        <CreateHouseForm />
+        <CreateHouseForm isRegister={true} />
       </div>
     </div>
   );
