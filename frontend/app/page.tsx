@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
 import { MetricsCards } from "@/components/metrics-cards";
 import { ActivitiesBoard } from "@/components/activities-board";
@@ -10,7 +10,7 @@ import { AppSidebar } from "@/components/app-sidebar";
 import { houseService } from "@/lib/house-service";
 import { House } from "@/lib/types";
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
@@ -66,7 +66,7 @@ export default function Home() {
   // Authenticated - show dashboard
   return (
     <div className="flex min-h-screen bg-gray-50">
-      <AppSidebar />
+      <AppSidebar houses={userHouses ?? []} currentHouse={currentHouse} />
       <main className="flex-1 lg:ml-40 pt-16 lg:pt-0">
         <div className="flex-1">
           <DashboardHeader
@@ -75,11 +75,19 @@ export default function Home() {
             router={router}
           />
           <div className="p-4 md:p-6 space-y-6">
-            <MetricsCards />
-            <ActivitiesBoard />
+            <MetricsCards house={currentHouse} />
+            <ActivitiesBoard house={currentHouse} />
           </div>
         </div>
       </main>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <HomeContent />
+    </Suspense>
   );
 }
