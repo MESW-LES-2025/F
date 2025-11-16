@@ -74,6 +74,17 @@ export class AuthService {
 		// Find user
 		const user = await this.prisma.user.findFirst({
 			where: { email, deletedAt: null },
+			select: {
+				id: true,
+				name: true,
+				username: true,
+				email: true,
+				password: true,
+				imageUrl: true,
+				houses: {
+					select: { houseId: true },
+				},
+			},
 		});
 
 		if (!user) {
@@ -101,6 +112,7 @@ export class AuthService {
 				username: user.username,
 				name: user.name,
 				imageUrl: user.imageUrl,
+				houses: user.houses,
 			},
 		};
 	}

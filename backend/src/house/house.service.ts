@@ -16,7 +16,7 @@ export class HouseService {
 		private pantryService: PantryService,
 	) {}
 
-	async create(createHouseDto: CreateHouseDto) {
+	async create(createHouseDto: CreateHouseDto, createdByUserId: string) {
 		const { name } = createHouseDto;
 
 		if (!verifyIsString(name)) {
@@ -39,6 +39,14 @@ export class HouseService {
 		if (!pantry) {
 			throw new NotFoundException('The pantry could not be created');
 		}
+
+		// add the relation between house and the user that created it
+		await this.prisma.houseToUser.create({
+			data: {
+				userId: createdByUserId,
+				houseId: house.id,
+			},
+		});
 
 		return house;
 	}
