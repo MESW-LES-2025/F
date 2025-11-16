@@ -46,7 +46,7 @@ export default function RegisterPage() {
 
     try {
       await register(formData.email, formData.username, formData.password, formData.name)
-      router.push("/")
+      router.push("/join-house");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.")
     } finally {
