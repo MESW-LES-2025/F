@@ -1,8 +1,8 @@
 -- CreateEnum
 CREATE TYPE "ExpenseCategory" AS ENUM ('GROCERIES', 'UTILITIES', 'HOUSEHOLD', 'FOOD', 'ENTERTAINMENT', 'TRANSPORTATION', 'OTHER');
 
--- DropEnum
-DROP TYPE "public"."Unit";
+-- DropEnum (only if it exists)
+DROP TYPE IF EXISTS "public"."Unit";
 
 -- CreateTable
 CREATE TABLE "Expense" (

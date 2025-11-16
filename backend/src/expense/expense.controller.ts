@@ -38,7 +38,7 @@ export class ExpenseController {
 		status: 404,
 		description: 'Payer, house, or user in splitWith not found',
 	})
-	async create(@Body() createExpenseDto: CreateExpenseDto) {
+	async create(@Body() createExpenseDto: CreateExpenseDto): Promise<unknown> {
 		return this.expenseService.create(createExpenseDto);
 	}
 
@@ -53,7 +53,7 @@ export class ExpenseController {
 		status: 200,
 		description: 'Expenses retrieved successfully',
 	})
-	async findAll(@Query('houseId') houseId?: string) {
+	async findAll(@Query('houseId') houseId?: string): Promise<unknown> {
 		if (houseId) {
 			return this.expenseService.findByHouse(houseId);
 		}
@@ -68,7 +68,7 @@ export class ExpenseController {
 		description: 'Expense retrieved successfully',
 	})
 	@ApiResponse({ status: 404, description: 'Expense not found' })
-	async findOne(@Param('id') id: string) {
+	async findOne(@Param('id') id: string): Promise<unknown> {
 		return this.expenseService.findOne(id);
 	}
 
@@ -80,7 +80,7 @@ export class ExpenseController {
 	async update(
 		@Param('id') id: string,
 		@Body() updateExpenseDto: UpdateExpenseDto,
-	) {
+	): Promise<unknown> {
 		return this.expenseService.update(id, updateExpenseDto);
 	}
 
@@ -89,7 +89,7 @@ export class ExpenseController {
 	@ApiParam({ name: 'id', description: 'Expense UUID' })
 	@ApiResponse({ status: 200, description: 'Expense deleted successfully' })
 	@ApiResponse({ status: 404, description: 'Expense not found' })
-	async remove(@Param('id') id: string) {
+	async remove(@Param('id') id: string): Promise<unknown> {
 		return this.expenseService.remove(id);
 	}
 }

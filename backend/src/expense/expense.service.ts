@@ -11,7 +11,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 export class ExpenseService {
 	constructor(private prisma: PrismaService) {}
 
-	async create(createExpenseDto: CreateExpenseDto) {
+	async create(createExpenseDto: CreateExpenseDto): Promise<unknown> {
 		const {
 			amount,
 			description,
@@ -110,7 +110,7 @@ export class ExpenseService {
 		return expense;
 	}
 
-	async findAll() {
+	findAll() {
 		return this.prisma.expense.findMany({
 			include: {
 				paidBy: {
@@ -135,7 +135,7 @@ export class ExpenseService {
 		});
 	}
 
-	async findOne(id: string) {
+	async findOne(id: string): Promise<unknown> {
 		const expense = await this.prisma.expense.findUnique({
 			where: { id },
 			include: {
@@ -164,7 +164,7 @@ export class ExpenseService {
 		return expense;
 	}
 
-	async findByHouse(houseId: string) {
+	async findByHouse(houseId: string): Promise<unknown> {
 		// Verify house exists
 		const house = await this.prisma.house.findUnique({
 			where: { id: houseId },
@@ -199,7 +199,10 @@ export class ExpenseService {
 		});
 	}
 
-	async update(id: string, updateExpenseDto: UpdateExpenseDto) {
+	async update(
+		id: string,
+		updateExpenseDto: UpdateExpenseDto,
+	): Promise<unknown> {
 		// Check if expense exists
 		const existingExpense = await this.prisma.expense.findUnique({
 			where: { id },
@@ -288,7 +291,7 @@ export class ExpenseService {
 		return expense;
 	}
 
-	async remove(id: string) {
+	async remove(id: string): Promise<{ message: string; id: string }> {
 		// Check if expense exists
 		const expense = await this.prisma.expense.findUnique({
 			where: { id },
