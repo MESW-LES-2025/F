@@ -25,6 +25,7 @@ model User {
   refreshTokens    RefreshToken[]
   assignedTasks Task[]         @relation("AssignedTasks")
   createdTasks  Task[]         @relation("CreatedTasks")
+  paidExpenses  Expense[]      @relation("PaidExpenses")
 }
 
 model RefreshToken {
@@ -52,6 +53,7 @@ model House {
   // Pantry items associated with this house (via PantryItem.houseId)
   pantryItems    PantryItem[]
   tasks          Task[]
+  expenses       Expense[]
 }
 
 model HouseToUser {
@@ -132,6 +134,26 @@ model Task {
   @@index([status])
 }
 
+model Expense {
+  id          String   @id @default(uuid()) @db.Uuid
+  amount      Float
+  description String   @db.VarChar(255)
+  category    ExpenseCategory
+  date        DateTime @default(now())
+  paidById    String   @db.Uuid
+  houseId     String   @db.Uuid
+  splitWith   String[] @db.Uuid
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  paidBy      User     @relation("PaidExpenses", fields: [paidById], references: [id], onDelete: Cascade)
+  house       House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+
+  @@index([houseId])
+  @@index([paidById])
+  @@index([date])
+}
+
 enum PantryCategory {
   OTHER
   GRAINS
@@ -142,5 +164,15 @@ enum PantryCategory {
   FROZEN
   CONDIMENTS
   BEVERAGES
+}
+
+enum ExpenseCategory {
+  GROCERIES
+  UTILITIES
+  HOUSEHOLD
+  FOOD
+  ENTERTAINMENT
+  TRANSPORTATION
+  OTHER
 }
 

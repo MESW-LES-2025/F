@@ -7,8 +7,8 @@
 -- AlterTable
 ALTER TABLE "Task" ADD COLUMN     "houseId" UUID NOT NULL;
 
--- DropEnum
-DROP TYPE "public"."Unit";
+-- DropEnum (only if it exists)
+DROP TYPE IF EXISTS "public"."Unit";
 
 -- CreateIndex
 CREATE INDEX "Task_houseId_idx" ON "Task"("houseId");

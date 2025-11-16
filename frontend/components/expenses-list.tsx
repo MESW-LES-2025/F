@@ -1,17 +1,135 @@
+"use client"
+
+import { useEffect, useState, useMemo } from "react"
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
-import { expenses } from "@/lib/data"
 import { format } from "date-fns"
+import { getExpenses } from "@/lib/expense-service"
+import type { Expense } from "@/lib/types"
+import { Spinner } from "@/components/ui/spinner"
+import { Alert, AlertDescription } from "@/components/ui/alert"
 
-export function ExpensesList() {
+interface ExpensesListProps {
+  houseId?: string
+  refreshTrigger?: number
+  // Filter and sort from parent
+  sortField: "date" | "amount" | "payer"
+  sortOrder: "asc" | "desc"
+  filterCategory: string
+  filterDateFrom: string
+  filterDateTo: string
+}
+
+export function ExpensesList({
+  houseId,
+  refreshTrigger,
+  sortField,
+  sortOrder,
+  filterCategory,
+  filterDateFrom,
+  filterDateTo,
+}: ExpensesListProps) {
+  const [expenses, setExpenses] = useState<Expense[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    loadExpenses()
+  }, [houseId, refreshTrigger])
+
+  const loadExpenses = async () => {
+    setIsLoading(true)
+    setError(null)
+    try {
+      const data = await getExpenses(houseId ? { houseId } : undefined)
+      setExpenses(data)
+    } catch (err) {
+      console.error('Failed to load expenses:', err)
+      setError('Failed to load expenses. Please try again.')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Compute filtered and sorted expenses
+  const filteredAndSortedExpenses = useMemo(() => {
+    let result = [...expenses]
+
+    // Filter by category
+    if (filterCategory !== "all") {
+      result = result.filter((e) => e.category === filterCategory)
+    }
+
+    // Filter by date range
+    if (filterDateFrom) {
+      const fromDate = new Date(filterDateFrom)
+      result = result.filter((e) => new Date(e.date) >= fromDate)
+    }
+    if (filterDateTo) {
+      const toDate = new Date(filterDateTo)
+      toDate.setHours(23, 59, 59, 999) // include entire day
+      result = result.filter((e) => new Date(e.date) <= toDate)
+    }
+
+    // Sort
+    result.sort((a, b) => {
+      let comparison = 0
+      switch (sortField) {
+        case "date":
+          comparison = new Date(a.date).getTime() - new Date(b.date).getTime()
+          break
+        case "amount":
+          comparison = a.amount - b.amount
+          break
+        case "payer":
+          comparison = a.paidBy.localeCompare(b.paidBy)
+          break
+      }
+      return sortOrder === "asc" ? comparison : -comparison
+    })
+
+    return result
+  }, [expenses, sortField, sortOrder, filterCategory, filterDateFrom, filterDateTo])
+
+  if (isLoading) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-8 flex items-center justify-center">
+        <Spinner className="w-8 h-8" />
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-4">
+        <Alert variant="destructive">
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      </div>
+    )
+  }
+
+  if (expenses.length === 0) {
+    return (
+      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+        <p className="text-gray-500">No expenses recorded yet. Add your first expense to get started!</p>
+      </div>
+    )
+  }
+
   return (
     <div className="bg-white rounded-lg border border-gray-200">
       <div className="p-4 border-b border-gray-200">
-        <h2 className="text-sm font-semibold text-gray-900">Recent Expenses</h2>
+        <div className="flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-gray-900">Recent Expenses</h2>
+          <p className="text-xs text-gray-500">
+            Showing {filteredAndSortedExpenses.length} of {expenses.length} expenses
+          </p>
+        </div>
       </div>
 
       <div className="divide-y divide-gray-200">
-        {expenses.map((expense) => {
+        {filteredAndSortedExpenses.map((expense) => {
           const splitCount = expense.splitWith.length
           const perPersonAmount = expense.amount / splitCount
 

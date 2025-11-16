@@ -7,6 +7,7 @@ import { PantryModule } from './pantry/pantry.module';
 import { PantryItemModule } from './pantry-item/pantry-item.module';
 import { TasksModule } from './tasks/tasks.module';
 import { UserModule } from './user/user.module';
+import { ExpenseModule } from './expense/expense.module';
 import { MulterModule } from '@nestjs/platform-express';
 import * as multer from 'multer';
 
@@ -21,6 +22,7 @@ import * as multer from 'multer';
 		PantryItemModule,
 		TasksModule,
 		UserModule,
+		ExpenseModule,
 	],
 })
 export class AppModule {}
