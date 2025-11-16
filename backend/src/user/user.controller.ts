@@ -16,6 +16,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UserRequest } from 'src/shared/types/user_request';
+import { JoinHouseDto } from './dto/join-house.dto';
 
 @Controller('user')
 export class UserController {
@@ -62,5 +63,19 @@ export class UserController {
 		@UploadedFile() file: Express.Multer.File,
 	) {
 		return await this.userService.uploadImage(req.user.userId, file);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'User can use an invite code to join a house' })
+	@Post('join-house')
+	async joinHouse(
+		@Request() req: UserRequest,
+		@Body() joinHouseDto: JoinHouseDto,
+	) {
+		return await this.userService.joinHouseWithCode(
+			req.user.userId,
+			joinHouseDto,
+		);
 	}
 }

@@ -12,11 +12,23 @@ jest.mock('src/shared/function-verify-string', () => ({
 describe('HouseService', () => {
 	let service: HouseService;
 
+	const mockUser = {
+		id: 'user-id-1',
+		email: 'test@example.com',
+		username: 'tester',
+		name: 'Tester',
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	};
+
 	const mockPrismaService = {
 		house: {
 			create: jest.fn(),
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
+		},
+		houseToUser: {
+			create: jest.fn(),
 		},
 	};
 
@@ -61,7 +73,7 @@ describe('HouseService', () => {
 			mockPrismaService.house.create.mockResolvedValue(mockHouse);
 			mockPantryService.create.mockResolvedValue(true);
 
-			const result = await service.create(dto);
+			const result = await service.create(dto, mockUser.id);
 
 			expect(result).toEqual(mockHouse);
 			expect(mockPrismaService.house.create).toHaveBeenCalled();
@@ -71,7 +83,7 @@ describe('HouseService', () => {
 		it('should throw UnauthorizedException when name is not a string', async () => {
 			(verifyIsString as unknown as jest.Mock).mockReturnValue(false);
 
-			await expect(service.create(dto)).rejects.toThrow(
+			await expect(service.create(dto, mockUser.id)).rejects.toThrow(
 				UnauthorizedException,
 			);
 		});
@@ -81,7 +93,7 @@ describe('HouseService', () => {
 
 			mockPrismaService.house.create.mockResolvedValue(null);
 
-			await expect(service.create(dto)).rejects.toThrow(
+			await expect(service.create(dto, mockUser.id)).rejects.toThrow(
 				NotFoundException,
 			);
 		});
@@ -91,7 +103,7 @@ describe('HouseService', () => {
 			mockPrismaService.house.create.mockResolvedValue(mockHouse);
 			mockPantryService.create.mockResolvedValue(false);
 
-			await expect(service.create(dto)).rejects.toThrow(
+			await expect(service.create(dto, mockUser.id)).rejects.toThrow(
 				NotFoundException,
 			);
 		});

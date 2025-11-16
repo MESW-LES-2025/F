@@ -2,13 +2,13 @@
 
 import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { authService } from './auth-service';
-import type { User } from './types';
+import type { AuthResponse, User } from './types';
 
 interface AuthContextType {
   user: User | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<AuthResponse>;
   register: (email: string, username: string, password: string, name: string) => Promise<void>;
   logout: () => Promise<void>;
   changePassword: (currentPassword: string, newPassword: string) => Promise<void>;
@@ -87,6 +87,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsAuthenticated(true);
       // Store user in sessionStorage for quick access
       sessionStorage.setItem('user', JSON.stringify(response.user));
+
+      return response
     } finally {
       setIsLoading(false);
     }
