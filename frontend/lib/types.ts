@@ -16,6 +16,8 @@ export interface Task {
   status: "todo" | "doing" | "done";
   deadline?: Date;
   createdAt: Date;
+  houseId: string;
+  houseName: string;
 }
 
 export interface House {
