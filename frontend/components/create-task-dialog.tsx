@@ -124,12 +124,18 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     setIsLoading(true)
 
     try {
+      if (!userHouseId) {
+        setError('You must belong to a house to create tasks.');
+        return;
+      }
+
       // Create the task via API
       const newTask = await createTask({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
         assigneeId: formData.assignee,
         deadline: new Date(formData.deadline).toISOString(),
+        houseId: userHouseId,
       })
 
       // Call the callback with the new task
