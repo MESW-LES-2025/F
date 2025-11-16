@@ -13,7 +13,8 @@ export class TasksService {
 	constructor(private prisma: PrismaService) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
-		const { title, description, assigneeId, deadline, houseId } = createTaskDto;
+		const { title, description, assigneeId, deadline, houseId } =
+			createTaskDto;
 
 		// Verify house exists
 		const house = await this.prisma.house.findUnique({
