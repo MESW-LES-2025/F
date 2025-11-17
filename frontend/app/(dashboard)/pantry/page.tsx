@@ -5,10 +5,17 @@ import PantryContainer from "@/components/pantry-container"
 import type { PantryItem } from "@/lib/types"
 import { getPantryItems } from "@/lib/pantry-service"
 import { useHouse } from "@/lib/house-context"
+import { apiGet } from "@/lib/api-client"
+
+interface PantryResponse {
+  id: string
+  houseId: string
+}
 
 export default function PantryPage() {
   const { selectedHouse } = useHouse()
   const [items, setItems] = useState<PantryItem[]>([])
+  const [pantryId, setPantryId] = useState<string | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -23,8 +30,19 @@ export default function PantryPage() {
       
       if (!selectedHouse) {
         setItems([])
+        setPantryId(null)
         setIsLoading(false)
         return
+      }
+      
+      // Fetch pantries to get the pantry ID for this house
+      const pantries = await apiGet<PantryResponse[]>('/pantry', { requiresAuth: true })
+      const housePantry = pantries.find((p) => p.houseId === selectedHouse.id)
+      
+      if (housePantry) {
+        setPantryId(housePantry.id)
+      } else {
+        setPantryId(null)
       }
       
       const fetchedItems = await getPantryItems(selectedHouse.id)
@@ -82,7 +100,8 @@ export default function PantryPage() {
     <PantryContainer 
       items={items} 
       pantryHouseId={selectedHouse.id} 
-      pantryId={selectedHouse.id} 
+      pantryId={pantryId || undefined}
+      onItemAdded={loadPantryItems}
     />
   )
 }

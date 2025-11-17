@@ -72,10 +72,12 @@ export async function getTasks(filters?: {
   status?: string
   houseId?: string
 }): Promise<Task[]> {
+  console.log('[tasks-service] getTasks called with filters:', filters)
   const tasks = await apiGet<TaskResponse[]>('/tasks', {
     requiresAuth: true,
     params: filters as Record<string, string>,
   })
+  console.log('[tasks-service] Received tasks:', tasks.length)
   
   return tasks.map(transformTask)
 }

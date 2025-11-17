@@ -12,9 +12,10 @@ interface PantryHeaderProps {
   setStatus: Dispatch<SetStateAction<string>>
   addedBy: string
   setAddedBy: Dispatch<SetStateAction<string>>
+  onItemAdded?: () => void
 }
 
-export function PantryHeader({ category, setCategory, status, setStatus, addedBy, setAddedBy }: PantryHeaderProps) {
+export function PantryHeader({ category, setCategory, status, setStatus, addedBy, setAddedBy, onItemAdded }: PantryHeaderProps) {
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="px-6 py-4">
@@ -23,7 +24,7 @@ export function PantryHeader({ category, setCategory, status, setStatus, addedBy
             <h1 className="text-lg font-semibold text-gray-900">Pantry</h1>
             <HouseSelector />
           </div>
-          <PantryAddItem />
+          <PantryAddItem onItemAdded={onItemAdded} />
         </div>
 
         <div className="flex items-center gap-4">
