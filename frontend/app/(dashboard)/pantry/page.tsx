@@ -1,112 +1,88 @@
+"use client"
+
+import { useState, useEffect } from "react"
 import PantryContainer from "@/components/pantry-container"
 import type { PantryItem } from "@/lib/types"
+import { getPantryItems } from "@/lib/pantry-service"
+import { useHouse } from "@/lib/house-context"
 
-export default async function PantryPage() {
-  let items: PantryItem[] | undefined = undefined
-  let pantryHouseId: string | undefined = undefined
-  let pantryId: string | undefined = undefined
+export default function PantryPage() {
+  const { selectedHouse } = useHouse()
+  const [items, setItems] = useState<PantryItem[]>([])
+  const [isLoading, setIsLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  try {
-    const apiBase = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3001/api/v1"
+  useEffect(() => {
+    loadPantryItems()
+  }, [selectedHouse])
 
-    // Try getting the user's houses (may 401 if not authenticated in SSR)
-    let houseId: string | undefined
+  const loadPantryItems = async () => {
     try {
-      const housesRes = await fetch(`${apiBase}/house/user`, { cache: "no-store" })
-      if (housesRes.ok) {
-        const houses = await housesRes.json()
-        houseId = Array.isArray(houses) && houses.length ? houses[0].id : undefined
-      } else {
-        // Don't throw here; we'll attempt fallbacks below.
-        console.warn('pantry page: GET /house/user returned', housesRes.status)
+      setIsLoading(true)
+      setError(null)
+      
+      if (!selectedHouse) {
+        setItems([])
+        setIsLoading(false)
+        return
       }
-    } catch (innerErr) {
-      // network or other low-level error
-      console.warn('pantry page: failed to fetch houses', innerErr)
+      
+      const fetchedItems = await getPantryItems(selectedHouse.id)
+      setItems(fetchedItems)
+    } catch (err) {
+      console.error('Failed to load pantry items:', err)
+      setError('Failed to load pantry items. Please try again.')
+    } finally {
+      setIsLoading(false)
     }
+  }
 
-    // Helper to map pantryData.items -> frontend items
-    const mapPantryItems = (arr: any[] = []) =>
-      arr.map((pi: any) => ({
-        id: pi.item?.id ?? pi.itemId ?? 'unknown',
-        name: pi.item?.name ?? pi.name ?? 'Unknown',
-        quantity: pi.quantity ?? 0,
-        unit: pi.item?.measurementUnit ?? 'unit',
-        category: pi.item?.category ?? 'OTHER',
-        addedBy: pi.user?.name ?? 'Unknown',
-        addedByAvatar: pi.user?.avatarUrl ?? '',
-        expiryDate: pi.expiryDate ? new Date(pi.expiryDate) : undefined,
-        lowStock: Number(pi.quantity ?? 0) <= 1,
-      }))
+  if (isLoading) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <p className="text-gray-500">Loading pantry items...</p>
+        </div>
+      </div>
+    )
+  }
 
-    let pantryFound = false
+  if (!selectedHouse) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-gray-500 mb-2">No house selected</p>
+            <p className="text-sm text-gray-400">Please select a house to view pantry items</p>
+          </div>
+        </div>
+      </div>
+    )
+  }
 
-    // If we got a houseId, prefer that pantry first
-    if (houseId) {
-      const panRes = await fetch(`${apiBase}/pantry`, { cache: "no-store" })
-      if (panRes.ok) {
-        const pans = await panRes.json()
-        const pantry = Array.isArray(pans) ? pans.find((p: any) => p.houseId === houseId) : undefined
-        if (pantry) {
-          const pantryRes = await fetch(`${apiBase}/pantry/${houseId}/${pantry.id}`, { cache: "no-store" })
-          if (pantryRes.ok) {
-            const pantryData = await pantryRes.json()
-                items = mapPantryItems(pantryData?.items ?? [])
-                pantryHouseId = houseId
-                pantryId = pantry.id
-            pantryFound = true
-          }
-        }
-      }
-    }
-
-    // Fallback: try any pantry (first available)
-    if (!pantryFound) {
-      const panRes = await fetch(`${apiBase}/pantry`, { cache: "no-store" })
-      if (panRes.ok) {
-        const pans = await panRes.json()
-        const pantry = Array.isArray(pans) && pans.length ? pans[0] : undefined
-        if (pantry) {
-          const pantryRes = await fetch(`${apiBase}/pantry/${pantry.houseId}/${pantry.id}`, { cache: "no-store" })
-          if (pantryRes.ok) {
-            const pantryData = await pantryRes.json()
-                items = mapPantryItems(pantryData?.items ?? [])
-                pantryHouseId = pantry.houseId
-                pantryId = pantry.id
-            pantryFound = true
-          }
-        }
-      }
-    }
-
-    // Last resort: fetch pantry-item catalog (no quantities, but show names)
-    if (!pantryFound) {
-      const res = await fetch(`${apiBase}/pantry-item`, { cache: "no-store" })
-      if (res.ok) {
-        const data = await res.json()
-        const arr = Array.isArray(data) ? data : data.items ?? data.data ?? []
-        items = arr.map((it: any) => ({
-          id: it.id,
-          name: it.name,
-          quantity: 0,
-          unit: it.measurementUnit ?? 'unit',
-          category: it.category ?? 'OTHER',
-          addedBy: it.createdByUser ?? 'Unknown',
-          addedByAvatar: it.createdByUserAvatar ?? '',
-          expiryDate: it.expiryDate ? new Date(it.expiryDate) : undefined,
-          lowStock: false,
-        }))
-      } else {
-        console.warn('pantry page: GET /pantry-item returned', res.status)
-      }
-    }
-  } catch (err) {
-    console.warn("Error fetching pantry items:", err)
+  if (error) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-red-500 mb-4">{error}</p>
+            <button
+              onClick={loadPantryItems}
+              className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
-    <div>
-        <PantryContainer items={items} pantryHouseId={pantryHouseId} pantryId={pantryId} />
-    </div>
+    <PantryContainer 
+      items={items} 
+      pantryHouseId={selectedHouse.id} 
+      pantryId={selectedHouse.id} 
+    />
   )
 }

@@ -70,6 +70,7 @@ function transformTask(backendTask: TaskResponse): Task {
 export async function getTasks(filters?: {
   assigneeId?: string
   status?: string
+  houseId?: string
 }): Promise<Task[]> {
   const tasks = await apiGet<TaskResponse[]>('/tasks', {
     requiresAuth: true,

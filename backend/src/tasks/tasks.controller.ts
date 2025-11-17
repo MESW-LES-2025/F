@@ -54,11 +54,20 @@ export class TasksController {
 		required: false,
 		description: 'Filter by status (todo, doing, done)',
 	})
+	@ApiQuery({
+		name: 'houseId',
+		required: false,
+		description: 'Filter by house ID',
+	})
 	@ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
 	async findAll(
 		@Query('assigneeId') assigneeId?: string,
 		@Query('status') status?: string,
+		@Query('houseId') houseId?: string,
 	) {
+		if (houseId) {
+			return this.tasksService.findByHouse(houseId);
+		}
 		if (assigneeId) {
 			return this.tasksService.findByAssignee(assigneeId);
 		}

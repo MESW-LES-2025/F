@@ -2,6 +2,7 @@
 
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { CreateExpenseDialog } from "@/components/create-expense-dialog"
+import { HouseSelector } from "@/components/house-selector"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -39,7 +40,10 @@ export function ExpensesHeader({
     <div className="bg-white border-b border-gray-200">
       <div className="px-4 md:px-6 py-4">
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 mb-4">
-          <h1 className="text-base md:text-lg font-semibold text-gray-900">Expenses</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-base md:text-lg font-semibold text-gray-900">Expenses</h1>
+            <HouseSelector />
+          </div>
           <CreateExpenseDialog houseId={houseId} onExpenseCreated={onExpenseCreated} />
         </div>
 

@@ -26,6 +26,7 @@ import { createExpense } from "@/lib/expense-service"
 import type { Expense, User } from "@/lib/types"
 import { apiGet } from "@/lib/api-client"
 import { Checkbox } from "@/components/ui/checkbox"
+import { useHouse } from "@/lib/house-context"
 
 interface CreateExpenseDialogProps {
   onExpenseCreated?: (expense: Expense) => void
@@ -33,11 +34,11 @@ interface CreateExpenseDialogProps {
 }
 
 export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpenseDialogProps) {
+  const { selectedHouse } = useHouse()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
-  const [houses, setHouses] = useState<Array<{ id: string; name?: string }>>([])
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -119,7 +120,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
       category: !formData.category,
       paidBy: !formData.paidBy,
       splitWith: formData.splitWith.length === 0,
-      houseId: !houseId && !formData.houseId,
+      houseId: false,
     }
 
     setFormErrors(errors)
@@ -127,36 +128,26 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
     return !Object.values(errors).some((error) => error)
   }
 
-  // Load users when dialog opens
+  // Load users from selected house when dialog opens
   useEffect(() => {
-    if (open) {
-      loadUsers()
-      loadHouses()
+    if (open && selectedHouse) {
+      loadHouseUsers()
     }
-  }, [open])
+  }, [open, selectedHouse])
 
-  const loadUsers = async () => {
+  const loadHouseUsers = async () => {
+    if (!selectedHouse) {
+      setError('Please select a house first.')
+      setUsers([])
+      return
+    }
+
     try {
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
+      const response = await apiGet<User[]>(`/auth/users/house/${selectedHouse.id}`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)
-      setError('Failed to load users. Please try again.')
-    }
-  }
-
-  const loadHouses = async () => {
-    try {
-      const response: any = await apiGet('/house/user', { requiresAuth: true })
-      if (Array.isArray(response)) {
-        const parsed = response.map((h: any) => ({ id: h.id, name: h.name }))
-        setHouses(parsed)
-        if (!houseId && parsed.length === 1) {
-          setFormData((prev) => ({ ...prev, houseId: parsed[0].id }))
-        }
-      }
-    } catch (err) {
-      console.error('Failed to load houses:', err)
+      setError('Failed to load users from this house.')
     }
   }
 
@@ -170,10 +161,8 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
       return
     }
 
-    // Resolve house id (prop overrides selection)
-    const resolvedHouseId = houseId || formData.houseId || (houses.length === 1 ? houses[0].id : '')
-    if (!resolvedHouseId) {
-      setError("House ID is required. Please select a house first.")
+    if (!selectedHouse) {
+      setError("Please select a house first.")
       return
     }
 
@@ -186,7 +175,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         description: formData.description.trim(),
         category: formData.category,
         paidById: formData.paidBy,
-        houseId: resolvedHouseId,
+        houseId: selectedHouse.id,
         splitWith: formData.splitWith,
         date: new Date(formData.date).toISOString(),
       })
@@ -313,29 +302,15 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
               <Label htmlFor="house">
                 House <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={houseId || formData.houseId}
-                onValueChange={(v) => setFormData((prev) => ({ ...prev, houseId: v }))}
-              >
-                <SelectTrigger
-                  id="house"
-                  aria-invalid={formErrors.houseId}
-                  className={formErrors.houseId ? "border-destructive" : ""}
-                >
-                  <SelectValue placeholder={houses.length === 1 ? houses[0].name || 'My house' : 'Select house'} />
-                </SelectTrigger>
-                <SelectContent>
-                  {houses.map((h) => (
-                    <SelectItem key={h.id} value={h.id}>
-                      {h.name || h.id}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-              {formErrors.houseId && (
-                <p className="text-sm text-destructive">Please select a house</p>
+              <Input
+                id="house"
+                value={selectedHouse?.name || 'No house selected'}
+                disabled
+                className="bg-muted"
+              />
+              {!selectedHouse && (
+                <p className="text-sm text-muted-foreground">Please select a house from the header to create expenses</p>
               )}
-
             </div>
 
             <div className="space-y-2">

@@ -1,6 +1,7 @@
 "use client"
 
 import PantryAddItem from "./pantry-add-item"
+import { HouseSelector } from "./house-selector"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import type { Dispatch, SetStateAction } from "react"
 
@@ -18,7 +19,10 @@ export function PantryHeader({ category, setCategory, status, setStatus, addedBy
     <div className="bg-white border-b border-gray-200">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-4">
-          <h1 className="text-lg font-semibold text-gray-900">Pantry</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold text-gray-900">Pantry</h1>
+            <HouseSelector />
+          </div>
           <PantryAddItem />
         </div>
 
