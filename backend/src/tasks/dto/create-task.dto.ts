@@ -45,4 +45,12 @@ export class CreateTaskDto {
 	@IsNotEmpty()
 	@IsDateString()
 	deadline: string;
+
+	@ApiProperty({
+		example: '550e8400-e29b-41d4-a716-446655440000',
+		description: 'UUID of the house this task belongs to',
+	})
+	@IsNotEmpty()
+	@IsUUID()
+	houseId: string;
 }

@@ -6,6 +6,7 @@ export interface CreateTaskPayload {
   description?: string
   assigneeId: string
   deadline: string
+  houseId: string
 }
 
 export interface UpdateTaskPayload {
@@ -35,6 +36,11 @@ export interface TaskResponse {
     email: string
     username: string
   }
+  houseId: string
+  house: {
+    id: string
+    name: string
+  }
   deadline: string
   createdAt: string
   updatedAt: string
@@ -53,6 +59,8 @@ function transformTask(backendTask: TaskResponse): Task {
     status: backendTask.status as 'todo' | 'doing' | 'done',
     deadline: new Date(backendTask.deadline),
     createdAt: new Date(backendTask.createdAt),
+    houseId: backendTask.houseId,
+    houseName: backendTask.house.name,
   }
 }
 

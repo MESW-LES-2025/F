@@ -36,6 +36,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
+  const [userHouseId, setUserHouseId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: task.title,
     description: task.description || "",
@@ -50,10 +51,10 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
     deadline: false,
   })
 
-  // Load users when dialog opens
+  // Load user's house and users when dialog opens
   useEffect(() => {
     if (open) {
-      loadUsers()
+      loadUserHouseAndUsers()
       // Reset form data when opening
       setFormData({
         title: task.title,
@@ -71,12 +72,26 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
     }
   }, [open, task])
 
-  const loadUsers = async () => {
+  const loadUserHouseAndUsers = async () => {
     try {
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
-      setUsers(response)
+      // First, get the user's houses
+      const houses = await apiGet<Array<{ id: string; name: string }>>('/house/user', { requiresAuth: true })
+      
+      if (houses && houses.length > 0) {
+        // Use the first house (assuming user is in at least one house)
+        const houseId = houses[0].id
+        setUserHouseId(houseId)
+        
+        // Fetch users from the same house
+        const response = await apiGet<User[]>(`/auth/users?houseId=${houseId}`, { requiresAuth: true })
+        setUsers(response)
+      } else {
+        setError('You must belong to a house to edit tasks.')
+        setUsers([])
+      }
     } catch (err) {
       console.error('Failed to load users:', err)
+      setError('Failed to load users from your house.')
     }
   }
 

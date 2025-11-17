@@ -37,6 +37,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
+  const [userHouseId, setUserHouseId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -80,22 +81,33 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     return !Object.values(errors).some((error) => error)
   }
 
-  // Load users when dialog opens
+  // Load user's house and users when dialog opens
   useEffect(() => {
     if (open) {
-      loadUsers()
+      loadUserHouseAndUsers()
     }
   }, [open])
 
-  const loadUsers = async () => {
+  const loadUserHouseAndUsers = async () => {
     try {
-      // TODO: Replace with actual API endpoint when users endpoint is available
-      // For now, we'll use mock data or handle it in the backend
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
-      setUsers(response)
+      // First, get the user's houses
+      const houses = await apiGet<Array<{ id: string; name: string }>>('/house/user', { requiresAuth: true })
+      
+      if (houses && houses.length > 0) {
+        // Use the first house (assuming user is in at least one house)
+        const houseId = houses[0].id
+        setUserHouseId(houseId)
+        
+        // Fetch users from the same house
+        const response = await apiGet<User[]>(`/auth/users?houseId=${houseId}`, { requiresAuth: true })
+        setUsers(response)
+      } else {
+        setError('You must belong to a house to create tasks.')
+        setUsers([])
+      }
     } catch (err) {
       console.error('Failed to load users:', err)
-      // Fallback to empty array - error will be shown when trying to create task
+      setError('Failed to load users from your house.')
     }
   }
 
@@ -112,12 +124,18 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     setIsLoading(true)
 
     try {
+      if (!userHouseId) {
+        setError('You must belong to a house to create tasks.');
+        return;
+      }
+
       // Create the task via API
       const newTask = await createTask({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
         assigneeId: formData.assignee,
         deadline: new Date(formData.deadline).toISOString(),
+        houseId: userHouseId,
       })
 
       // Call the callback with the new task

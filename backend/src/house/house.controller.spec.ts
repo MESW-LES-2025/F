@@ -1,9 +1,19 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HouseController } from './house.controller';
 import { HouseService } from './house.service';
+import { UserRequest } from 'src/shared/types/user_request';
 
 describe('HouseController', () => {
 	let controller: HouseController;
+
+	const mockUser = {
+		id: 'user-id-1',
+		email: 'test@example.com',
+		username: 'tester',
+		name: 'Tester',
+		createdAt: new Date(),
+		updatedAt: new Date(),
+	};
 
 	const mockService = {
 		create: jest.fn(),
@@ -40,13 +50,19 @@ describe('HouseController', () => {
 
 	describe('create', () => {
 		it('should create a house', async () => {
+			const req = {
+				user: { userId: mockUser.id },
+			} as unknown as UserRequest;
 			const dto = { name: 'My House' };
 			mockService.create.mockResolvedValue('created');
 
-			const result = await controller.create(dto);
+			const result = await controller.create(dto, req);
 
 			expect(result).toBe('created');
-			expect(mockService.create).toHaveBeenCalledWith(dto);
+			expect(mockService.create).toHaveBeenCalledWith(
+				dto,
+				req.user.userId,
+			);
 		});
 	});
 

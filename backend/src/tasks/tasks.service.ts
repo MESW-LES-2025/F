@@ -2,6 +2,7 @@ import {
 	Injectable,
 	NotFoundException,
 	ForbiddenException,
+	BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { CreateTaskDto } from './dto/create-task.dto';
@@ -12,7 +13,29 @@ export class TasksService {
 	constructor(private prisma: PrismaService) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
-		const { title, description, assigneeId, deadline } = createTaskDto;
+		const { title, description, assigneeId, deadline, houseId } =
+			createTaskDto;
+
+		// Verify house exists
+		const house = await this.prisma.house.findUnique({
+			where: { id: houseId },
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found');
+		}
+
+		// Verify creator belongs to the house
+		const creatorInHouse = await this.prisma.houseToUser.findFirst({
+			where: {
+				userId: createdById,
+				houseId: houseId,
+			},
+		});
+
+		if (!creatorInHouse) {
+			throw new ForbiddenException('You do not belong to this house');
+		}
 
 		// Verify assignee exists
 		const assignee = await this.prisma.user.findUnique({
@@ -23,6 +46,20 @@ export class TasksService {
 			throw new NotFoundException('Assignee user not found');
 		}
 
+		// Verify assignee belongs to the house
+		const assigneeInHouse = await this.prisma.houseToUser.findFirst({
+			where: {
+				userId: assigneeId,
+				houseId: houseId,
+			},
+		});
+
+		if (!assigneeInHouse) {
+			throw new BadRequestException(
+				'Cannot assign task to user not in this house',
+			);
+		}
+
 		const task = await this.prisma.task.create({
 			data: {
 				title,
@@ -30,6 +67,7 @@ export class TasksService {
 				assigneeId,
 				deadline: new Date(deadline),
 				createdById,
+				houseId,
 				status: 'todo',
 			},
 			include: {
@@ -47,6 +85,12 @@ export class TasksService {
 						name: true,
 						email: true,
 						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
 					},
 				},
 			},
@@ -74,6 +118,12 @@ export class TasksService {
 						username: true,
 					},
 				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
 			},
 			orderBy: {
 				createdAt: 'desc',
@@ -99,6 +149,12 @@ export class TasksService {
 						name: true,
 						email: true,
 						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
 					},
 				},
 			},
@@ -145,7 +201,7 @@ export class TasksService {
 			}
 		}
 
-		// If updating assignee, verify new assignee exists
+		// If updating assignee, verify new assignee exists and is in the same house as the task
 		if (updateTaskDto.assigneeId) {
 			const assignee = await this.prisma.user.findUnique({
 				where: { id: updateTaskDto.assigneeId },
@@ -153,6 +209,20 @@ export class TasksService {
 
 			if (!assignee) {
 				throw new NotFoundException('Assignee user not found');
+			}
+
+			// Verify the new assignee belongs to the task's house
+			const assigneeInHouse = await this.prisma.houseToUser.findFirst({
+				where: {
+					userId: updateTaskDto.assigneeId,
+					houseId: task.houseId,
+				},
+			});
+
+			if (!assigneeInHouse) {
+				throw new BadRequestException(
+					'Cannot assign task to user not in this house',
+				);
 			}
 		}
 
@@ -179,6 +249,12 @@ export class TasksService {
 						name: true,
 						email: true,
 						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
 					},
 				},
 			},
@@ -224,6 +300,12 @@ export class TasksService {
 						username: true,
 					},
 				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
 			},
 			orderBy: {
 				createdAt: 'desc',
@@ -249,6 +331,12 @@ export class TasksService {
 						name: true,
 						email: true,
 						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
 					},
 				},
 			},

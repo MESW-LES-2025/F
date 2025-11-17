@@ -3,6 +3,8 @@ import { UserController } from './user.controller';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRequest } from 'src/shared/types/user_request';
+import { HouseService } from 'src/house/house.service';
+import { House } from '@prisma/client';
 
 describe('UserController', () => {
 	let controller: UserController;
@@ -20,12 +22,33 @@ describe('UserController', () => {
 		findOne: jest.fn().mockResolvedValue(mockUser),
 		update: jest.fn().mockResolvedValue({ ...mockUser, name: 'Updated' }),
 		remove: jest.fn().mockResolvedValue({ success: true }),
+		joinHouseWithCode: jest
+			.fn()
+			.mockResolvedValue({ houseId: 'house-id-1' }),
+	};
+
+	const mockHouseService = {
+		create: jest
+			.fn<Promise<House>, [{ name: string }]>()
+			.mockResolvedValue({
+				id: 'house-id-1',
+				name: 'My House',
+				invitationCode: 'INVITE123',
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			} as House),
+		join: jest
+			.fn()
+			.mockResolvedValue({ success: true } as { success: boolean }),
 	};
 
 	beforeEach(async () => {
 		const module: TestingModule = await Test.createTestingModule({
 			controllers: [UserController],
-			providers: [{ provide: UserService, useValue: mockUserService }],
+			providers: [
+				{ provide: UserService, useValue: mockUserService },
+				{ provide: HouseService, useValue: mockHouseService },
+			],
 		}).compile();
 
 		controller = module.get<UserController>(UserController);
@@ -56,5 +79,24 @@ describe('UserController', () => {
 		const result = await controller.removeCurrent(req);
 		expect(mockUserService.remove).toHaveBeenCalledWith(mockUser.id);
 		expect(result).toEqual({ success: true });
+	});
+
+	it('joinHouse should join a house and return the house id', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+
+		const newHouse: House = await mockHouseService.create({
+			name: 'My House',
+		});
+		const inviteCode = newHouse.invitationCode;
+
+		const result: { houseId: string | null } = await controller.joinHouse(
+			req,
+			{ inviteCode },
+		);
+		expect(mockUserService.joinHouseWithCode).toHaveBeenCalledWith(
+			mockUser.id,
+			{ inviteCode },
+		);
+		expect(result).toEqual({ houseId: 'house-id-1' });
 	});
 });
