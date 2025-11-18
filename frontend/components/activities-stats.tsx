@@ -22,7 +22,8 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
     const load = async (background = false) => {
       try {
         if (!background) setIsLoading(true)
-        const fetched = await getTasks()
+        // only non-archived tasks
+        const fetched = await getTasks({ archived: 'false' })
         if (mounted) setTasks(fetched)
       } catch (err) {
         console.error("Failed to load tasks for stats", err)
@@ -59,10 +60,12 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
     )
   }
 
-  const total = tasks.length
-  const todoCount = tasks.filter((t) => t.status === "todo").length
-  const doingCount = tasks.filter((t) => t.status === "doing").length
-  const doneCount = tasks.filter((t) => t.status === "done").length
+  // Exclude archived tasks from stats
+  const activeTasks = tasks.filter((t) => !t.archived)
+  const total = activeTasks.length
+  const todoCount = activeTasks.filter((t) => t.status === "todo").length
+  const doingCount = activeTasks.filter((t) => t.status === "doing").length
+  const doneCount = activeTasks.filter((t) => t.status === "done").length
 
   const now = new Date()
   // exclude completed tasks from overdue/due-soon counts
@@ -81,7 +84,7 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
   const startToday = startOfDay(now)
   const endInSevenDays = endOfDay(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
 
-  const overdueCount = tasks.filter((t) => {
+  const overdueCount = activeTasks.filter((t) => {
     if (t.status === 'done' || !t.deadline) return false
     const dl = new Date(t.deadline)
     // overdue
@@ -89,13 +92,13 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
   }).length
 
   // due soon if deadline is in 1 week
-  const dueSoonCount = tasks.filter((t) => {
+  const dueSoonCount = activeTasks.filter((t) => {
     if (t.status !== 'doing' || !t.deadline) return false
     const dl = new Date(t.deadline)
     return dl >= startToday && dl <= endInSevenDays
   }).length
 
-  const tasksByPerson = tasks.reduce((acc, task) => {
+  const tasksByPerson = activeTasks.reduce((acc, task) => {
     const name = task.assignee || "Unassigned"
     acc[name] = (acc[name] || 0) + 1
     return acc

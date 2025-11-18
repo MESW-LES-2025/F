@@ -33,7 +33,8 @@ export default function ActivitiesPage() {
         setError(null)
       }
 
-      const fetchedTasks = await getTasks()
+  // only non-archived tasks
+  const fetchedTasks = await getTasks({ archived: 'false' })
       setTasks(fetchedTasks)
     } catch (err) {
       console.error('Failed to load tasks:', err)
@@ -56,6 +57,11 @@ export default function ActivitiesPage() {
   }
 
   const handleTaskDeleted = (taskId: string) => {
+    setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
+  }
+
+  const handleTaskArchived = (taskId: string) => {
+    // Remove archived task from the board
     setTasks((prevTasks) => prevTasks.filter((task) => task.id !== taskId))
   }
 
@@ -169,6 +175,7 @@ export default function ActivitiesPage() {
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
         onChangeStatus={handleStatusChange}
+        onTaskArchived={handleTaskArchived}
       />
 
       {/* Edit Task Dialog */}

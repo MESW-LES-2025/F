@@ -17,17 +17,19 @@ interface ActivitiesKanbanProps {
 }
 
 export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask, onChangeStatus, onTaskArchived }: ActivitiesKanbanProps) {
-  const todoTasks = tasks.filter((t) => t.status === "todo")
-  const doingTasks = tasks.filter((t) => t.status === "doing")
-  const doneTasks = tasks.filter((t) => t.status === "done")
+  // dont show archived tasks
+  const visible = (tasks || []).filter((t) => !t.archived)
+  const todoTasks = visible.filter((t) => t.status === "todo")
+  const doingTasks = visible.filter((t) => t.status === "doing")
+  const doneTasks = visible.filter((t) => t.status === "done")
 
   return (
     <div>
       <h2 className="text-sm font-semibold text-gray-900 mb-4">Task Board</h2>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" status="todo" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
-        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" status="doing" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
-        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" status="done" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} />
+        <TaskColumn title="To-do" tasks={todoTasks} bgColor="bg-rose-100" status="todo" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} onTaskArchived={onTaskArchived} />
+        <TaskColumn title="Doing" tasks={doingTasks} bgColor="bg-amber-50" status="doing" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} onTaskArchived={onTaskArchived} />
+        <TaskColumn title="Done" tasks={doneTasks} bgColor="bg-green-100" status="done" onEditTask={onEditTask} onDeleteTask={onDeleteTask} onChangeStatus={onChangeStatus} onTaskArchived={onTaskArchived} />
       </div>
     </div>
   )
@@ -41,9 +43,10 @@ interface TaskColumnProps {
   onEditTask?: (task: Task) => void
   onDeleteTask?: (task: Task) => void
   onChangeStatus?: (taskId: string, status: 'todo' | 'doing' | 'done') => void
+  onTaskArchived?: (taskId: string) => void
 }
 
-function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, onChangeStatus }: TaskColumnProps & { onTaskArchived?: (taskId: string) => void }) {
+function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, onChangeStatus, onTaskArchived }: TaskColumnProps) {
   const handleDragOver = (e: any) => {
     e.preventDefault()
   }
@@ -69,7 +72,9 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, o
             onDragStart={(e) => {
               e.dataTransfer.setData('text/plain', task.id)
             }}
-            className="bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group"
+            className={`bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group border-l-4 ${
+              status === 'todo' ? 'border-l-rose-400' : status === 'doing' ? 'border-l-amber-400' : 'border-l-green-400'
+            }`}
           >
             <div className="flex items-start gap-2">
               <GripVertical className="w-4 h-4 text-gray-400 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -132,8 +137,8 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, o
                           e.stopPropagation()
                           try {
                             const archived = await archiveTask(task.id)
-                            // remove from UI optimistically by changing status to done (already) & mark archived
-                            onChangeStatus?.(archived.id, archived.status)
+                            // remove from UI immediately
+                            onTaskArchived?.(archived.id)
                             toast({ title: 'Task archived', description: 'Moved to history.' })
                           } catch (err) {
                             toast({ title: 'Archive failed', description: String((err as any)?.message || 'Could not archive') })
