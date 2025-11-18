@@ -44,6 +44,8 @@ export interface TaskResponse {
   deadline: string
   createdAt: string
   updatedAt: string
+  archived: boolean
+  archivedAt?: string | null
 }
 
 /**
@@ -61,6 +63,8 @@ function transformTask(backendTask: TaskResponse): Task {
     createdAt: new Date(backendTask.createdAt),
     houseId: backendTask.houseId,
     houseName: backendTask.house.name,
+    archived: backendTask.archived,
+    archivedAt: backendTask.archivedAt ? new Date(backendTask.archivedAt) : null,
   }
 }
 
@@ -70,6 +74,7 @@ function transformTask(backendTask: TaskResponse): Task {
 export async function getTasks(filters?: {
   assigneeId?: string
   status?: string
+  archived?: string
 }): Promise<Task[]> {
   const tasks = await apiGet<TaskResponse[]>('/tasks', {
     requiresAuth: true,
@@ -136,4 +141,24 @@ export async function getTasksByAssignee(assigneeId: string): Promise<Task[]> {
  */
 export async function getTasksByStatus(status: 'todo' | 'doing' | 'done'): Promise<Task[]> {
   return getTasks({ status })
+}
+
+/**
+ * Archive a task (only if done)
+ */
+export async function archiveTask(taskId: string): Promise<Task> {
+  const task = await apiPatch<TaskResponse>(`/tasks/${taskId}/archive`, undefined, {
+    requiresAuth: true,
+  })
+  return transformTask(task)
+}
+
+/**
+ * Unarchive a task
+ */
+export async function unarchiveTask(taskId: string): Promise<Task> {
+  const task = await apiPatch<TaskResponse>(`/tasks/${taskId}/unarchive`, undefined, {
+    requiresAuth: true,
+  })
+  return transformTask(task)
 }

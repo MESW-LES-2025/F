@@ -3,7 +3,9 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Button } from "@/components/ui/button"
 import { tasks as defaultTasks } from "@/lib/data"
-import { GripVertical, Pencil, Trash2 } from "lucide-react"
+import { GripVertical, Pencil, Trash2, ArchiveRestore } from "lucide-react"
+import { archiveTask } from "@/lib/tasks-service"
+import { toast } from "@/hooks/use-toast"
 import type { Task } from "@/lib/types"
 
 interface ActivitiesKanbanProps {
@@ -11,9 +13,10 @@ interface ActivitiesKanbanProps {
   onEditTask?: (task: Task) => void
   onDeleteTask?: (task: Task) => void
   onChangeStatus?: (taskId: string, status: 'todo' | 'doing' | 'done') => void
+  onTaskArchived?: (taskId: string) => void
 }
 
-export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask, onChangeStatus }: ActivitiesKanbanProps) {
+export function ActivitiesKanban({ tasks = defaultTasks, onEditTask, onDeleteTask, onChangeStatus, onTaskArchived }: ActivitiesKanbanProps) {
   const todoTasks = tasks.filter((t) => t.status === "todo")
   const doingTasks = tasks.filter((t) => t.status === "doing")
   const doneTasks = tasks.filter((t) => t.status === "done")
@@ -40,7 +43,7 @@ interface TaskColumnProps {
   onChangeStatus?: (taskId: string, status: 'todo' | 'doing' | 'done') => void
 }
 
-function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, onChangeStatus }: TaskColumnProps) {
+function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, onChangeStatus }: TaskColumnProps & { onTaskArchived?: (taskId: string) => void }) {
   const handleDragOver = (e: any) => {
     e.preventDefault()
   }
@@ -120,6 +123,26 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, o
                     >
                       <Trash2 className="w-3.5 h-3.5 text-red-600" />
                     </Button>
+                    {status === 'done' && !task.archived && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        className="flex items-center gap-1 h-7 px-2 cursor-pointer"
+                        onClick={async (e) => {
+                          e.stopPropagation()
+                          try {
+                            const archived = await archiveTask(task.id)
+                            // remove from UI optimistically by changing status to done (already) & mark archived
+                            onChangeStatus?.(archived.id, archived.status)
+                            toast({ title: 'Task archived', description: 'Moved to history.' })
+                          } catch (err) {
+                            toast({ title: 'Archive failed', description: String((err as any)?.message || 'Could not archive') })
+                          }
+                        }}
+                      >
+                        <ArchiveRestore className="w-3.5 h-3.5 text-gray-600" />
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
