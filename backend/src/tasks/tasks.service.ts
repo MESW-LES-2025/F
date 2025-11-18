@@ -131,6 +131,31 @@ export class TasksService {
 		});
 	}
 
+	async findByHouse(houseId: string, userId: string) {
+		// ensure the requesting user belongs to the house
+		const membership = await this.prisma.houseToUser.findFirst({
+			where: { userId, houseId },
+		});
+
+		if (!membership) {
+			throw new ForbiddenException('You do not belong to this house');
+		}
+
+		return this.prisma.task.findMany({
+			where: { houseId },
+			include: {
+				assignee: {
+					select: { id: true, name: true, email: true, username: true },
+				},
+				createdBy: {
+					select: { id: true, name: true, email: true, username: true },
+				},
+				house: { select: { id: true, name: true } },
+			},
+			orderBy: { createdAt: 'desc' },
+		});
+	}
+
 	async findOne(id: string) {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
@@ -160,12 +185,41 @@ export class TasksService {
 			},
 		});
 
-		if (!task) {
+			if (!task) {
 			throw new NotFoundException('Task not found');
 		}
-
 		return task;
 	}
+
+		async findAllForUser(
+    userId: string,
+    filters?: { assigneeId?: string; status?: string }
+  ) {
+    // user's houses
+    const memberships = await this.prisma.houseToUser.findMany({
+      where: { userId },
+      select: { houseId: true },
+    });
+    const houseIds = memberships.map((m) => m.houseId);
+
+    if (houseIds.length === 0) {
+      return [];
+    }
+
+    return this.prisma.task.findMany({
+      where: {
+        houseId: { in: houseIds },
+        assigneeId: filters?.assigneeId || undefined,
+        status: (filters?.status as any) || undefined,
+      },
+      include: {
+        assignee: { select: { id: true, name: true, email: true, username: true } },
+        createdBy: { select: { id: true, name: true, email: true, username: true } },
+        house: { select: { id: true, name: true } },
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
 
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
 		const task = await this.findOne(id);

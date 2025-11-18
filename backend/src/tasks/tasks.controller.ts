@@ -58,14 +58,11 @@ export class TasksController {
 	async findAll(
 		@Query('assigneeId') assigneeId?: string,
 		@Query('status') status?: string,
+		@Request() req?: { user: { userId: string } },
 	) {
-		if (assigneeId) {
-			return this.tasksService.findByAssignee(assigneeId);
-		}
-		if (status) {
-			return this.tasksService.findByStatus(status);
-		}
-		return this.tasksService.findAll();
+		const userId = req?.user.userId as string;
+		// tasks across all houses the user belongs to
+		return this.tasksService.findAllForUser(userId, { assigneeId, status });
 	}
 
 	@Get(':id')

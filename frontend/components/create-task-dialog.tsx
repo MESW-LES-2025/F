@@ -99,7 +99,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         setUserHouseId(houseId)
         
         // Fetch users from the same house
-        const response = await apiGet<User[]>(`/auth/users?houseId=${houseId}`, { requiresAuth: true })
+  // Fetch only users that belong to this house (server filters by param route)
+  const response = await apiGet<User[]>(`/auth/users/house/${houseId}`, { requiresAuth: true })
         setUsers(response)
       } else {
         setError('You must belong to a house to create tasks.')

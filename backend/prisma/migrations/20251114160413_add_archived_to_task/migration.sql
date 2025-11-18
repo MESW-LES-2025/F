@@ -2,5 +2,4 @@
 ALTER TABLE "Task" ADD COLUMN     "archived" BOOLEAN NOT NULL DEFAULT false,
 ADD COLUMN     "archivedAt" TIMESTAMP(3);
 
--- DropEnum
-DROP TYPE "Unit";
+DROP TYPE IF EXISTS "Unit";
