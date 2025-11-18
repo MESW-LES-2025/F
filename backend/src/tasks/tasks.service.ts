@@ -145,10 +145,20 @@ export class TasksService {
 			where: { houseId },
 			include: {
 				assignee: {
-					select: { id: true, name: true, email: true, username: true },
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
 				},
 				createdBy: {
-					select: { id: true, name: true, email: true, username: true },
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
 				},
 				house: { select: { id: true, name: true } },
 			},
@@ -185,42 +195,65 @@ export class TasksService {
 			},
 		});
 
-			if (!task) {
+		if (!task) {
 			throw new NotFoundException('Task not found');
 		}
 		return task;
 	}
 
-		async findAllForUser(
-		    userId: string,
-		    filters?: { assigneeId?: string; status?: string; archived?: string }
-		  ) {
-    // user's houses
-    const memberships = await this.prisma.houseToUser.findMany({
-      where: { userId },
-      select: { houseId: true },
-    });
-    const houseIds = memberships.map((m) => m.houseId);
+	async findAllForUser(
+		userId: string,
+		filters?: {
+			assigneeId?: string;
+			status?: 'todo' | 'doing' | 'done';
+			archived?: string;
+		},
+	) {
+		// user's houses
+		const memberships = await this.prisma.houseToUser.findMany({
+			where: { userId },
+			select: { houseId: true },
+		});
+		const houseIds = memberships.map((m) => m.houseId);
 
-    if (houseIds.length === 0) {
-      return [];
-    }
+		if (houseIds.length === 0) {
+			return [];
+		}
 
-	    return this.prisma.task.findMany({
-	      where: {
-	        houseId: { in: houseIds },
-	        assigneeId: filters?.assigneeId || undefined,
-	        status: (filters?.status as any) || undefined,
-	        archived: filters?.archived === 'true' ? true : filters?.archived === 'false' ? false : undefined,
-	      },
-      include: {
-        assignee: { select: { id: true, name: true, email: true, username: true } },
-        createdBy: { select: { id: true, name: true, email: true, username: true } },
-        house: { select: { id: true, name: true } },
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
+		return this.prisma.task.findMany({
+			where: {
+				houseId: { in: houseIds },
+				assigneeId: filters?.assigneeId || undefined,
+				status: filters?.status ?? undefined,
+				archived:
+					filters?.archived === 'true'
+						? true
+						: filters?.archived === 'false'
+							? false
+							: undefined,
+			},
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: { select: { id: true, name: true } },
+			},
+			orderBy: { createdAt: 'desc' },
+		});
+	}
 
 	async archive(id: string, userId: string) {
 		const task = await this.findOne(id);
@@ -231,21 +264,39 @@ export class TasksService {
 				where: { userId, houseId: task.houseId },
 			});
 			if (!membership) {
-				throw new ForbiddenException('You do not have permission to archive this task');
+				throw new ForbiddenException(
+					'You do not have permission to archive this task',
+				);
 			}
 		}
 		if (task.archived) {
 			return task; // idempotent
 		}
 		if (task.status !== 'done') {
-			throw new BadRequestException('Only completed tasks can be archived');
+			throw new BadRequestException(
+				'Only completed tasks can be archived',
+			);
 		}
 		return this.prisma.task.update({
 			where: { id },
 			data: { archived: true, archivedAt: new Date() },
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
 			},
 		});
@@ -258,7 +309,9 @@ export class TasksService {
 				where: { userId, houseId: task.houseId },
 			});
 			if (!membership) {
-				throw new ForbiddenException('You do not have permission to unarchive this task');
+				throw new ForbiddenException(
+					'You do not have permission to unarchive this task',
+				);
 			}
 		}
 		if (!task.archived) {
@@ -268,8 +321,22 @@ export class TasksService {
 			where: { id },
 			data: { archived: false, archivedAt: null },
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
 			},
 		});
@@ -291,7 +358,9 @@ export class TasksService {
 				where: { userId: task.createdById },
 				select: { houseId: true },
 			});
-			const sharesWithCreator = creatorHouses.some((ch) => userHouseIds.has(ch.houseId));
+			const sharesWithCreator = creatorHouses.some((ch) =>
+				userHouseIds.has(ch.houseId),
+			);
 
 			let sharesWithAssignee = false;
 			if (task.assigneeId && task.assigneeId !== task.createdById) {
@@ -299,7 +368,9 @@ export class TasksService {
 					where: { userId: task.assigneeId },
 					select: { houseId: true },
 				});
-				sharesWithAssignee = assigneeHouses.some((ah) => userHouseIds.has(ah.houseId));
+				sharesWithAssignee = assigneeHouses.some((ah) =>
+					userHouseIds.has(ah.houseId),
+				);
 			}
 
 			if (!sharesWithCreator && !sharesWithAssignee) {

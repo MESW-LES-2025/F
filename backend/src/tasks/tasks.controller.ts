@@ -67,7 +67,15 @@ export class TasksController {
 		@Request() req?: { user: { userId: string } },
 	) {
 		const userId = req?.user.userId as string;
-		return this.tasksService.findAllForUser(userId, { assigneeId, status, archived });
+		const normalizedStatus: 'todo' | 'doing' | 'done' | undefined =
+			status === 'todo' || status === 'doing' || status === 'done'
+				? status
+				: undefined;
+		return this.tasksService.findAllForUser(userId, {
+			assigneeId,
+			status: normalizedStatus,
+			archived,
+		});
 	}
 
 	@Get(':id')
