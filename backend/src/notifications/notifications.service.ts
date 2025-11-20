@@ -71,7 +71,7 @@ export class NotificationsService {
 	}
 
 	async findOneByUser(userId: string, notificationId: string) {
-		await this.prisma.notificationToUser.findFirst({
+		const notification = await this.prisma.notificationToUser.findFirst({
 			where: { notificationId, userId },
 			select: {
 				userId: true,
@@ -90,6 +90,14 @@ export class NotificationsService {
 				},
 			},
 		});
+
+		if (!notification) {
+			throw new NotFoundException(
+				'No notification found with the id provided',
+			);
+		}
+
+		return notification;
 	}
 
 	async markOneAsReadByUser(userId: string, notificationId: string) {
@@ -108,6 +116,7 @@ export class NotificationsService {
 			where: { id: existingNotification.id, userId },
 			data: {
 				isRead: true,
+				readAt: new Date(),
 			},
 		});
 	}
@@ -128,6 +137,7 @@ export class NotificationsService {
 			where: { userId },
 			data: {
 				isRead: true,
+				readAt: new Date(),
 			},
 		});
 	}
