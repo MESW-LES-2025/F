@@ -41,9 +41,6 @@ export function AppSidebar() {
   const { user } = useAuth();
 
   const houseId = searchParams.get("houseId");
-  if (houseId) {
-    navigation[0].href = `/?houseId=${houseId}`;
-  }
 
   return (
     <>

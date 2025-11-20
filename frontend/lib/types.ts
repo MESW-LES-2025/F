@@ -18,6 +18,8 @@ export interface Task {
   createdAt: Date;
   houseId: string;
   houseName: string;
+  archived: boolean;
+  archivedAt?: Date | null;
 }
 
 export interface House {

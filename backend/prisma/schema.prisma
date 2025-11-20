@@ -125,6 +125,8 @@ model Task {
   houseId     String   @db.Uuid
   house       House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
   deadline    DateTime
+  archived    Boolean  @default(false)
+  archivedAt  DateTime?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

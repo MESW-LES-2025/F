@@ -163,18 +163,186 @@ export class TasksService {
 		if (!task) {
 			throw new NotFoundException('Task not found');
 		}
-
 		return task;
+	}
+
+	async findAllForUser(
+		userId: string,
+		filters?: {
+			assigneeId?: string;
+			status?: 'todo' | 'doing' | 'done';
+			archived?: string;
+		},
+	) {
+		// user's houses
+		const memberships = await this.prisma.houseToUser.findMany({
+			where: { userId },
+			select: { houseId: true },
+		});
+		const houseIds = memberships.map((m) => m.houseId);
+
+		if (houseIds.length === 0) {
+			return [];
+		}
+
+		return this.prisma.task.findMany({
+			where: {
+				houseId: { in: houseIds },
+				assigneeId: filters?.assigneeId || undefined,
+				status: filters?.status ?? undefined,
+				archived:
+					filters?.archived === 'true'
+						? true
+						: filters?.archived === 'false'
+							? false
+							: undefined,
+			},
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: { select: { id: true, name: true } },
+			},
+			orderBy: { createdAt: 'desc' },
+		});
+	}
+
+	async archive(id: string, userId: string) {
+		const task = await this.findOne(id);
+		// Permission: reuse update logic subset
+		if (task.createdById !== userId && task.assigneeId !== userId) {
+			// ensure user shares house
+			const membership = await this.prisma.houseToUser.findFirst({
+				where: { userId, houseId: task.houseId },
+			});
+			if (!membership) {
+				throw new ForbiddenException(
+					'You do not have permission to archive this task',
+				);
+			}
+		}
+		if (task.archived) {
+			return task; // idempotent
+		}
+		if (task.status !== 'done') {
+			throw new BadRequestException(
+				'Only completed tasks can be archived',
+			);
+		}
+		return this.prisma.task.update({
+			where: { id },
+			data: { archived: true, archivedAt: new Date() },
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: { select: { id: true, name: true } },
+			},
+		});
+	}
+
+	async unarchive(id: string, userId: string) {
+		const task = await this.findOne(id);
+		if (task.createdById !== userId && task.assigneeId !== userId) {
+			const membership = await this.prisma.houseToUser.findFirst({
+				where: { userId, houseId: task.houseId },
+			});
+			if (!membership) {
+				throw new ForbiddenException(
+					'You do not have permission to unarchive this task',
+				);
+			}
+		}
+		if (!task.archived) {
+			return task; // idempotent
+		}
+		return this.prisma.task.update({
+			where: { id },
+			data: { archived: false, archivedAt: null },
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: { select: { id: true, name: true } },
+			},
+		});
 	}
 
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
 		const task = await this.findOne(id);
 
-		// Verify user has permission (either creator or assignee)
+		// Verify user has permission (creator, assignee), or shares a house with creator/assignee
 		if (task.createdById !== userId && task.assigneeId !== userId) {
-			throw new ForbiddenException(
-				'You do not have permission to update this task',
+			// get house memberships for acting user
+			const userHouses = await this.prisma.houseToUser.findMany({
+				where: { userId },
+				select: { houseId: true },
+			});
+			const userHouseIds = new Set(userHouses.map((h) => h.houseId));
+
+			const creatorHouses = await this.prisma.houseToUser.findMany({
+				where: { userId: task.createdById },
+				select: { houseId: true },
+			});
+			const sharesWithCreator = creatorHouses.some((ch) =>
+				userHouseIds.has(ch.houseId),
 			);
+
+			let sharesWithAssignee = false;
+			if (task.assigneeId && task.assigneeId !== task.createdById) {
+				const assigneeHouses = await this.prisma.houseToUser.findMany({
+					where: { userId: task.assigneeId },
+					select: { houseId: true },
+				});
+				sharesWithAssignee = assigneeHouses.some((ah) =>
+					userHouseIds.has(ah.houseId),
+				);
+			}
+
+			if (!sharesWithCreator && !sharesWithAssignee) {
+				throw new ForbiddenException(
+					'You do not have permission to update this task',
+				);
+			}
 		}
 
 		// If updating assignee, verify new assignee exists and is in the same house as the task
@@ -289,10 +457,22 @@ export class TasksService {
 		});
 	}
 
-	async findByHouse(houseId: string) {
-		console.log('[TasksService] findByHouse called with houseId:', houseId);
+	async findByHouse(houseId: string, archived?: string) {
+		console.log(
+			'[TasksService] findByHouse called with houseId:',
+			houseId,
+			'archived:',
+			archived,
+		);
 		const tasks = await this.prisma.task.findMany({
-			where: { houseId },
+			where: {
+				houseId,
+				...(archived === 'true'
+					? { archived: true }
+					: archived === 'false'
+						? { archived: false }
+						: {}),
+			},
 			include: {
 				assignee: {
 					select: {

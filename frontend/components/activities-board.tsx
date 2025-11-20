@@ -25,7 +25,7 @@ export function ActivitiesBoard() {
     try {
       setIsLoading(true)
       console.log('[ActivitiesBoard] Fetching tasks for house:', selectedHouse.id)
-      const fetchedTasks = await getTasks({ houseId: selectedHouse.id })
+      const fetchedTasks = await getTasks({ houseId: selectedHouse.id, archived: 'false' })
       console.log('[ActivitiesBoard] Fetched tasks:', fetchedTasks)
       console.log('[ActivitiesBoard] Task house IDs:', fetchedTasks.map(t => ({ title: t.title, houseId: t.houseId, houseName: t.houseName })))
       setTasks(fetchedTasks)

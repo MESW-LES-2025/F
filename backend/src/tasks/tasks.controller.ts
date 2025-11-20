@@ -59,22 +59,36 @@ export class TasksController {
 		required: false,
 		description: 'Filter by house ID',
 	})
+	@ApiQuery({
+		name: 'archived',
+		required: false,
+		description: 'Filter by archived state (true/false)',
+	})
 	@ApiResponse({ status: 200, description: 'Tasks retrieved successfully' })
 	async findAll(
 		@Query('assigneeId') assigneeId?: string,
 		@Query('status') status?: string,
 		@Query('houseId') houseId?: string,
+		@Query('archived') archived?: string,
+		@Request() req?: { user: { userId: string } },
 	) {
+		const userId = req?.user.userId as string;
+		const normalizedStatus: 'todo' | 'doing' | 'done' | undefined =
+			status === 'todo' || status === 'doing' || status === 'done'
+				? status
+				: undefined;
+
+		// If houseId is provided, use the house-specific query
 		if (houseId) {
-			return this.tasksService.findByHouse(houseId);
+			return this.tasksService.findByHouse(houseId, archived);
 		}
-		if (assigneeId) {
-			return this.tasksService.findByAssignee(assigneeId);
-		}
-		if (status) {
-			return this.tasksService.findByStatus(status);
-		}
-		return this.tasksService.findAll();
+
+		// Otherwise use the comprehensive user-based query with filters
+		return this.tasksService.findAllForUser(userId, {
+			assigneeId,
+			status: normalizedStatus,
+			archived,
+		});
 	}
 
 	@Get(':id')
@@ -101,6 +115,31 @@ export class TasksController {
 		@Request() req: { user: { userId: string } },
 	) {
 		return this.tasksService.update(id, updateTaskDto, req.user.userId);
+	}
+
+	@Patch(':id/archive')
+	@ApiOperation({ summary: 'Archive a completed task' })
+	@ApiParam({ name: 'id', description: 'Task UUID' })
+	@ApiResponse({ status: 200, description: 'Task archived successfully' })
+	@ApiResponse({ status: 400, description: 'Bad request' })
+	@ApiResponse({ status: 403, description: 'Forbidden' })
+	async archive(
+		@Param('id') id: string,
+		@Request() req: { user: { userId: string } },
+	) {
+		return this.tasksService.archive(id, req.user.userId);
+	}
+
+	@Patch(':id/unarchive')
+	@ApiOperation({ summary: 'Unarchive a task' })
+	@ApiParam({ name: 'id', description: 'Task UUID' })
+	@ApiResponse({ status: 200, description: 'Task unarchived successfully' })
+	@ApiResponse({ status: 403, description: 'Forbidden' })
+	async unarchive(
+		@Param('id') id: string,
+		@Request() req: { user: { userId: string } },
+	) {
+		return this.tasksService.unarchive(id, req.user.userId);
 	}
 
 	@Delete(':id')
