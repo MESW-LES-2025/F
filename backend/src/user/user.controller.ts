@@ -84,7 +84,7 @@ export class UserController {
 	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Invite another user to a house' })
 	@Post('invite')
-	inviteUser(
+	inviteUserToHouse(
 		@Body() inviteToHouseDto: InviteToHouseDto,
 		@Request() req: UserRequest,
 	) {

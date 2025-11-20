@@ -190,8 +190,8 @@ export class UserService {
 
 		const existingUser = await this.prisma.user.findFirst({
 			where: {
-				email: dto.email ? dto.email : undefined,
-				username: dto.username ? dto.username : undefined,
+				...(dto.email !== undefined && { email: dto.email }),
+				...(dto.username !== undefined && { username: dto.username }),
 			},
 		});
 

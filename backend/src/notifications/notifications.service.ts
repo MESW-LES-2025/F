@@ -45,10 +45,10 @@ export class NotificationsService {
 		return await this.prisma.notificationToUser.findMany({
 			where: {
 				userId,
-				isRead: filters.isRead ? filters.isRead : undefined,
+				...(filters.isRead !== undefined && { isRead: filters.isRead }),
 				notification: {
-					category: filters.category ? filters.category : undefined,
-					level: filters.level ? filters.level : undefined,
+					...(filters.category && { category: filters.category }),
+					...(filters.level && { level: filters.level }),
 				},
 			},
 			select: {
