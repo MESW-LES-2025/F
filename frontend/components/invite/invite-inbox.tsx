@@ -138,10 +138,6 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     }
   };
 
-  if (!loading && invites.length === 0) {
-    return null;
-  }
-
   return (
     <Card className="space-y-4 p-6">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -175,12 +171,16 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
             <Skeleton key={key} className="h-20 w-full" />
           ))}
         </div>
+      ) : invites.length === 0 ? (
+        <div className="rounded-lg border border-dashed p-6 text-sm text-muted-foreground">
+          You don’t have any pending invites right now.
+        </div>
       ) : (
         <div className="space-y-3">
           {invites.map((invite) => (
             <div
               key={invite.notification.id}
-              className="rounded-lg border border-border bg-card p-4"
+              className="rounded-lg border border-border bg-card p-4 hover:bg-accent/40 transition-colors"
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -193,7 +193,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
                     </p>
                   )}
                   <p className="text-xs text-muted-foreground">
-                    Received on {new Date(invite.createdAt).toLocaleString()}
+                    Received {new Date(invite.createdAt).toLocaleString()}
                   </p>
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -201,6 +201,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
                     variant="secondary"
                     onClick={() => handleDismiss(invite.notification.id)}
                     disabled={actionId === invite.notification.id}
+                    aria-label="Dismiss invite"
                   >
                     {actionId === invite.notification.id ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />
@@ -212,6 +213,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
                   <Button
                     onClick={() => handleAccept(invite)}
                     disabled={actionId === invite.notification.id}
+                    aria-label="Accept invite"
                   >
                     {actionId === invite.notification.id ? (
                       <Loader2 className="mr-2 h-4 w-4 animate-spin" />

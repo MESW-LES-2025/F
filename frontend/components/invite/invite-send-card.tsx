@@ -13,6 +13,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
+import { ApiError } from "@/lib/api-client";
 import { House } from "@/lib/types";
 import { userService } from "@/lib/user-service";
 import { UserPlus2 } from "lucide-react";
@@ -36,8 +37,13 @@ export function InviteSendCard({
     target: string;
     houseName: string;
   } | null>(null);
+  const [inlineNote, setInlineNote] = useState<string | null>(null);
+  const [outgoingInvites, setOutgoingInvites] = useState<
+    { target: string; houseName: string; at: number }[]
+  >([]);
 
   const selectedHouse = houses.find((h) => h.id === selectedHouseId) || null;
+  const canSend = !!selectedHouseId && (email.trim().length > 0 || username.trim().length > 0) && !isSending;
 
   const handleInvite = async () => {
     if (!selectedHouseId) {
@@ -77,18 +83,48 @@ export function InviteSendCard({
 
       setEmail("");
       setUsername("");
+      setInlineNote(null);
       setLastSuccess({
         target: trimmedEmail || `@${trimmedUsername}`,
         houseName: selectedHouse?.name ?? "",
       });
-    } catch (error) {
-      const message =
-        error instanceof Error ? error.message : "Failed to send the invite.";
-      toast({
-        title: "Invite failed",
-        description: message,
-        variant: "destructive",
+      // Track locally as a recently-sent invite (session only)
+      setOutgoingInvites((prev) => {
+        const next = [
+          {
+            target: trimmedEmail || `@${trimmedUsername}`,
+            houseName: selectedHouse?.name ?? "",
+            at: Date.now(),
+          },
+          ...prev,
+        ];
+        // keep last 5
+        return next.slice(0, 5);
       });
+    } catch (error) {
+      if (error instanceof ApiError) {
+        const msg = (error.message || "").toLowerCase();
+        if (error.status === 400 && msg.includes("already in the house")) {
+          setInlineNote("This user is already a member of the selected house.");
+        } else if (error.status === 400 && msg.includes("pending invite")) {
+          setInlineNote("They already have a pending invite to this house.");
+        } else if (
+          error.status === 404 ||
+          msg.includes("not found") ||
+          msg.includes("does not exist") ||
+          msg.includes("no user")
+        ) {
+          // Same inline style as other informative notes
+          const notFoundMsg =
+            "We couldn’t find that user. Check the email/username.";
+          setInlineNote(notFoundMsg);
+        } else {
+          toast({ title: "Invite failed", description: error.message, variant: "destructive" });
+        }
+      } else {
+        const message = error instanceof Error ? error.message : "Failed to send the invite.";
+        toast({ title: "Invite failed", description: message, variant: "destructive" });
+      }
     } finally {
       setIsSending(false);
     }
@@ -109,7 +145,7 @@ export function InviteSendCard({
       </div>
 
       {lastSuccess && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900" role="status" aria-live="polite">
           Invite sent to <span className="font-medium">{lastSuccess.target}</span>
           {lastSuccess.houseName ? (
             <>
@@ -118,6 +154,12 @@ export function InviteSendCard({
           ) : (
             '.'
           )}
+        </div>
+      )}
+
+      {inlineNote && (
+        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status" aria-live="polite">
+          {inlineNote}
         </div>
       )}
 
@@ -146,7 +188,7 @@ export function InviteSendCard({
             id="invite-email"
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => { setEmail(event.target.value); setInlineNote(null); }}
             placeholder="friend@example.com"
           />
         </div>
@@ -155,9 +197,14 @@ export function InviteSendCard({
           <Input
             id="invite-username"
             value={username}
-            onChange={(event) => setUsername(event.target.value)}
+            onChange={(event) => { setUsername(event.target.value); setInlineNote(null); }}
             placeholder="housemate"
           />
+        </div>
+        <div className="sm:col-span-2 -mt-1">
+          <p className="text-xs text-muted-foreground">
+            Email or username - only one is required.
+          </p>
         </div>
       </div>
 
@@ -190,11 +237,41 @@ export function InviteSendCard({
               Copy invite code
             </Button>
           )}
-          <Button onClick={handleInvite} disabled={isSending}>
+          <Button onClick={handleInvite} disabled={!canSend} aria-disabled={!canSend}>
             {isSending ? "Sending..." : "Send Invite"}
           </Button>
         </div>
       </div>
+
+      {outgoingInvites.length > 0 && (
+        <div className="rounded-md border bg-muted/20 p-3">
+          <div className="mb-2 text-sm font-medium">Recently sent invites</div>
+          <ul className="space-y-1 text-sm">
+            {outgoingInvites.map((o, idx) => (
+              <li key={`${o.at}-${idx}`} className="flex items-center justify-between">
+                <span>
+                  To <span className="font-medium">{o.target}</span>
+                  {o.houseName ? (
+                    <>
+                      {" "}for <span className="font-medium">{o.houseName}</span>
+                    </>
+                  ) : null}
+                  {" "}at {new Date(o.at).toLocaleTimeString()}
+                </span>
+                <button
+                  type="button"
+                  className="text-xs text-muted-foreground hover:underline"
+                  onClick={() =>
+                    setOutgoingInvites((prev) => prev.filter((x) => x.at !== o.at))
+                  }
+                >
+                  Dismiss
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </Card>
   );
 }
