@@ -218,6 +218,19 @@ export class UserService {
 			throw new BadRequestException('The inviting user does not exist');
 		}
 
+		const invitingUserMembership = await this.prisma.houseToUser.findFirst({
+			where: {
+				houseId: house.id,
+				userId: userInvitingId,
+			},
+		});
+
+		if (!invitingUserMembership) {
+			throw new BadRequestException(
+				'The inviting user must belong to the house',
+			);
+		}
+
 		const existingHouse = await this.prisma.house.findUnique({
 			where: { id: dto.houseId },
 		});
@@ -226,12 +239,31 @@ export class UserService {
 			throw new BadRequestException('The house does not exist');
 		}
 
+		const existingPendingInvite =
+			await this.prisma.notificationToUser.findFirst({
+				where: {
+					userId: existingUser.id,
+					isRead: false,
+					notification: {
+						category: NotificationCategory.HOUSE,
+						actionUrl: house.id,
+					},
+				},
+			});
+
+		if (existingPendingInvite) {
+			throw new BadRequestException(
+				'The user already has a pending invite to this house',
+			);
+		}
+
 		return await this.notificationService.create({
 			title: `${existingUserInviting.name} invited you to join a house!`,
 			body: `${existingUserInviting.name} invited you to join the house ${existingHouse.name}, use the following code to join: ${house.invitationCode}`,
 			userIds: [existingUser.id],
 			level: NotificationLevel.MEDIUM,
 			category: NotificationCategory.HOUSE,
+			actionUrl: house.id,
 		});
 	}
 }

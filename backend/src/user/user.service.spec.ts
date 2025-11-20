@@ -11,6 +11,7 @@ import {
 	HouseToUser,
 	NotificationCategory,
 	NotificationLevel,
+	NotificationToUser,
 } from '@prisma/client';
 import { NotificationsService } from 'src/notifications/notifications.service';
 
@@ -41,6 +42,11 @@ describe('UserService', () => {
 			>;
 			update: jest.MockedFunction<
 				(...args: any[]) => Promise<UserType & Record<string, any>>
+			>;
+		};
+		notificationToUser: {
+			findFirst: jest.MockedFunction<
+				(...args: any[]) => Promise<NotificationToUser | null>
 			>;
 		};
 		refreshToken: {
@@ -84,6 +90,11 @@ describe('UserService', () => {
 		refreshToken: {
 			updateMany: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<{ count: number }>
+			>,
+		},
+		notificationToUser: {
+			findFirst: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<NotificationToUser | null>
 			>,
 		},
 		house: {
@@ -130,7 +141,8 @@ describe('UserService', () => {
 		}).compile();
 
 		service = module.get<UserService>(UserService);
-		jest.clearAllMocks();
+		jest.resetAllMocks();
+		mockPrismaService.notificationToUser.findFirst.mockResolvedValue(null);
 	});
 
 	it('should be defined', () => {
@@ -521,13 +533,12 @@ describe('UserService', () => {
 			).rejects.toThrow(BadRequestException);
 		});
 
-		it('throws BadRequestException if second house check fails', async () => {
-			mockPrismaService.house.findUnique
-				.mockResolvedValueOnce(mockHouse) // first check
-				.mockResolvedValueOnce(null); // second check
-
+		it('throws BadRequestException if inviting user is not a member of the house', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
 			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
-			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce(null);
 			mockPrismaService.user.findUnique.mockResolvedValue(
 				mockInvitingUser,
 			);
@@ -540,13 +551,85 @@ describe('UserService', () => {
 			).rejects.toThrow(BadRequestException);
 		});
 
+		it('throws BadRequestException if second house check fails', async () => {
+			mockPrismaService.house.findUnique
+				.mockResolvedValueOnce(mockHouse) // first check
+				.mockResolvedValueOnce(null); // second check
+
+			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					id: 'membership-id',
+					houseId: mockHouse.id,
+					userId: mockInvitingUser.id,
+					role: null,
+					joinedAt: new Date(),
+				});
+			mockPrismaService.user.findUnique.mockResolvedValue(
+				mockInvitingUser,
+			);
+
+			await expect(
+				service.inviteToHouse(
+					{ houseId: mockHouse.id, email: mockInvitedUser.email },
+					mockInvitingUser.id,
+				),
+			).rejects.toThrow(BadRequestException);
+		});
+
+		it('throws BadRequestException if user already has a pending invite', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					id: 'membership-id',
+					houseId: mockHouse.id,
+					userId: mockInvitingUser.id,
+					role: null,
+					joinedAt: new Date(),
+				});
+			mockPrismaService.user.findUnique.mockResolvedValue(
+				mockInvitingUser,
+			);
+			mockPrismaService.notificationToUser.findFirst.mockResolvedValue({
+				id: 'notif-to-user-id',
+				userId: mockInvitedUser.id,
+				notificationId: 'notification-id',
+				isRead: false,
+				readAt: null,
+				createdAt: new Date(),
+				updatedAt: new Date(),
+			});
+
+			await expect(
+				service.inviteToHouse(
+					{ houseId: mockHouse.id, email: mockInvitedUser.email },
+					mockInvitingUser.id,
+				),
+			).rejects.toThrow(BadRequestException);
+
+			expect(
+				mockPrismaService.notificationToUser.findFirst,
+			).toHaveBeenCalled();
+		});
+
 		it('creates a notification successfully when everything is correct', async () => {
 			mockPrismaService.house.findUnique
 				.mockResolvedValueOnce(mockHouse) // first call
 				.mockResolvedValueOnce(mockHouse); // second call
 
 			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
-			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					id: 'membership-id',
+					houseId: mockHouse.id,
+					userId: mockInvitingUser.id,
+					role: null,
+					joinedAt: new Date(),
+				});
 			mockPrismaService.user.findUnique.mockResolvedValue(
 				mockInvitingUser,
 			);
@@ -567,6 +650,7 @@ describe('UserService', () => {
 				userIds: [mockInvitedUser.id],
 				level: NotificationLevel.MEDIUM,
 				category: NotificationCategory.HOUSE,
+				actionUrl: mockHouse.id,
 			});
 
 			expect(result).toEqual(notificationResult);
