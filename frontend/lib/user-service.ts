@@ -1,7 +1,4 @@
-import type { User } from "./types";
-import { apiGet, apiPost, apiUpload } from "./api-client";
-import { apiDelete } from "./api-client";
-import { apiPatch } from "./api-client";
+import { apiPost } from "./api-client";
 
 export interface JoinHousePayload {
   inviteCode: string;
@@ -9,6 +6,12 @@ export interface JoinHousePayload {
 
 export interface JoinHouseResponse {
   houseId: string | null;
+}
+
+export interface InviteUserPayload {
+  houseId: string;
+  email?: string;
+  username?: string;
 }
 
 class UserService {
@@ -25,6 +28,10 @@ class UserService {
     );
 
     return userToHouse;
+  }
+
+  async inviteUserToHouse(payload: InviteUserPayload): Promise<void> {
+    await apiPost("/user/invite", payload, { requiresAuth: true });
   }
 }
 

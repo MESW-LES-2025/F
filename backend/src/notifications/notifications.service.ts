@@ -42,10 +42,21 @@ export class NotificationsService {
 		userId: string,
 		filters: FindAllNotificationsByUserDto,
 	) {
+		// Ensure isRead is a boolean (query params may arrive as strings)
+		let isReadFilter: boolean | undefined;
+		const rawIsRead = (filters as any)?.isRead;
+		if (typeof rawIsRead === 'string') {
+			const v = rawIsRead.toLowerCase();
+			if (v === 'true') isReadFilter = true;
+			else if (v === 'false') isReadFilter = false;
+		} else if (typeof rawIsRead === 'boolean') {
+			isReadFilter = rawIsRead;
+		}
+
 		return await this.prisma.notificationToUser.findMany({
 			where: {
 				userId,
-				...(filters.isRead !== undefined && { isRead: filters.isRead }),
+				...(isReadFilter !== undefined && { isRead: isReadFilter }),
 				notification: {
 					...(filters.category && { category: filters.category }),
 					...(filters.level && { level: filters.level }),

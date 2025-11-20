@@ -37,6 +37,7 @@ const support = [
 export function AppSidebar() {
   const searchParams = useSearchParams();
   const pathname = usePathname();
+  const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
 
@@ -118,6 +119,28 @@ export function AppSidebar() {
               Support
             </p>
             {support.map((item) => {
+              if (item.name === "Invite People") {
+                const isActive = pathname === "/invite";
+                return (
+                  <button
+                    key={item.name}
+                    onClick={() => {
+                      setIsMobileMenuOpen(false);
+                      router.push("/invite");
+                    }}
+                    className={cn(
+                      "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                      isActive
+                        ? "bg-green-50 text-gray-900 font-medium"
+                        : "text-gray-600 hover:bg-gray-50"
+                    )}
+                  >
+                    <item.icon className="w-4 h-4" />
+                    <span>{item.name}</span>
+                  </button>
+                );
+              }
+
               const isActive =
                 item.href === "/settings" && pathname === "/settings";
               if (item.href === "/settings") {
