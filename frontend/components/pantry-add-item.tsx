@@ -23,11 +23,16 @@ import {
 } from "@/components/ui/select"
 import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
-import { useRouter } from "next/navigation"
 import { apiGet, apiPost, apiPatch } from "@/lib/api-client"
 import { authService } from "@/lib/auth-service"
+import { useHouse } from "@/lib/house-context"
 
-export default function PantryAddItem() {
+interface PantryAddItemProps {
+  onItemAdded?: () => void
+}
+
+export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
+  const { selectedHouse } = useHouse()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState<number | undefined>(undefined)
@@ -35,33 +40,24 @@ export default function PantryAddItem() {
   const [expiry, setExpiry] = useState("")
   const [category, setCategory] = useState("OTHER")
 
-  const [houses, setHouses] = useState<Array<{ id: string; name?: string }>>([])
-  const [houseId, setHouseId] = useState("")
   const [pantryMap, setPantryMap] = useState<Record<string, string>>({})
   const [notAuthenticated, setNotAuthenticated] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   const { toast } = useToast()
-  const router = useRouter()
 
   useEffect(() => {
     let mounted = true
 
-    async function loadHousesAndPantries() {
+    async function loadPantries() {
       try {
         if (!authService.isAuthenticated()) {
           setNotAuthenticated(true)
         } else {
           setNotAuthenticated(false)
-          const userHouses: any = await apiGet('/house/user', { requiresAuth: true })
-          if (Array.isArray(userHouses) && mounted) {
-            const parsed = userHouses.map((h: any) => ({ id: h.id, name: h.name }))
-            setHouses(parsed)
-            if (parsed.length === 1) setHouseId(parsed[0].id)
-          }
         }
       } catch (err) {
-        console.error('Failed fetching houses', err)
+        console.error('Failed checking auth', err)
       }
 
       try {
@@ -78,7 +74,7 @@ export default function PantryAddItem() {
       }
     }
 
-    loadHousesAndPantries()
+    loadPantries()
     return () => {
       mounted = false
     }
@@ -97,11 +93,8 @@ export default function PantryAddItem() {
       return
     }
 
-    // If user has no houses selected and there is exactly one, pick it.
-    const resolvedHouseId = houseId || (houses.length === 1 ? houses[0].id : '')
-
-    if (!resolvedHouseId) {
-      toast({ title: 'House required', description: 'Please choose a house to add this item to.' })
+    if (!selectedHouse) {
+      toast({ title: 'House required', description: 'Please select a house to add this item to.' })
       return
     }
 
@@ -116,21 +109,19 @@ export default function PantryAddItem() {
         name: name.trim(),
         measurementUnit: String(unit).trim(),
         imageLink: 'https://via.placeholder.com/150',
-        category: String(category).
-          trim?.() ?? category,
+        category: String(category).trim?.() ?? category,
       }
 
-      // Create pantry item under the selected house (backend expects POST /pantry-item/:houseId)
-      const created: any = await apiPost(`/pantry-item/${resolvedHouseId}`, body, { requiresAuth: true })
+      // Create pantry item under the selected house
+      const created: any = await apiPost(`/pantry-item/${selectedHouse.id}`, body, { requiresAuth: true })
 
-      // DEBUG: log created id and pantry mapping to help trace missing PantryToItem rows
       console.debug('[pantry-add] created item', created)
       console.debug('[pantry-add] pantryMap (houseId -> pantryId)', pantryMap)
 
-      let resolvedPantryId = pantryMap[resolvedHouseId]
-      console.debug('[pantry-add] resolvedHouseId', resolvedHouseId, 'resolvedPantryId', resolvedPantryId)
+      let resolvedPantryId = pantryMap[selectedHouse.id]
+      console.debug('[pantry-add] selectedHouse.id', selectedHouse.id, 'resolvedPantryId', resolvedPantryId)
 
-      // If we don't have a pantry mapping (possible in dev after migrations), re-fetch pantries once and retry
+      // If we don't have a pantry mapping, re-fetch pantries and retry
       if (!resolvedPantryId) {
         try {
           const refreshed: any = await apiGet('/pantry')
@@ -140,7 +131,7 @@ export default function PantryAddItem() {
               if (p.houseId && p.id) map[p.houseId] = p.id
             })
             setPantryMap(map)
-            resolvedPantryId = map[resolvedHouseId]
+            resolvedPantryId = map[selectedHouse.id]
             console.debug('[pantry-add] refreshed pantryMap', map)
           }
         } catch (err) {
@@ -149,7 +140,7 @@ export default function PantryAddItem() {
       }
 
       if (!resolvedPantryId) {
-        console.warn('[pantry-add] Pantry not found for house', resolvedHouseId)
+        console.warn('[pantry-add] Pantry not found for house', selectedHouse.id)
         toast({ title: 'Pantry not found', description: 'Could not find a pantry for the selected house.' })
       } else {
         try {
@@ -157,27 +148,27 @@ export default function PantryAddItem() {
           if (expiry) patchBodyItem.expiryDate = expiry
 
           const patchResp: any = await apiPatch(
-              `/pantry/${resolvedHouseId}/${resolvedPantryId}`,
-              { items: [patchBodyItem] },
-              { requiresAuth: true },
-            )
+            `/pantry/${selectedHouse.id}/${resolvedPantryId}`,
+            { items: [patchBodyItem] },
+            { requiresAuth: true },
+          )
           console.debug('[pantry-add] patch response', patchResp)
-          toast({ title: 'Added to pantry', description: 'The item was added to the pantry with the given quantity.' })
+          toast({ title: 'Added to pantry', description: 'The item was added to the pantry successfully.' })
+          
+          // Call the callback to refresh the pantry list
+          onItemAdded?.()
         } catch (err: any) {
           console.error('Failed to add to pantry', err)
           toast({ title: 'Created catalog item', description: 'Item created but failed to add to pantry. Check permissions.' })
         }
       }
 
-  setOpen(false)
-  setName("")
-  setUnit('UNITS')
-  setExpiry("")
+      setOpen(false)
+      setName("")
+      setUnit('UNITS')
+      setExpiry("")
       setQuantity(undefined)
-      setHouseId("")
-
-      toast({ title: 'Item created', description: 'The pantry item was created successfully.' })
-      router.refresh()
+      setCategory("OTHER")
     } catch (err: any) {
       console.error(err)
       const message = err?.message ?? 'Failed to create item'
@@ -281,34 +272,32 @@ export default function PantryAddItem() {
                     <SelectItem value="BEVERAGES">Beverages</SelectItem>
                   </SelectContent>
                 </Select>
-              </div>
-            </div>
-
-            <div>
-              <Label className="mb-1 block">House</Label>
-              {notAuthenticated ? (
-                <div className="text-sm text-gray-600">Login to see your houses</div>
-              ) : houses.length > 0 ? (
-                <select value={houseId} onChange={(e) => setHouseId(e.target.value)} className="w-full p-2 border rounded" disabled={isSaving}>
-                  <option value="">Choose a house</option>
-                  {houses.map((h) => (
-                    <option key={h.id} value={h.id}>{h.name ?? h.id}</option>
-                  ))}
-                </select>
-              ) : (
-                <div className="text-sm text-gray-600">No houses found. Create or join a house first.</div>
-              )}
             </div>
           </div>
 
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="ghost" type="button" disabled={isSaving}>Cancel</Button>
-            </DialogClose>
-            <Button type="submit" disabled={isSaving || notAuthenticated || !quantity}>{isSaving ? 'Saving…' : 'Create'}</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
+          <div>
+            <Label className="mb-1 block">House</Label>
+            <Input
+              value={selectedHouse?.name || 'No house selected'}
+              disabled
+              className="bg-muted"
+            />
+            {!selectedHouse && (
+              <p className="text-sm text-muted-foreground mt-1">Please select a house from the header to add items</p>
+            )}
+          </div>
+        </div>
+
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost" type="button" disabled={isSaving}>Cancel</Button>
+          </DialogClose>
+          <Button type="submit" disabled={isSaving || notAuthenticated || !quantity || !selectedHouse}>
+            {isSaving ? 'Saving…' : 'Create'}
+          </Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
   )
 }

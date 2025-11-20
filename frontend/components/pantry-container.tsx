@@ -11,9 +11,10 @@ interface Props {
   items?: PantryItem[]
   pantryHouseId?: string | undefined
   pantryId?: string | undefined
+  onItemAdded?: () => void
 }
 
-export default function PantryContainer({ items, pantryHouseId, pantryId }: Props) {
+export default function PantryContainer({ items, pantryHouseId, pantryId, onItemAdded }: Props) {
   const list = items ?? []
   const [category, setCategory] = useState<string>("all")
   const [status, setStatus] = useState<string>("all")
@@ -62,6 +63,7 @@ export default function PantryContainer({ items, pantryHouseId, pantryId }: Prop
         setStatus={setStatus}
         addedBy={addedBy}
         setAddedBy={setAddedBy}
+        onItemAdded={onItemAdded}
       />
 
       <PantryStats items={filtered} />

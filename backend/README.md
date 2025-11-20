@@ -178,9 +178,6 @@ npm run test:watch
 # Run tests with coverage report
 npm run test:cov
 
-# Run E2E tests
-npm run test:e2e
-
 # Run linter
 npm run lint
 

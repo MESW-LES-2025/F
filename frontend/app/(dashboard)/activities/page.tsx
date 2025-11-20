@@ -9,8 +9,10 @@ import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { getTasks, updateTask } from "@/lib/tasks-service"
 import { toast } from "@/hooks/use-toast"
 import type { Task } from "@/lib/types"
+import { useHouse } from "@/lib/house-context"
 
 export default function ActivitiesPage() {
+  const { selectedHouse } = useHouse()
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -21,20 +23,28 @@ export default function ActivitiesPage() {
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all")
   const [statusFilter, setStatusFilter] = useState<string>("all")
 
-  // Load tasks on mount
+  // Load tasks when selectedHouse changes
   useEffect(() => {
     loadTasks()
-  }, [])
+  }, [selectedHouse])
 
   const loadTasks = async (background = false) => {
     try {
       if (!background) {
         setIsLoading(true)
         setError(null)
+      
+      // Only fetch tasks if a house is selected
+      if (!selectedHouse) {
+        setTasks([])
+        setIsLoading(false)
+        return
+      }
+      
       }
 
   // only non-archived tasks
-  const fetchedTasks = await getTasks({ archived: 'false' })
+  const fetchedTasks = await getTasks({ archived: 'false', houseId: selectedHouse.id })
       setTasks(fetchedTasks)
     } catch (err) {
       console.error('Failed to load tasks:', err)
@@ -131,8 +141,23 @@ export default function ActivitiesPage() {
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <ActivitiesHeader onTaskCreated={handleTaskCreated} />
         <div className="flex items-center justify-center h-64">
           <p className="text-gray-500">Loading tasks...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!selectedHouse) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <ActivitiesHeader onTaskCreated={handleTaskCreated} />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-gray-500 mb-2">No house selected</p>
+            <p className="text-sm text-gray-400">Please select a house to view tasks</p>
+          </div>
         </div>
       </div>
     )

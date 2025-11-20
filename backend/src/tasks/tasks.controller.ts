@@ -55,6 +55,11 @@ export class TasksController {
 		description: 'Filter by status (todo, doing, done)',
 	})
 	@ApiQuery({
+		name: 'houseId',
+		required: false,
+		description: 'Filter by house ID',
+	})
+	@ApiQuery({
 		name: 'archived',
 		required: false,
 		description: 'Filter by archived state (true/false)',
@@ -63,6 +68,7 @@ export class TasksController {
 	async findAll(
 		@Query('assigneeId') assigneeId?: string,
 		@Query('status') status?: string,
+		@Query('houseId') houseId?: string,
 		@Query('archived') archived?: string,
 		@Request() req?: { user: { userId: string } },
 	) {
@@ -71,6 +77,13 @@ export class TasksController {
 			status === 'todo' || status === 'doing' || status === 'done'
 				? status
 				: undefined;
+		
+		// If houseId is provided, use the house-specific query
+		if (houseId) {
+			return this.tasksService.findByHouse(houseId, archived);
+		}
+		
+		// Otherwise use the comprehensive user-based query with filters
 		return this.tasksService.findAllForUser(userId, {
 			assigneeId,
 			status: normalizedStatus,

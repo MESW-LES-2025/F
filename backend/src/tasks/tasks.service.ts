@@ -131,41 +131,6 @@ export class TasksService {
 		});
 	}
 
-	async findByHouse(houseId: string, userId: string) {
-		// ensure the requesting user belongs to the house
-		const membership = await this.prisma.houseToUser.findFirst({
-			where: { userId, houseId },
-		});
-
-		if (!membership) {
-			throw new ForbiddenException('You do not belong to this house');
-		}
-
-		return this.prisma.task.findMany({
-			where: { houseId },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-			},
-			orderBy: { createdAt: 'desc' },
-		});
-	}
-
 	async findOne(id: string) {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
@@ -490,6 +455,53 @@ export class TasksService {
 				createdAt: 'desc',
 			},
 		});
+	}
+
+	async findByHouse(houseId: string, archived?: string) {
+		console.log('[TasksService] findByHouse called with houseId:', houseId, 'archived:', archived);
+		const tasks = await this.prisma.task.findMany({
+			where: { 
+				houseId,
+				...(archived === 'true' ? { archived: true } : archived === 'false' ? { archived: false } : {}),
+			},
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+			orderBy: {
+				createdAt: 'desc',
+			},
+		});
+		console.log(
+			'[TasksService] findByHouse returning',
+			tasks.length,
+			'tasks',
+		);
+		console.log(
+			'[TasksService] Task houseIds:',
+			tasks.map((t) => ({ title: t.title, houseId: t.houseId })),
+		);
+		return tasks;
 	}
 
 	async findByStatus(status: string) {

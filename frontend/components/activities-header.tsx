@@ -1,6 +1,7 @@
 "use client"
 
 import { CreateTaskDialog } from "@/components/create-task-dialog"
+import { HouseSelector } from "@/components/house-selector"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import Link from 'next/link'
 import type { Task } from "@/lib/types"
@@ -32,9 +33,12 @@ export function ActivitiesHeader({
     <div className="bg-white border-b border-gray-200/80">
       <div className="px-6 py-4">
         <div className="flex items-center justify-between mb-3">
-          <div>
-            <h1 className="text-lg font-semibold text-gray-900">Activities</h1>
-            <p className="text-xs text-gray-500">Plan, track, and complete tasks across your house</p>
+          <div className="flex items-center gap-4">
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Activities</h1>
+              <p className="text-xs text-gray-500">Plan, track, and complete tasks across your house</p>
+            </div>
+            <HouseSelector />
           </div>
           <div className="flex items-center gap-2">
             <Link href="/activities/history">

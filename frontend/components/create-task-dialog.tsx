@@ -27,17 +27,18 @@ import { createTask } from "@/lib/tasks-service"
 import type { Task, User } from "@/lib/types"
 import { useEffect } from "react"
 import { apiGet } from "@/lib/api-client"
+import { useHouse } from "@/lib/house-context"
 
 interface CreateTaskDialogProps {
   onTaskCreated?: (task: Task) => void
 }
 
 export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
+  const { selectedHouse } = useHouse()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [users, setUsers] = useState<User[]>([])
-  const [userHouseId, setUserHouseId] = useState<string | null>(null)
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -81,34 +82,27 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     return !Object.values(errors).some((error) => error)
   }
 
-  // Load user's house and users when dialog opens
+  // Load users from selected house when dialog opens
   useEffect(() => {
-    if (open) {
-      loadUserHouseAndUsers()
+    if (open && selectedHouse) {
+      loadHouseUsers()
     }
-  }, [open])
+  }, [open, selectedHouse])
 
-  const loadUserHouseAndUsers = async () => {
+  const loadHouseUsers = async () => {
+    if (!selectedHouse) {
+      setError('Please select a house first.')
+      setUsers([])
+      return
+    }
+
     try {
-      // First, get the user's houses
-      const houses = await apiGet<Array<{ id: string; name: string }>>('/house/user', { requiresAuth: true })
-      
-      if (houses && houses.length > 0) {
-        // Use the first house (assuming user is in at least one house)
-        const houseId = houses[0].id
-        setUserHouseId(houseId)
-        
-        // Fetch users from the same house
-  // Fetch only users that belong to this house (server filters by param route)
-  const response = await apiGet<User[]>(`/auth/users/house/${houseId}`, { requiresAuth: true })
-        setUsers(response)
-      } else {
-        setError('You must belong to a house to create tasks.')
-        setUsers([])
-      }
+      // Fetch users from the selected house
+      const response = await apiGet<User[]>(`/auth/users/house/${selectedHouse.id}`, { requiresAuth: true })
+      setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)
-      setError('Failed to load users from your house.')
+      setError('Failed to load users from this house.')
     }
   }
 
@@ -125,8 +119,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     setIsLoading(true)
 
     try {
-      if (!userHouseId) {
-        setError('You must belong to a house to create tasks.');
+      if (!selectedHouse) {
+        setError('Please select a house first.');
         return;
       }
 
@@ -136,7 +130,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         description: formData.description.trim() || undefined,
         assigneeId: formData.assignee,
         deadline: new Date(formData.deadline).toISOString(),
-        houseId: userHouseId,
+        houseId: selectedHouse.id,
       })
 
       // Call the callback with the new task
