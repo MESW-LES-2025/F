@@ -44,7 +44,7 @@ export class NotificationsService {
 	) {
 		// Ensure isRead is a boolean (query params may arrive as strings)
 		let isReadFilter: boolean | undefined;
-		const rawIsRead = (filters as any)?.isRead;
+		const rawIsRead: unknown = (filters as Record<string, unknown>)?.isRead;
 		if (typeof rawIsRead === 'string') {
 			const v = rawIsRead.toLowerCase();
 			if (v === 'true') isReadFilter = true;
