@@ -3,6 +3,7 @@ import { NotificationsController } from './notifications.controller';
 import { NotificationsService } from './notifications.service';
 import { UserRequest } from 'src/shared/types/user_request';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
+import { FindAllNotificationsByUserDto } from './dto/find-all-by-user.dto';
 
 describe('NotificationsController', () => {
 	let controller: NotificationsController;
@@ -28,7 +29,9 @@ describe('NotificationsController', () => {
 			],
 		}).compile();
 
-		controller = module.get<NotificationsController>(NotificationsController);
+		controller = module.get<NotificationsController>(
+			NotificationsController,
+		);
 		jest.clearAllMocks();
 	});
 
@@ -52,7 +55,9 @@ describe('NotificationsController', () => {
 	});
 
 	it('findAllByUser should call service.findAllByUser and return result', async () => {
-		const filters = { unreadOnly: true } as any;
+		const filters: FindAllNotificationsByUserDto = {
+			isRead: false,
+		};
 		const req = { user: { userId: mockUserId } } as UserRequest;
 
 		const result = await controller.findAllByUser(req, filters);
@@ -83,10 +88,9 @@ describe('NotificationsController', () => {
 
 		const result = await controller.markOneAsReadByUser(id, req);
 
-		expect(mockNotificationsService.markOneAsReadByUser).toHaveBeenCalledWith(
-			mockUserId,
-			id,
-		);
+		expect(
+			mockNotificationsService.markOneAsReadByUser,
+		).toHaveBeenCalledWith(mockUserId, id);
 		expect(result).toEqual({ success: true });
 	});
 
