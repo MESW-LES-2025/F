@@ -77,12 +77,12 @@ export class TasksController {
 			status === 'todo' || status === 'doing' || status === 'done'
 				? status
 				: undefined;
-		
+
 		// If houseId is provided, use the house-specific query
 		if (houseId) {
 			return this.tasksService.findByHouse(houseId, archived);
 		}
-		
+
 		// Otherwise use the comprehensive user-based query with filters
 		return this.tasksService.findAllForUser(userId, {
 			assigneeId,

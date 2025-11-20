@@ -15,6 +15,10 @@ describe('TasksController', () => {
 		remove: jest.fn(),
 		findByAssignee: jest.fn(),
 		findByStatus: jest.fn(),
+		findAllForUser: jest.fn(),
+		findByHouse: jest.fn(),
+		archive: jest.fn(),
+		unarchive: jest.fn(),
 	};
 
 	const mockReq = {
@@ -116,50 +120,94 @@ describe('TasksController', () => {
 		const mockTasks = [mockTask, { ...mockTask, id: 'task-456' }];
 
 		it('should return all tasks when no filters provided', async () => {
-			mockService.findAll.mockResolvedValue(mockTasks);
+			mockService.findAllForUser.mockResolvedValue(mockTasks);
 
-			const result = await controller.findAll();
+			const result = await controller.findAll(
+				undefined,
+				undefined,
+				undefined,
+				undefined,
+				mockReq,
+			);
 
 			expect(result).toEqual(mockTasks);
-			expect(mockService.findAll).toHaveBeenCalledTimes(1);
-			expect(mockService.findByAssignee).not.toHaveBeenCalled();
-			expect(mockService.findByStatus).not.toHaveBeenCalled();
+			expect(mockService.findAllForUser).toHaveBeenCalledWith(
+				'user-123',
+				{
+					assigneeId: undefined,
+					status: undefined,
+					archived: undefined,
+				},
+			);
 		});
 
 		it('should filter tasks by assigneeId when provided', async () => {
 			const assigneeTasks = [mockTask];
-			mockService.findByAssignee.mockResolvedValue(assigneeTasks);
+			mockService.findAllForUser.mockResolvedValue(assigneeTasks);
 
-			const result = await controller.findAll('user-456');
+			const result = await controller.findAll(
+				'user-456',
+				undefined,
+				undefined,
+				undefined,
+				mockReq,
+			);
 
 			expect(result).toEqual(assigneeTasks);
-			expect(mockService.findByAssignee).toHaveBeenCalledWith('user-456');
-			expect(mockService.findByAssignee).toHaveBeenCalledTimes(1);
-			expect(mockService.findAll).not.toHaveBeenCalled();
+			expect(mockService.findAllForUser).toHaveBeenCalledWith(
+				'user-123',
+				{
+					assigneeId: 'user-456',
+					status: undefined,
+					archived: undefined,
+				},
+			);
 		});
 
 		it('should filter tasks by status when provided', async () => {
 			const statusTasks = [{ ...mockTask, status: 'doing' }];
-			mockService.findByStatus.mockResolvedValue(statusTasks);
+			mockService.findAllForUser.mockResolvedValue(statusTasks);
 
-			const result = await controller.findAll(undefined, 'doing');
+			const result = await controller.findAll(
+				undefined,
+				'doing',
+				undefined,
+				undefined,
+				mockReq,
+			);
 
 			expect(result).toEqual(statusTasks);
-			expect(mockService.findByStatus).toHaveBeenCalledWith('doing');
-			expect(mockService.findByStatus).toHaveBeenCalledTimes(1);
-			expect(mockService.findAll).not.toHaveBeenCalled();
+			expect(mockService.findAllForUser).toHaveBeenCalledWith(
+				'user-123',
+				{
+					assigneeId: undefined,
+					status: 'doing',
+					archived: undefined,
+				},
+			);
 		});
 
-		it('should prioritize assigneeId filter when both filters provided', async () => {
+		it('should handle multiple filters together', async () => {
 			const assigneeTasks = [mockTask];
-			mockService.findByAssignee.mockResolvedValue(assigneeTasks);
+			mockService.findAllForUser.mockResolvedValue(assigneeTasks);
 
-			const result = await controller.findAll('user-456', 'todo');
+			const result = await controller.findAll(
+				'user-456',
+				'todo',
+				undefined,
+				undefined,
+				mockReq,
+			);
 
 			expect(result).toEqual(assigneeTasks);
-			expect(mockService.findByAssignee).toHaveBeenCalledWith('user-456');
-			expect(mockService.findByStatus).not.toHaveBeenCalled();
-			expect(mockService.findAll).not.toHaveBeenCalled();
+			expect(mockService.findAllForUser).toHaveBeenCalledWith(
+				'user-123',
+				{
+					assigneeId: 'user-456',
+					status: 'todo',
+					archived: undefined,
+				},
+			);
 		});
 	});
 

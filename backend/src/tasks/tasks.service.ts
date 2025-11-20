@@ -458,11 +458,20 @@ export class TasksService {
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
-		console.log('[TasksService] findByHouse called with houseId:', houseId, 'archived:', archived);
+		console.log(
+			'[TasksService] findByHouse called with houseId:',
+			houseId,
+			'archived:',
+			archived,
+		);
 		const tasks = await this.prisma.task.findMany({
-			where: { 
+			where: {
 				houseId,
-				...(archived === 'true' ? { archived: true } : archived === 'false' ? { archived: false } : {}),
+				...(archived === 'true'
+					? { archived: true }
+					: archived === 'false'
+						? { archived: false }
+						: {}),
 			},
 			include: {
 				assignee: {

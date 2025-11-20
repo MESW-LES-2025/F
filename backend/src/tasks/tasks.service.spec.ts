@@ -441,6 +441,7 @@ describe('TasksService', () => {
 
 		it('should throw ForbiddenException when user is neither creator nor assignee', async () => {
 			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
 
 			await expect(
 				service.update('task-123', updateTaskDto, 'unauthorized-user'),
