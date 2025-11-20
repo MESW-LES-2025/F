@@ -60,3 +60,25 @@ export interface User {
   imageUrl?: string;
   createdAt?: string;
 }
+
+// Notifications
+export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "OTHER";
+
+export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
+
+export interface NotificationPayload {
+  id: string;
+  title: string;
+  body?: string | null;
+  actionUrl?: string | null;
+  level?: NotificationLevel | null;
+  category?: NotificationCategory | null;
+}
+
+export interface UserNotification {
+  userId: string;
+  isRead: boolean;
+  readAt?: string | null;
+  createdAt: string;
+  notification: NotificationPayload;
+}

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { InviteSendCard } from "@/components/invite/invite-send-card";
 import { Card } from "@/components/ui/card";
+import { InviteInbox } from "@/components/invite/invite-inbox";
 import { houseService } from "@/lib/house-service";
 import { House } from "@/lib/types";
 
@@ -47,11 +48,14 @@ export default function InvitePage() {
           </div>
         </Card>
       ) : (
-        <InviteSendCard
-          houses={houses}
-          selectedHouseId={selectedHouseId}
-          onHouseChange={setSelectedHouseId}
-        />
+        <div className="space-y-6">
+          <InviteSendCard
+            houses={houses}
+            selectedHouseId={selectedHouseId}
+            onHouseChange={setSelectedHouseId}
+          />
+          <InviteInbox onRefreshHouses={loadHouses} />
+        </div>
       )}
     </div>
   );

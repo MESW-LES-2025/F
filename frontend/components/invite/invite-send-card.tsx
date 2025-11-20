@@ -32,6 +32,12 @@ export function InviteSendCard({
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [isSending, setIsSending] = useState(false);
+  const [lastSuccess, setLastSuccess] = useState<{
+    target: string;
+    houseName: string;
+  } | null>(null);
+
+  const selectedHouse = houses.find((h) => h.id === selectedHouseId) || null;
 
   const handleInvite = async () => {
     if (!selectedHouseId) {
@@ -71,6 +77,10 @@ export function InviteSendCard({
 
       setEmail("");
       setUsername("");
+      setLastSuccess({
+        target: trimmedEmail || `@${trimmedUsername}`,
+        houseName: selectedHouse?.name ?? "",
+      });
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to send the invite.";
@@ -97,6 +107,19 @@ export function InviteSendCard({
           </div>
         </div>
       </div>
+
+      {lastSuccess && (
+        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900">
+          Invite sent to <span className="font-medium">{lastSuccess.target}</span>
+          {lastSuccess.houseName ? (
+            <>
+              {' '}for house <span className="font-medium">{lastSuccess.houseName}</span>.
+            </>
+          ) : (
+            '.'
+          )}
+        </div>
+      )}
 
       <div className="grid gap-4 sm:grid-cols-2">
         <div className="grid gap-2">
@@ -142,9 +165,35 @@ export function InviteSendCard({
         <p className="text-sm text-muted-foreground">
           The recipient must have an account and not already belong to the house.
         </p>
-        <Button onClick={handleInvite} disabled={isSending}>
-          {isSending ? "Sending..." : "Send Invite"}
-        </Button>
+        <div className="flex items-center gap-2">
+          {selectedHouse?.invitationCode && (
+            <Button
+              type="button"
+              variant="secondary"
+              onClick={async () => {
+                try {
+                  await navigator.clipboard.writeText(
+                    selectedHouse.invitationCode
+                  );
+                  toast({
+                    title: "Invite code copied",
+                    description: "Share it with your friend to join.",
+                  });
+                } catch {
+                  toast({
+                    title: "Could not copy",
+                    description: selectedHouse.invitationCode,
+                  });
+                }
+              }}
+            >
+              Copy invite code
+            </Button>
+          )}
+          <Button onClick={handleInvite} disabled={isSending}>
+            {isSending ? "Sending..." : "Send Invite"}
+          </Button>
+        </div>
       </div>
     </Card>
   );
