@@ -289,6 +289,50 @@ export class TasksService {
 		});
 	}
 
+	async findByHouse(houseId: string) {
+		console.log('[TasksService] findByHouse called with houseId:', houseId);
+		const tasks = await this.prisma.task.findMany({
+			where: { houseId },
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+			orderBy: {
+				createdAt: 'desc',
+			},
+		});
+		console.log(
+			'[TasksService] findByHouse returning',
+			tasks.length,
+			'tasks',
+		);
+		console.log(
+			'[TasksService] Task houseIds:',
+			tasks.map((t) => ({ title: t.title, houseId: t.houseId })),
+		);
+		return tasks;
+	}
+
 	async findByStatus(status: string) {
 		return this.prisma.task.findMany({
 			where: { status },

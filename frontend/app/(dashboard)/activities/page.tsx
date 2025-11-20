@@ -8,24 +8,34 @@ import { EditTaskDialog } from "@/components/edit-task-dialog"
 import { DeleteTaskDialog } from "@/components/delete-task-dialog"
 import { getTasks } from "@/lib/tasks-service"
 import type { Task } from "@/lib/types"
+import { useHouse } from "@/lib/house-context"
 
 export default function ActivitiesPage() {
+  const { selectedHouse } = useHouse()
   const [tasks, setTasks] = useState<Task[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [editingTask, setEditingTask] = useState<Task | null>(null)
   const [deletingTask, setDeletingTask] = useState<Task | null>(null)
 
-  // Load tasks on mount
+  // Load tasks when selectedHouse changes
   useEffect(() => {
     loadTasks()
-  }, [])
+  }, [selectedHouse])
 
   const loadTasks = async () => {
     try {
       setIsLoading(true)
       setError(null)
-      const fetchedTasks = await getTasks()
+      
+      // Only fetch tasks if a house is selected
+      if (!selectedHouse) {
+        setTasks([])
+        setIsLoading(false)
+        return
+      }
+      
+      const fetchedTasks = await getTasks({ houseId: selectedHouse.id })
       setTasks(fetchedTasks)
     } catch (err) {
       console.error('Failed to load tasks:', err)
@@ -60,8 +70,23 @@ export default function ActivitiesPage() {
   if (isLoading) {
     return (
       <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <ActivitiesHeader onTaskCreated={handleTaskCreated} />
         <div className="flex items-center justify-center h-64">
           <p className="text-gray-500">Loading tasks...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (!selectedHouse) {
+    return (
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <ActivitiesHeader onTaskCreated={handleTaskCreated} />
+        <div className="flex items-center justify-center h-64">
+          <div className="text-center">
+            <p className="text-gray-500 mb-2">No house selected</p>
+            <p className="text-sm text-gray-400">Please select a house to view tasks</p>
+          </div>
         </div>
       </div>
     )
