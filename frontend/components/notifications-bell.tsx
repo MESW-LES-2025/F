@@ -118,11 +118,17 @@ export function NotificationsBell({ className }: { className?: string }) {
         <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/40">
           <div className="flex items-center gap-2">
             {showCenter && (
-              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowCenter(false)} aria-label="Back">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => setShowCenter(false)}
+                aria-label="Back"
+              >
                 <ArrowLeft className="h-4 w-4" />
               </Button>
             )}
-            <span className="text-sm font-medium">Notifications{showCenter ? " Center" : ""}</span>
+            <span className="text-sm font-medium">Notifications</span>
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
           <div className="flex items-center gap-2">
@@ -130,11 +136,6 @@ export function NotificationsBell({ className }: { className?: string }) {
               <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
                 <CheckCheck className="h-4 w-4 mr-1" />
                 Mark all
-              </Button>
-            )}
-            {!showCenter && (
-              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowCenter(true)}>
-                Open Center
               </Button>
             )}
           </div>
@@ -262,21 +263,13 @@ export function NotificationsBell({ className }: { className?: string }) {
         <div className="px-4 py-2 text-[11px] text-muted-foreground flex justify-between items-center">
           <span>{unreadCount} unread</span>
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => fetchAll()}
-              className="underline hover:no-underline"
-            >
-              Refresh
-            </button>
             {!showCenter && (
-              <button
-                type="button"
-                onClick={() => setShowCenter(true)}
+              <a
+                href="/notifications"
                 className="underline hover:no-underline"
               >
                 View all
-              </button>
+              </a>
             )}
           </div>
         </div>
