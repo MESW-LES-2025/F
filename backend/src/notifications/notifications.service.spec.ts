@@ -207,7 +207,7 @@ describe('NotificationsService', () => {
 				mockPrismaService.notificationToUser.update,
 			).toHaveBeenCalledWith({
 				where: { id: 'ntu1', userId: 'u1' },
-				data: { isRead: true },
+				data: { isRead: true, readAt: expect.any(Date) },
 			});
 
 			expect(result).toEqual({ success: true });
@@ -238,7 +238,7 @@ describe('NotificationsService', () => {
 				mockPrismaService.notificationToUser.updateMany,
 			).toHaveBeenCalledWith({
 				where: { userId: 'u1' },
-				data: { isRead: true },
+				data: { isRead: true, readAt: expect.any(Date) },
 			});
 
 			expect(result).toEqual({ count: 1 });
