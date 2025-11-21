@@ -17,6 +17,7 @@ import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
 import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UserRequest } from 'src/shared/types/user_request';
 import { JoinHouseDto } from './dto/join-house.dto';
+import { InviteToHouseDto } from './dto/invite-to-house.dto';
 
 @Controller('user')
 export class UserController {
@@ -76,6 +77,20 @@ export class UserController {
 		return await this.userService.joinHouseWithCode(
 			req.user.userId,
 			joinHouseDto,
+		);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Invite another user to a house' })
+	@Post('invite')
+	inviteUserToHouse(
+		@Body() inviteToHouseDto: InviteToHouseDto,
+		@Request() req: UserRequest,
+	) {
+		return this.userService.inviteToHouse(
+			inviteToHouseDto,
+			req.user.userId,
 		);
 	}
 }

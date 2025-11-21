@@ -9,6 +9,7 @@ import { TasksModule } from './tasks/tasks.module';
 import { UserModule } from './user/user.module';
 import { ExpenseModule } from './expense/expense.module';
 import { MulterModule } from '@nestjs/platform-express';
+import { NotificationsModule } from './notifications/notifications.module';
 import * as multer from 'multer';
 
 @Module({
@@ -23,6 +24,7 @@ import * as multer from 'multer';
 		TasksModule,
 		UserModule,
 		ExpenseModule,
+		NotificationsModule,
 	],
 })
 export class AppModule {}
