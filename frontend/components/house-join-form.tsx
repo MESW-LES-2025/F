@@ -69,7 +69,7 @@ export function JoinHouseForm({ isRegister = false }: JoinHouseFormProps) {
           />
         </div>
 
-        <Button onClick={handleJoinHouse} disabled={isSaving}>
+        <Button id="join-house-btn" onClick={handleJoinHouse} disabled={isSaving}>
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
 
