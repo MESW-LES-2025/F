@@ -63,6 +63,17 @@ export class NotificationsController {
 
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Dismiss one notification for a user' })
+	@Patch(':id/dismiss')
+	dismissOneByUser(@Param('id') id: string, @Request() req: UserRequest) {
+		return this.notificationsService.dismissOneByUser(
+			req.user.userId,
+			id,
+		);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Mark all notifications to a user as read' })
 	@Patch()
 	markAllAsReadByUser(@Request() req: UserRequest) {

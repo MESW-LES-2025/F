@@ -41,16 +41,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         const sorted = [...data].sort(
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
-        // Filter out dismissed invites
-        let dismissed: string[] = [];
-        try {
-          const raw = localStorage.getItem("dismissed_house_invites");
-          if (raw) {
-            const parsed = JSON.parse(raw);
-            if (Array.isArray(parsed)) dismissed = parsed;
-          }
-        } catch {}
-        setInvites(sorted.filter(n => !dismissed.includes(n.notification.id)));
+        setInvites(sorted);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to load invites.";
@@ -84,21 +75,8 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
   const handleDismiss = async (notificationId: string) => {
     setActionId(notificationId);
     try {
-      await notificationService.markAsRead(notificationId);
-      // Dismiss means we remove it from the list
-      setInvites((current) =>
-        current.filter((item) => item.notification.id !== notificationId)
-      );
-      // Persist dismissed id
-      try {
-        const raw = localStorage.getItem("dismissed_house_invites");
-        const existing = raw ? JSON.parse(raw) : [];
-        const updated = Array.isArray(existing) ? existing : [];
-        if (!updated.includes(notificationId)) {
-          updated.push(notificationId);
-        }
-        localStorage.setItem("dismissed_house_invites", JSON.stringify(updated));
-      } catch {}
+      await notificationService.dismiss(notificationId);
+      setInvites((current) => current.filter((item) => item.notification.id !== notificationId));
       toast({
         title: "Invite dismissed",
         description: "You can still join later via invite code if shared.",
