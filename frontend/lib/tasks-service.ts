@@ -6,6 +6,7 @@ export interface CreateTaskPayload {
   description?: string
   assigneeId: string
   deadline: string
+  houseId: string
 }
 
 export interface UpdateTaskPayload {
@@ -35,9 +36,16 @@ export interface TaskResponse {
     email: string
     username: string
   }
+  houseId: string
+  house: {
+    id: string
+    name: string
+  }
   deadline: string
   createdAt: string
   updatedAt: string
+  archived: boolean
+  archivedAt?: string | null
 }
 
 /**
@@ -53,6 +61,10 @@ function transformTask(backendTask: TaskResponse): Task {
     status: backendTask.status as 'todo' | 'doing' | 'done',
     deadline: new Date(backendTask.deadline),
     createdAt: new Date(backendTask.createdAt),
+    houseId: backendTask.houseId,
+    houseName: backendTask.house.name,
+    archived: backendTask.archived,
+    archivedAt: backendTask.archivedAt ? new Date(backendTask.archivedAt) : null,
   }
 }
 
@@ -62,11 +74,15 @@ function transformTask(backendTask: TaskResponse): Task {
 export async function getTasks(filters?: {
   assigneeId?: string
   status?: string
+  houseId?: string
+  archived?: string
 }): Promise<Task[]> {
+  console.log('[tasks-service] getTasks called with filters:', filters)
   const tasks = await apiGet<TaskResponse[]>('/tasks', {
     requiresAuth: true,
     params: filters as Record<string, string>,
   })
+  console.log('[tasks-service] Received tasks:', tasks.length)
   
   return tasks.map(transformTask)
 }
@@ -128,4 +144,24 @@ export async function getTasksByAssignee(assigneeId: string): Promise<Task[]> {
  */
 export async function getTasksByStatus(status: 'todo' | 'doing' | 'done'): Promise<Task[]> {
   return getTasks({ status })
+}
+
+/**
+ * Archive a task (only if done)
+ */
+export async function archiveTask(taskId: string): Promise<Task> {
+  const task = await apiPatch<TaskResponse>(`/tasks/${taskId}/archive`, undefined, {
+    requiresAuth: true,
+  })
+  return transformTask(task)
+}
+
+/**
+ * Unarchive a task
+ */
+export async function unarchiveTask(taskId: string): Promise<Task> {
+  const task = await apiPatch<TaskResponse>(`/tasks/${taskId}/unarchive`, undefined, {
+    requiresAuth: true,
+  })
+  return transformTask(task)
 }

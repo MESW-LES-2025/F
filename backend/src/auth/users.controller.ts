@@ -1,9 +1,10 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Get, UseGuards, Param } from '@nestjs/common';
 import {
 	ApiTags,
 	ApiOperation,
 	ApiResponse,
 	ApiBearerAuth,
+	ApiParam,
 } from '@nestjs/swagger';
 import { PrismaService } from '../prisma/prisma.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
@@ -26,7 +27,38 @@ export class UsersController {
 				email: true,
 				username: true,
 				name: true,
-				imageUrl: true,
+			},
+			orderBy: {
+				name: 'asc',
+			},
+		});
+
+		return users;
+	}
+
+	@Get('users/house/:houseId')
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({
+		summary: 'Get all users in a specific house (for task assignment)',
+	})
+	@ApiParam({ name: 'houseId', description: 'House UUID' })
+	@ApiResponse({ status: 200, description: 'Users retrieved successfully' })
+	@ApiResponse({ status: 401, description: 'Unauthorized' })
+	async getUsersByHouse(@Param('houseId') houseId: string) {
+		const users = await this.prisma.user.findMany({
+			where: {
+				houses: {
+					some: {
+						houseId: houseId,
+					},
+				},
+			},
+			select: {
+				id: true,
+				email: true,
+				username: true,
+				name: true,
 			},
 			orderBy: {
 				name: 'asc',

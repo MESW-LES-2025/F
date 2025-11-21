@@ -1,7 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
-import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+	NotFoundException,
+	ForbiddenException,
+	BadRequestException,
+} from '@nestjs/common';
 import { CreateTaskDto, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -19,6 +23,13 @@ describe('TasksService', () => {
 		user: {
 			findUnique: jest.fn(),
 		},
+		house: {
+			findUnique: jest.fn(),
+		},
+		houseToUser: {
+			findMany: jest.fn(),
+			findFirst: jest.fn(),
+		},
 	};
 
 	const mockAssignee = {
@@ -35,6 +46,7 @@ describe('TasksService', () => {
 		assigneeId: 'user-456',
 		deadline: new Date('2025-12-31'),
 		createdById: 'user-123',
+		houseId: 'house-1',
 		status: 'todo',
 		createdAt: new Date(),
 		updatedAt: new Date(),
@@ -49,6 +61,10 @@ describe('TasksService', () => {
 			name: 'John Doe',
 			email: 'john@example.com',
 			username: 'johndoe',
+		},
+		house: {
+			id: 'house-1',
+			name: 'Test House',
 		},
 	};
 
@@ -78,15 +94,35 @@ describe('TasksService', () => {
 			description: 'Clean all surfaces',
 			assigneeId: 'user-456',
 			deadline: '2025-12-31T23:59:59.000Z',
+			houseId: 'house-1',
 		};
 
-		it('should create a task successfully', async () => {
+		it('should create a task successfully when users are in the same house', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+				name: 'Test House',
+			});
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({
+					userId: 'user-123',
+					houseId: 'house-1',
+				})
+				.mockResolvedValueOnce({
+					userId: 'user-456',
+					houseId: 'house-1',
+				});
 			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
 			mockPrismaService.task.create.mockResolvedValue(mockTask);
 
 			const result = await service.create(createTaskDto, 'user-123');
 
 			expect(result).toEqual(mockTask);
+			expect(mockPrismaService.house.findUnique).toHaveBeenCalledWith({
+				where: { id: 'house-1' },
+			});
+			expect(
+				mockPrismaService.houseToUser.findFirst,
+			).toHaveBeenCalledTimes(2);
 			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
 				where: { id: 'user-456' },
 			});
@@ -97,6 +133,7 @@ describe('TasksService', () => {
 					assigneeId: createTaskDto.assigneeId,
 					deadline: new Date(createTaskDto.deadline),
 					createdById: 'user-123',
+					houseId: 'house-1',
 					status: 'todo',
 				},
 				include: {
@@ -116,11 +153,24 @@ describe('TasksService', () => {
 							username: true,
 						},
 					},
+					house: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
 				},
 			});
 		});
 
 		it('should throw NotFoundException when assignee does not exist', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+			});
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue({
+				userId: 'user-123',
+				houseId: 'house-1',
+			});
 			mockPrismaService.user.findUnique.mockResolvedValue(null);
 
 			await expect(
@@ -136,7 +186,51 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.create).not.toHaveBeenCalled();
 		});
 
+		it('should throw BadRequestException when users are not in the same house', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+			});
+			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({
+					userId: 'user-123',
+					houseId: 'house-1',
+				})
+				.mockResolvedValueOnce(null);
+
+			await expect(
+				service.create(createTaskDto, 'user-123'),
+			).rejects.toThrow(BadRequestException);
+
+			// Reset mocks for second call
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+			});
+			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({
+					userId: 'user-123',
+					houseId: 'house-1',
+				})
+				.mockResolvedValueOnce(null);
+
+			await expect(
+				service.create(createTaskDto, 'user-123'),
+			).rejects.toThrow('Cannot assign task to user not in this house');
+		});
 		it('should set status to todo by default', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+			});
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({
+					userId: 'user-123',
+					houseId: 'house-1',
+				})
+				.mockResolvedValueOnce({
+					userId: 'user-456',
+					houseId: 'house-1',
+				});
 			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
 			mockPrismaService.task.create.mockResolvedValue(mockTask);
 
@@ -152,6 +246,18 @@ describe('TasksService', () => {
 		});
 
 		it('should convert deadline string to Date object', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue({
+				id: 'house-1',
+			});
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({
+					userId: 'user-123',
+					houseId: 'house-1',
+				})
+				.mockResolvedValueOnce({
+					userId: 'user-456',
+					houseId: 'house-1',
+				});
 			mockPrismaService.user.findUnique.mockResolvedValue(mockAssignee);
 			mockPrismaService.task.create.mockResolvedValue(mockTask);
 
@@ -191,6 +297,12 @@ describe('TasksService', () => {
 							name: true,
 							email: true,
 							username: true,
+						},
+					},
+					house: {
+						select: {
+							id: true,
+							name: true,
 						},
 					},
 				},
@@ -236,10 +348,15 @@ describe('TasksService', () => {
 							username: true,
 						},
 					},
+					house: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
 				},
 			});
 		});
-
 		it('should throw NotFoundException when task does not exist', async () => {
 			mockPrismaService.task.findUnique.mockResolvedValue(null);
 
@@ -295,6 +412,12 @@ describe('TasksService', () => {
 							username: true,
 						},
 					},
+					house: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
 				},
 			});
 		});
@@ -318,6 +441,7 @@ describe('TasksService', () => {
 
 		it('should throw ForbiddenException when user is neither creator nor assignee', async () => {
 			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
 
 			await expect(
 				service.update('task-123', updateTaskDto, 'unauthorized-user'),
@@ -341,6 +465,10 @@ describe('TasksService', () => {
 				email: 'new@example.com',
 				username: 'newuser',
 			});
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue({
+				userId: 'new-user-789',
+				houseId: 'house-1',
+			});
 			mockPrismaService.task.update.mockResolvedValue({
 				...mockTask,
 				assigneeId: 'new-user-789',
@@ -351,6 +479,7 @@ describe('TasksService', () => {
 			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
 				where: { id: 'new-user-789' },
 			});
+			expect(mockPrismaService.houseToUser.findFirst).toHaveBeenCalled();
 		});
 
 		it('should throw NotFoundException when new assignee does not exist', async () => {
@@ -371,6 +500,29 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.update).not.toHaveBeenCalled();
 		});
 
+		it('should throw BadRequestException when new assignee is not in the same house', async () => {
+			const updateWithNewAssignee: UpdateTaskDto = {
+				assigneeId: 'new-user-789',
+			};
+
+			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.user.findUnique.mockResolvedValue({
+				id: 'new-user-789',
+				name: 'New User',
+				email: 'new@example.com',
+				username: 'newuser',
+			});
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.update('task-123', updateWithNewAssignee, 'user-123'),
+			).rejects.toThrow(BadRequestException);
+			await expect(
+				service.update('task-123', updateWithNewAssignee, 'user-123'),
+			).rejects.toThrow('Cannot assign task to user not in this house');
+
+			expect(mockPrismaService.task.update).not.toHaveBeenCalled();
+		});
 		it('should convert deadline string to Date when updating', async () => {
 			const updateWithDeadline: UpdateTaskDto = {
 				deadline: '2026-06-15T12:00:00.000Z',
@@ -495,6 +647,12 @@ describe('TasksService', () => {
 							username: true,
 						},
 					},
+					house: {
+						select: {
+							id: true,
+							name: true,
+						},
+					},
 				},
 				orderBy: {
 					createdAt: 'desc',
@@ -537,6 +695,12 @@ describe('TasksService', () => {
 							name: true,
 							email: true,
 							username: true,
+						},
+					},
+					house: {
+						select: {
+							id: true,
+							name: true,
 						},
 					},
 				},

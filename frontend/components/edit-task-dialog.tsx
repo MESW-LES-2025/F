@@ -50,10 +50,10 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
     deadline: false,
   })
 
-  // Load users when dialog opens
+  // Load users from task's house when dialog opens
   useEffect(() => {
     if (open) {
-      loadUsers()
+      loadHouseUsers()
       // Reset form data when opening
       setFormData({
         title: task.title,
@@ -71,12 +71,20 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
     }
   }, [open, task])
 
-  const loadUsers = async () => {
+  const loadHouseUsers = async () => {
+    if (!task.houseId) {
+      setError('Task does not have an associated house.')
+      setUsers([])
+      return
+    }
+
     try {
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
+      // Fetch users from the task's house
+      const response = await apiGet<User[]>(`/auth/users/house/${task.houseId}`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)
+      setError('Failed to load users from this house.')
     }
   }
 

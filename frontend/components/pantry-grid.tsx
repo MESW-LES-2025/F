@@ -50,8 +50,15 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
   const [zeroConfirmAction, setZeroConfirmAction] = useState<(() => Promise<void>) | null>(null)
   const [zeroConfirmMessage, setZeroConfirmMessage] = useState<string>('')
 
+  // Only update localItems when items change significantly (different length or IDs)
   useEffect(() => {
-    setLocalItems(items ?? [])
+    const itemIds = (items ?? []).map(i => i.id).sort().join(',')
+    const localIds = localItems.map(i => i.id).sort().join(',')
+    
+    // Only reset if items were added/removed, not if quantities changed
+    if (itemIds !== localIds) {
+      setLocalItems(items ?? [])
+    }
   }, [items])
 
   return (

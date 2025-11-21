@@ -27,12 +27,14 @@ import { createTask } from "@/lib/tasks-service"
 import type { Task, User } from "@/lib/types"
 import { useEffect } from "react"
 import { apiGet } from "@/lib/api-client"
+import { useHouse } from "@/lib/house-context"
 
 interface CreateTaskDialogProps {
   onTaskCreated?: (task: Task) => void
 }
 
 export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
+  const { selectedHouse } = useHouse()
   const [open, setOpen] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -80,22 +82,27 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     return !Object.values(errors).some((error) => error)
   }
 
-  // Load users when dialog opens
+  // Load users from selected house when dialog opens
   useEffect(() => {
-    if (open) {
-      loadUsers()
+    if (open && selectedHouse) {
+      loadHouseUsers()
     }
-  }, [open])
+  }, [open, selectedHouse])
 
-  const loadUsers = async () => {
+  const loadHouseUsers = async () => {
+    if (!selectedHouse) {
+      setError('Please select a house first.')
+      setUsers([])
+      return
+    }
+
     try {
-      // TODO: Replace with actual API endpoint when users endpoint is available
-      // For now, we'll use mock data or handle it in the backend
-      const response = await apiGet<User[]>('/auth/users', { requiresAuth: true })
+      // Fetch users from the selected house
+      const response = await apiGet<User[]>(`/auth/users/house/${selectedHouse.id}`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)
-      // Fallback to empty array - error will be shown when trying to create task
+      setError('Failed to load users from this house.')
     }
   }
 
@@ -112,12 +119,18 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     setIsLoading(true)
 
     try {
+      if (!selectedHouse) {
+        setError('Please select a house first.');
+        return;
+      }
+
       // Create the task via API
       const newTask = await createTask({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
         assigneeId: formData.assignee,
         deadline: new Date(formData.deadline).toISOString(),
+        houseId: selectedHouse.id,
       })
 
       // Call the callback with the new task
