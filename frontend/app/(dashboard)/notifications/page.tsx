@@ -92,9 +92,18 @@ export default function NotificationsPage() {
   const markOne = async (id: string) => {
     try {
       await notificationService.markAsRead(id);
-      setItems((prev) => prev.map((n) => n.notification.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
+      setItems((prev) => prev.map((n) => (n.id === id || n.notification.id === id) ? { ...n, isRead: true, readAt: new Date().toISOString() } : n));
     } catch (e) {
       toast({ title: "Mark failed", description: "Could not mark notification as read", variant: "destructive" });
+    }
+  };
+
+  const dismissOne = async (id: string) => {
+    try {
+      await notificationService.dismiss(id);
+      setItems((prev) => prev.filter((n) => !(n.id === id || n.notification.id === id)));
+    } catch (e) {
+      toast({ title: "Dismiss failed", description: "Could not dismiss notification", variant: "destructive" });
     }
   };
 
@@ -223,23 +232,33 @@ export default function NotificationsPage() {
                       <div className="flex items-center gap-2 pt-1">
                         {isUnread && (
                           <Button
-                            variant="outline"
+                            variant="ghost"
                             size="sm"
-                            onClick={() => markOne(n.notification.id)}
-                            className="h-7 px-2 text-xs"
+                            onClick={() => markOne(n.id || n.notification.id)}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                           >
-                            Mark read
+                            Mark as read
                           </Button>
                         )}
                         {n.notification.actionUrl && (
-                          <a
-                            href={n.notification.actionUrl}
-                            className="text-xs text-primary underline underline-offset-2 hover:no-underline"
-                            onClick={() => markOne(n.notification.id)}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => markOne(n.id || n.notification.id)}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            asChild
                           >
-                            Open
-                          </a>
+                            <a href={n.notification.actionUrl}>Open</a>
+                          </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => dismissOne(n.id || n.notification.id)}
+                          className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                        >
+                          Dismiss
+                        </Button>
                       </div>
                     </div>
                   </li>

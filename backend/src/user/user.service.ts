@@ -244,6 +244,7 @@ export class UserService {
 				where: {
 					userId: existingUser.id,
 					isRead: false,
+					deletedAt: null,
 					notification: {
 						category: NotificationCategory.HOUSE,
 						body: { contains: house.invitationCode },

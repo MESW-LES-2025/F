@@ -78,6 +78,7 @@ export interface NotificationPayload {
 }
 
 export interface UserNotification {
+  id?: string; 
   userId: string;
   isRead: boolean;
   readAt?: string | null;

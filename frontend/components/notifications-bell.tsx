@@ -83,6 +83,13 @@ export function NotificationsBell({ className }: { className?: string }) {
     } catch {}
   };
 
+  const dismissOne = async (id: string) => {
+    try {
+      await notificationService.dismiss(id);
+      setItems((prev) => prev.filter((n) => !(n.id === id || n.notification.id === id)));
+    } catch {}
+  };
+
   const categoryIcon = (cat: string | null | undefined) => {
     switch (cat) {
       case "HOUSE":
@@ -172,24 +179,36 @@ export function NotificationsBell({ className }: { className?: string }) {
                             <span className="text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
                           </div>
                         </div>
-                        <div className="flex items-center gap-2 pt-1">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => markOne(n.notification.id)}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Mark read
-                          </Button>
-                          {safeUrl && (
-                            <a
-                              href={safeUrl}
-                              className="text-xs text-primary underline underline-offset-2 hover:no-underline"
-                              onClick={() => markOne(n.notification.id)}
+                        <div className="flex items-center gap-1 pt-1">
+                          {!n.isRead && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markOne(n.id || n.notification.id)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                             >
-                              Open
-                            </a>
+                              Mark
+                            </Button>
                           )}
+                          {safeUrl && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markOne(n.id || n.notification.id)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              asChild
+                            >
+                              <a href={safeUrl}>Open</a>
+                            </Button>
+                          )}
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => dismissOne(n.id || n.notification.id)}
+                            className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                          >
+                            Dismiss
+                          </Button>
                         </div>
                       </div>
                     </li>
@@ -242,13 +261,36 @@ export function NotificationsBell({ className }: { className?: string }) {
                             </div>
                             <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(n.createdAt)}</span>
                           </div>
-                          <div className="flex items-center gap-2 pt-1">
+                          <div className="flex items-center gap-1 pt-1">
                             {!n.isRead && (
-                              <Button variant="outline" size="sm" onClick={() => markOne(n.notification.id)} className="h-7 px-2 text-xs">Mark read</Button>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => markOne(n.id || n.notification.id)}
+                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                              >
+                                Mark
+                              </Button>
                             )}
                             {safeUrl && (
-                              <a href={safeUrl} className="text-xs text-primary underline underline-offset-2 hover:no-underline" onClick={() => markOne(n.notification.id)}>Open</a>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => markOne(n.id || n.notification.id)}
+                                className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                                asChild
+                              >
+                                <a href={safeUrl}>Open</a>
+                              </Button>
                             )}
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => dismissOne(n.id || n.notification.id)}
+                              className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
+                            >
+                              Dismiss
+                            </Button>
                           </div>
                         </div>
                       </li>

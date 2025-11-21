@@ -72,11 +72,11 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     );
   };
 
-  const handleDismiss = async (notificationId: string) => {
-    setActionId(notificationId);
+  const handleDismiss = async (notificationRowOrNotificationId: string) => {
+    setActionId(notificationRowOrNotificationId);
     try {
-      await notificationService.dismiss(notificationId);
-      setInvites((current) => current.filter((item) => item.notification.id !== notificationId));
+      await notificationService.dismiss(notificationRowOrNotificationId);
+      setInvites((current) => current.filter((item) => !(item.id === notificationRowOrNotificationId || item.notification.id === notificationRowOrNotificationId)));
       toast({
         title: "Invite dismissed",
         description: "You can still join later via invite code if shared.",
@@ -95,7 +95,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
   };
 
   const handleAccept = async (invite: UserNotification) => {
-    const notificationId = invite.notification.id;
+  const notificationId = invite.id || invite.notification.id;
     const houseId = invite.notification.actionUrl;
 
     if (!houseId) {
