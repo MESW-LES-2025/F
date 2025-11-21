@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { notificationService } from "@/lib/notification-service";
-import { UserNotification } from "@/lib/types";
+import { UserNotification, NotificationCategory } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCheck, RefreshCcw, Bell, Home, ChefHat, Wallet, Info } from "lucide-react";
+import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -39,30 +40,50 @@ function timeAgo(iso: string) {
 
 export default function NotificationsPage() {
   const { toast } = useToast();
+  const searchParams = useSearchParams();
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
   const [markingAll, setMarkingAll] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const focusId = searchParams.get("focus");
+  const focusedRef = useRef<HTMLLIElement | null>(null);
   const unreadCount = items.filter((n) => !n.isRead).length;
 
-  const load = useCallback(async (initial = false) => {
-    initial ? setLoading(true) : setRefreshing(true);
-    try {
-      const data = await notificationService.list();
-      const sorted = [...data].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
-      );
-      setItems(sorted);
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : "Failed to load notifications";
-      toast({ title: "Load failed", description: msg, variant: "destructive" });
-    } finally {
-      setLoading(false);
-      setRefreshing(false);
-    }
-  }, [toast]);
+  const load = useCallback(
+    async (initial = false) => {
+      initial ? setLoading(true) : setRefreshing(true);
+      try {
+  const filters: { category?: NotificationCategory; isRead?: boolean } = {};
+  if (activeCategory !== "ALL") filters.category = activeCategory as NotificationCategory;
+        if (showUnreadOnly) filters.isRead = false;
+        const data = await notificationService.list(filters);
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setItems(sorted);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load notifications";
+        toast({ title: "Load failed", description: msg, variant: "destructive" });
+      } finally {
+        setLoading(false);
+        setRefreshing(false);
+      }
+    },
+    [toast, activeCategory, showUnreadOnly]
+  );
 
-  useEffect(() => { load(true); }, [load]);
+  useEffect(() => {
+    load(true);
+  }, [load, activeCategory, showUnreadOnly]);
+
+  useEffect(() => {
+    if (!loading && focusId && focusedRef.current) {
+      focusedRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [loading, focusId]);
 
   const markOne = async (id: string) => {
     try {
@@ -84,6 +105,8 @@ export default function NotificationsPage() {
       setMarkingAll(false);
     }
   };
+
+  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "OTHER"];
 
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8">
@@ -120,7 +143,36 @@ export default function NotificationsPage() {
               {markingAll ? <CheckCheck className="mr-2 h-4 w-4 animate-spin" /> : <CheckCheck className="mr-2 h-4 w-4" />}
               Mark all read
             </Button>
+            <Button
+              variant={showUnreadOnly ? "secondary" : "outline"}
+              size="sm"
+              onClick={() => setShowUnreadOnly((v) => !v)}
+            >
+              {showUnreadOnly ? "Showing Unread" : "Show Unread"}
+            </Button>
           </div>
+        </div>
+
+        {/* Category Tabs */}
+        <div className="flex flex-wrap gap-2">
+          {categories.map((cat) => {
+            const active = activeCategory === cat;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                  active
+                    ? "bg-primary text-primary-foreground border-primary"
+                    : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent"
+                )}
+                aria-pressed={active}
+              >
+                {cat === "ALL" ? "All" : cat.charAt(0) + cat.slice(1).toLowerCase()}
+              </button>
+            );
+          })}
         </div>
 
         {loading ? (
@@ -136,12 +188,15 @@ export default function NotificationsPage() {
             <ul className="divide-y">
               {items.map(n => {
                 const isUnread = !n.isRead;
+                const isFocused = focusId === n.notification.id;
                 return (
                   <li
                     key={n.notification.id}
+                    ref={isFocused ? focusedRef : null}
                     className={cn(
                       "px-4 py-3 flex gap-3 transition-colors",
-                      isUnread ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50"
+                      isUnread ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50",
+                      isFocused && "ring-2 ring-primary/60"
                     )}
                   >
                     <div className="mt-1 shrink-0">{iconForCategory(n.notification.category || null)}</div>
