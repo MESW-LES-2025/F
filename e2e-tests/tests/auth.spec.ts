@@ -17,18 +17,16 @@ test.describe('Auth Acceptance Tests', () => {
 			
 			// Provide valid email and password
 			await page.fill('input[name="name"]', testUser.name);
-			await page.fill('input[name="username"]', testUser.username);
-			await page.fill('input[name="email"]', testUser.email);
-			await page.fill('input[name="password"]', testUser.password);
-			await page.fill('input[name="confirmPassword"]', testUser.password);
-			await page.check('input#terms');
-			await page.click('button[type="submit"]');
-			
-			// User is redirected to home page
-			await expect(page).toHaveURL('/');
-		});
-
-		test('An error message is displayed if any required field is empty', async ({ page }) => {
+		await page.fill('input[name="username"]', testUser.username);
+		await page.fill('input[name="email"]', testUser.email);
+		await page.fill('input[name="password"]', testUser.password);
+		await page.fill('input[name="confirmPassword"]', testUser.password);
+		await page.check('input#terms');
+		await page.click('button[type="submit"]');
+		
+		// User is redirected to join-house page
+		await expect(page).toHaveURL('/join-house');
+	});		test('An error message is displayed if any required field is empty', async ({ page }) => {
 			await page.goto('/register');
 			
 			// Submit form with empty email
@@ -88,7 +86,7 @@ test.describe('Auth Acceptance Tests', () => {
 			await page.click('button[type="submit"]');
 			
 			// User is redirected to the main dashboard
-			await expect(page).toHaveURL('/');
+			await expect(page).toHaveURL('/join-house');
 		});
 
 		test('An error message is displayed for an incorrect password', async ({ page }) => {
@@ -128,7 +126,7 @@ test.describe('Auth Acceptance Tests', () => {
 			await page.fill('input[name="email"]', testUser.email);
 			await page.fill('input[name="password"]', testUser.password);
 			await page.click('button[type="submit"]');
-			await expect(page).toHaveURL('/');
+			await expect(page).toHaveURL('/join-house');
 
 			await page.goto('/settings');
 			await expect(page).toHaveURL('/settings');

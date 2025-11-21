@@ -25,6 +25,7 @@ describe('UserController', () => {
 		joinHouseWithCode: jest
 			.fn()
 			.mockResolvedValue({ houseId: 'house-id-1' }),
+		inviteToHouse: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 	};
 
 	const mockHouseService = {
@@ -98,5 +99,31 @@ describe('UserController', () => {
 			{ inviteCode },
 		);
 		expect(result).toEqual({ houseId: 'house-id-1' });
+	});
+
+	it('inviteUser should call userService.inviteToHouse with correct params', async () => {
+		const req = {
+			user: { userId: mockUser.id },
+		} as unknown as UserRequest;
+
+		const dto = {
+			houseId: 'house-id-1',
+			email: 'invite@test.com',
+		};
+
+		const mockNotificationResult = { id: 'notification-id-1' };
+
+		mockUserService.inviteToHouse = jest
+			.fn()
+			.mockResolvedValue(mockNotificationResult);
+
+		const result = await controller.inviteUserToHouse(dto, req);
+
+		expect(mockUserService.inviteToHouse).toHaveBeenCalledWith(
+			dto,
+			mockUser.id,
+		);
+
+		expect(result).toEqual(mockNotificationResult);
 	});
 });
