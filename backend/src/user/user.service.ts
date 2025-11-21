@@ -239,17 +239,17 @@ export class UserService {
 			throw new BadRequestException('The house does not exist');
 		}
 
-		const existingPendingInvite =
-			await this.prisma.notificationToUser.findFirst({
-				where: {
-					userId: existingUser.id,
-					isRead: false,
-					notification: {
-						category: NotificationCategory.HOUSE,
-						actionUrl: house.id,
-					},
+		const existingPendingInvite = await this.prisma.notificationToUser.findFirst({
+			where: {
+				userId: existingUser.id,
+				isRead: false,
+				notification: {
+					category: NotificationCategory.HOUSE,
+					body: { contains: house.invitationCode },
+					actionUrl: '/invite',
 				},
-			});
+			},
+		});
 
 		if (existingPendingInvite) {
 			throw new BadRequestException(
@@ -263,7 +263,7 @@ export class UserService {
 			userIds: [existingUser.id],
 			level: NotificationLevel.MEDIUM,
 			category: NotificationCategory.HOUSE,
-			actionUrl: house.id,
+			actionUrl: '/invite',
 		});
 	}
 }

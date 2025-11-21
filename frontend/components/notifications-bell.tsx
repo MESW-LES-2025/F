@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, CheckCheck, Loader2, Home, ChefHat, Wallet, Info } from "lucide-react";
+import { Bell, CheckCheck, Loader2, Home, ChefHat, Wallet, Info, ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -29,23 +29,28 @@ export function NotificationsBell({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
   const unreadCount = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
-  // Popup shows only unread for brevity
+  const [showCenter, setShowCenter] = useState(false);
+  const [activeCategory, setActiveCategory] = useState<string>("ALL");
+  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const displayed = useMemo(() => items.filter((n) => !n.isRead), [items]);
+  const centerItems = useMemo(() => {
+    return items.filter((n) => {
+      if (activeCategory !== "ALL" && n.notification.category !== activeCategory) return false;
+      if (showUnreadOnly && n.isRead) return false;
+      return true;
+    });
+  }, [items, activeCategory, showUnreadOnly]);
 
   const fetchAll = async () => {
     try {
       setLoading(true);
-      // Fetch both read and unread (backend returns full list filtered by optional params)
+      // Fetch both read and unread
       const all = await notificationService.list();
-      // Sort newest first
       const sorted = [...all].sort(
         (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-      // Optionally cap to latest 30 to keep popup light
       setItems(sorted.slice(0, 30));
-    } catch {
-      // ignore for now; could add toast
-    } finally {
+    } catch {} finally {
       setLoading(false);
     }
   };
@@ -92,6 +97,8 @@ export function NotificationsBell({ className }: { className?: string }) {
   };
 
 
+  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "OTHER"];
+
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
@@ -107,73 +114,149 @@ export function NotificationsBell({ className }: { className?: string }) {
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-96 p-0" align="end">
+      <PopoverContent className="w-[480px] p-0" align="end">
         <div className="flex items-center justify-between px-4 py-2 border-b bg-muted/40">
           <div className="flex items-center gap-2">
-            <span className="text-sm font-medium">Notifications</span>
+            {showCenter && (
+              <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => setShowCenter(false)} aria-label="Back">
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+            )}
+            <span className="text-sm font-medium">Notifications{showCenter ? " Center" : ""}</span>
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
-          {unreadCount > 0 && (
-            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
-              <CheckCheck className="h-4 w-4 mr-1" />
-              Mark all
-            </Button>
-          )}
+          <div className="flex items-center gap-2">
+            {unreadCount > 0 && (
+              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
+                <CheckCheck className="h-4 w-4 mr-1" />
+                Mark all
+              </Button>
+            )}
+            {!showCenter && (
+              <Button variant="outline" size="sm" className="h-7 px-2 text-xs" onClick={() => setShowCenter(true)}>
+                Open Center
+              </Button>
+            )}
+          </div>
         </div>
-        {displayed.length === 0 ? (
+        {!showCenter ? (
+          displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
             <Bell className="h-8 w-8 text-muted-foreground/40" />
             <p className="text-sm text-muted-foreground">No unread notifications.</p>
           </div>
-        ) : (
-          <ScrollArea className="max-h-96">
-            <ul className="divide-y">
-              {displayed.map((n) => {
-                const category = n.notification.category || null;
-                return (
-                  <li
-                    key={n.notification.id}
-                    className={cn(
-                      "px-4 py-3 flex gap-3 transition-colors",
-                      !n.isRead ? "bg-background hover:bg-muted/60" : "hover:bg-muted/40"
-                    )}
-                  >
-                    <div className="mt-0.5">{categoryIcon(category)}</div>
-                    <div className="flex-1 min-w-0 space-y-1">
-                      <div className="flex items-start justify-between gap-2">
-                        <div className="flex flex-col gap-1 min-w-0">
-                          <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
-                          {/* Body intentionally omitted for popup brevity */}
+          ) : (
+            <ScrollArea className="max-h-96">
+              <ul className="divide-y">
+                {displayed.map((n) => {
+                  const category = n.notification.category || null;
+                  const rawUrl = n.notification.actionUrl;
+                  // Force house invite notifications to use /invite (ignore any legacy UUID form)
+                  const safeUrl = rawUrl && n.notification.category === 'HOUSE' ? '/invite' : rawUrl;
+                  return (
+                    <li
+                      key={n.notification.id}
+                      className={cn(
+                        "px-4 py-3 flex gap-3 transition-colors",
+                        !n.isRead ? "bg-background hover:bg-muted/60" : "hover:bg-muted/40"
+                      )}
+                    >
+                      <div className="mt-0.5">{categoryIcon(category)}</div>
+                      <div className="flex-1 min-w-0 space-y-1">
+                        <div className="flex items-start justify-between gap-2">
+                          <div className="flex flex-col gap-1 min-w-0">
+                            <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
+                          </div>
+                          <div className="flex flex-col items-end gap-1 shrink-0">
+                            <span className="text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
+                          </div>
                         </div>
-                        <div className="flex flex-col items-end gap-1 shrink-0">
-                          <span className="text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2 pt-1">
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => markOne(n.notification.id)}
-                          className="h-7 px-2 text-xs"
-                        >
-                          Mark read
-                        </Button>
-                        {n.notification.actionUrl && (
-                          <a
-                            href={n.notification.actionUrl}
-                            className="text-xs text-primary underline underline-offset-2 hover:no-underline"
+                        <div className="flex items-center gap-2 pt-1">
+                          <Button
+                            variant="outline"
+                            size="sm"
                             onClick={() => markOne(n.notification.id)}
+                            className="h-7 px-2 text-xs"
                           >
-                            Open
-                          </a>
-                        )}
+                            Mark read
+                          </Button>
+                          {safeUrl && (
+                            <a
+                              href={safeUrl}
+                              className="text-xs text-primary underline underline-offset-2 hover:no-underline"
+                              onClick={() => markOne(n.notification.id)}
+                            >
+                              Open
+                            </a>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  </li>
+                    </li>
+                  );
+                })}
+              </ul>
+            </ScrollArea>
+          )
+        ) : (
+          <div className="flex flex-col">
+            <div className="px-4 py-2 border-b flex flex-wrap gap-2">
+              {categories.map(cat => {
+                const active = activeCategory === cat;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={cn("px-3 py-1.5 text-xs rounded-md border transition-colors", active ? "bg-primary text-primary-foreground border-primary" : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent")}
+                  >
+                    {cat === "ALL" ? "All" : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                  </button>
                 );
               })}
-            </ul>
-          </ScrollArea>
+              <button
+                onClick={() => setShowUnreadOnly(v => !v)}
+                className={cn("px-3 py-1.5 text-xs rounded-md border transition-colors", showUnreadOnly ? "bg-secondary text-secondary-foreground" : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent")}
+              >
+                {showUnreadOnly ? "Unread" : "All status"}
+              </button>
+            </div>
+            {centerItems.length === 0 ? (
+              <div className="p-6 text-sm text-muted-foreground text-center">No notifications match.</div>
+            ) : (
+              <ScrollArea className="max-h-[420px]">
+                <ul className="divide-y">
+                  {centerItems.map(n => {
+                    const category = n.notification.category || null;
+                    const rawUrl = n.notification.actionUrl;
+                    const safeUrl = rawUrl && n.notification.category === 'HOUSE' ? '/invite' : rawUrl;
+                    return (
+                      <li key={n.notification.id} className={cn("px-4 py-3 flex gap-3 transition-colors", !n.isRead ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50")}>
+                        <div className="mt-0.5">{categoryIcon(category)}</div>
+                        <div className="flex-1 min-w-0 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex flex-col gap-1 min-w-0">
+                              <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
+                              {n.notification.body && (
+                                <p className="text-xs text-muted-foreground whitespace-pre-line">{n.notification.body}</p>
+                              )}
+                            </div>
+                            <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(n.createdAt)}</span>
+                          </div>
+                          <div className="flex items-center gap-2 pt-1">
+                            {!n.isRead && (
+                              <Button variant="outline" size="sm" onClick={() => markOne(n.notification.id)} className="h-7 px-2 text-xs">Mark read</Button>
+                            )}
+                            {safeUrl && (
+                              <a href={safeUrl} className="text-xs text-primary underline underline-offset-2 hover:no-underline" onClick={() => markOne(n.notification.id)}>Open</a>
+                            )}
+                          </div>
+                        </div>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </ScrollArea>
+            )}
+          </div>
         )}
         <Separator />
         <div className="px-4 py-2 text-[11px] text-muted-foreground flex justify-between items-center">
@@ -186,12 +269,15 @@ export function NotificationsBell({ className }: { className?: string }) {
             >
               Refresh
             </button>
-            <a
-              href="/notifications"
-              className="underline hover:no-underline"
-            >
-              View all
-            </a>
+            {!showCenter && (
+              <button
+                type="button"
+                onClick={() => setShowCenter(true)}
+                className="underline hover:no-underline"
+              >
+                View all
+              </button>
+            )}
           </div>
         </div>
       </PopoverContent>
