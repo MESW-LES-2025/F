@@ -33,11 +33,24 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
       }
 
       try {
+        // Fetch read and unread
         const data = await notificationService.list({
           category: "HOUSE",
-          isRead: false,
         });
-        setInvites(data);
+        // Newest first
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        // Filter out dismissed invites
+        let dismissed: string[] = [];
+        try {
+          const raw = localStorage.getItem("dismissed_house_invites");
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) dismissed = parsed;
+          }
+        } catch {}
+        setInvites(sorted.filter(n => !dismissed.includes(n.notification.id)));
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to load invites.";
@@ -58,9 +71,13 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     loadInvites(true);
   }, [loadInvites]);
 
-  const removeInviteFromList = (notificationId: string) => {
+  const updateInviteAsRead = (notificationId: string) => {
     setInvites((current) =>
-      current.filter((item) => item.notification.id !== notificationId)
+      current.map((item) =>
+        item.notification.id === notificationId
+          ? { ...item, isRead: true, readAt: new Date().toISOString() }
+          : item
+      )
     );
   };
 
@@ -68,10 +85,23 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     setActionId(notificationId);
     try {
       await notificationService.markAsRead(notificationId);
-      removeInviteFromList(notificationId);
+      // Dismiss means we remove it from the list
+      setInvites((current) =>
+        current.filter((item) => item.notification.id !== notificationId)
+      );
+      // Persist dismissed id
+      try {
+        const raw = localStorage.getItem("dismissed_house_invites");
+        const existing = raw ? JSON.parse(raw) : [];
+        const updated = Array.isArray(existing) ? existing : [];
+        if (!updated.includes(notificationId)) {
+          updated.push(notificationId);
+        }
+        localStorage.setItem("dismissed_house_invites", JSON.stringify(updated));
+      } catch {}
       toast({
         title: "Invite dismissed",
-        description: "You can join later using the invite code if needed.",
+        description: "You can still join later via invite code if shared.",
       });
     } catch (error) {
       const message =
@@ -116,7 +146,10 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
       }
 
       await notificationService.markAsRead(notificationId);
-      removeInviteFromList(notificationId);
+      // Remove after acceptance
+      setInvites((current) =>
+        current.filter((item) => item.notification.id !== notificationId)
+      );
 
       toast({
         title: "Welcome to the house",
@@ -180,7 +213,10 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
           {invites.map((invite) => (
             <div
               key={invite.notification.id}
-              className="rounded-lg border border-border bg-card p-4 hover:bg-accent/40 transition-colors"
+              className={"rounded-lg border border-border p-4 transition-colors " +
+                (invite.isRead
+                  ? "bg-muted/40 hover:bg-muted/50"
+                  : "bg-card hover:bg-accent/40")}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -195,6 +231,11 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
                   <p className="text-xs text-muted-foreground">
                     Received {new Date(invite.createdAt).toLocaleString()}
                   </p>
+                  {invite.isRead && (
+                    <p className="text-xs text-green-700 mt-1">
+                      Read • Pending action (Dismiss or Accept)
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Button

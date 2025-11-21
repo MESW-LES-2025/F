@@ -5,7 +5,6 @@ import { Bell, CheckCheck, Loader2, Home, ChefHat, Wallet, Info } from "lucide-r
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Switch } from "@/components/ui/switch";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { notificationService } from "@/lib/notification-service";
@@ -29,12 +28,9 @@ export function NotificationsBell({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
-  const [showUnreadOnly, setShowUnreadOnly] = useState(false);
   const unreadCount = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
-  const displayed = useMemo(
-    () => (showUnreadOnly ? items.filter((n) => !n.isRead) : items),
-    [items, showUnreadOnly]
-  );
+  // Popup shows only unread for brevity
+  const displayed = useMemo(() => items.filter((n) => !n.isRead), [items]);
 
   const fetchAll = async () => {
     try {
@@ -117,27 +113,17 @@ export function NotificationsBell({ className }: { className?: string }) {
             <span className="text-sm font-medium">Notifications</span>
             {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
           </div>
-          <div className="flex items-center gap-3">
-            <div className="flex items-center gap-1 text-xs text-muted-foreground">
-              <Switch
-                checked={showUnreadOnly}
-                onCheckedChange={(v) => setShowUnreadOnly(Boolean(v))}
-                aria-label="Toggle unread only"
-              />
-              Unread
-            </div>
-            {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
-                <CheckCheck className="h-4 w-4 mr-1" />
-                Mark all
-              </Button>
-            )}
-          </div>
+          {unreadCount > 0 && (
+            <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
+              <CheckCheck className="h-4 w-4 mr-1" />
+              Mark all
+            </Button>
+          )}
         </div>
         {displayed.length === 0 ? (
           <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
             <Bell className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">{showUnreadOnly ? "No unread notifications." : "You're all caught up."}</p>
+            <p className="text-sm text-muted-foreground">No unread notifications.</p>
           </div>
         ) : (
           <ScrollArea className="max-h-96">
@@ -157,25 +143,21 @@ export function NotificationsBell({ className }: { className?: string }) {
                       <div className="flex items-start justify-between gap-2">
                         <div className="flex flex-col gap-1 min-w-0">
                           <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
-                          {n.notification.body && (
-                            <p className="text-xs text-muted-foreground line-clamp-2">{n.notification.body}</p>
-                          )}
+                          {/* Body intentionally omitted for popup brevity */}
                         </div>
                         <div className="flex flex-col items-end gap-1 shrink-0">
                           <span className="text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
                         </div>
                       </div>
                       <div className="flex items-center gap-2 pt-1">
-                        {!n.isRead && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            onClick={() => markOne(n.notification.id)}
-                            className="h-7 px-2 text-xs"
-                          >
-                            Mark read
-                          </Button>
-                        )}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => markOne(n.notification.id)}
+                          className="h-7 px-2 text-xs"
+                        >
+                          Mark read
+                        </Button>
                         {n.notification.actionUrl && (
                           <a
                             href={n.notification.actionUrl}
@@ -194,15 +176,23 @@ export function NotificationsBell({ className }: { className?: string }) {
           </ScrollArea>
         )}
         <Separator />
-        <div className="px-4 py-2 text-[11px] text-muted-foreground flex justify-between">
+        <div className="px-4 py-2 text-[11px] text-muted-foreground flex justify-between items-center">
           <span>{unreadCount} unread</span>
-          <button
-            type="button"
-            onClick={() => fetchAll()}
-            className="underline hover:no-underline"
-          >
-            Refresh
-          </button>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => fetchAll()}
+              className="underline hover:no-underline"
+            >
+              Refresh
+            </button>
+            <a
+              href="/notifications"
+              className="underline hover:no-underline"
+            >
+              View all
+            </a>
+          </div>
         </div>
       </PopoverContent>
     </Popover>
