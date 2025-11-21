@@ -45,6 +45,8 @@ export default function NotificationsPage() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
+  const [page, setPage] = useState(1);
+  const pageSize = 4;
   const [markingAll, setMarkingAll] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -64,6 +66,8 @@ export default function NotificationsPage() {
           (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
         );
         setItems(sorted);
+        // reset to first page whenever we reload the list (filters or manual refresh)
+        setPage(1);
       } catch (e) {
         const msg = e instanceof Error ? e.message : "Failed to load notifications";
         toast({ title: "Load failed", description: msg, variant: "destructive" });
@@ -107,6 +111,11 @@ export default function NotificationsPage() {
   };
 
   const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "OTHER"];
+
+  const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
+  const currentPage = Math.min(page, totalPages);
+  const startIndex = (currentPage - 1) * pageSize;
+  const pageItems = items.slice(startIndex, startIndex + pageSize);
 
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8">
@@ -184,9 +193,10 @@ export default function NotificationsPage() {
             No notifications yet.
           </div>
         ) : (
-          <ScrollArea className="max-h-[60vh]">
+          <>
+          <ScrollArea className="max-h-[40vh]">
             <ul className="divide-y">
-              {items.map(n => {
+              {pageItems.map(n => {
                 const isUnread = !n.isRead;
                 const isFocused = focusId === n.notification.id;
                 return (
@@ -237,6 +247,32 @@ export default function NotificationsPage() {
               })}
             </ul>
           </ScrollArea>
+          <div className="mt-7 flex items-center justify-between text-xs text-muted-foreground">
+            <span>
+              Page {currentPage} of {totalPages}
+            </span>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                disabled={currentPage <= 1}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+              >
+                Previous
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                className="h-7 px-2"
+                disabled={currentPage >= totalPages}
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+              >
+                Next
+              </Button>
+            </div>
+          </div>
+          </>
         )}
       </Card>
     </div>
