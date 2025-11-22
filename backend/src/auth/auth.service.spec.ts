@@ -3,6 +3,7 @@ import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { EmailService } from '../shared/email/email.service';
 import * as bcrypt from 'bcrypt';
 
 // Mock bcrypt module
@@ -92,6 +93,10 @@ describe('AuthService', () => {
 		verify: jest.fn(),
 	};
 
+	const mockEmailService = {
+		sendEmail: jest.fn().mockResolvedValue(undefined),
+	};
+
 	const mockUser = {
 		id: 'user-id-123',
 		email: 'test@example.com',
@@ -100,6 +105,8 @@ describe('AuthService', () => {
 		name: 'Test User',
 		createdAt: new Date(),
 		updatedAt: new Date(),
+		isEmailVerified: true,
+		verificationToken: null,
 	};
 
 	const mockRefreshToken = {
@@ -125,6 +132,10 @@ describe('AuthService', () => {
 					provide: JwtService,
 					useValue: mockJwtService,
 				},
+				{
+					provide: EmailService,
+					useValue: mockEmailService,
+				},
 			],
 		}).compile();
 
@@ -138,7 +149,7 @@ describe('AuthService', () => {
 
 	describe('register', () => {
 		it('should successfully register a new user', async () => {
-			mockPrismaService.user.findFirst.mockResolvedValue(null);
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
 			mockPrismaService.user.create.mockResolvedValue(mockUser);
 			mockPrismaService.refreshToken.deleteMany.mockResolvedValue({
 				count: 0,
@@ -162,7 +173,7 @@ describe('AuthService', () => {
 		});
 
 		it('should throw ConflictException if user already exists', async () => {
-			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
 			await expect(
 				service.register({
@@ -176,7 +187,10 @@ describe('AuthService', () => {
 
 	describe('login', () => {
 		it('should successfully login with valid credentials', async () => {
-			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.user.findFirst.mockResolvedValue({
+				...mockUser,
+				houses: [],
+			});
 			mockPrismaService.refreshToken.deleteMany.mockResolvedValue({
 				count: 0,
 			});

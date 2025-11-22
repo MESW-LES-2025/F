@@ -30,6 +30,7 @@ export class AuthService {
 
 	async register(registerDto: RegisterDto) {
 		const { email, username, password, name } = registerDto;
+		const isDev = process.env.NODE_ENV === 'development';
 
 		const userByEmail = await this.prisma.user.findUnique({
 			where: { email },
@@ -68,7 +69,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: false,
+					isEmailVerified: isDev ? true : false,
 					deletedAt: null,
 				},
 			});
@@ -81,7 +82,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: false,
+					isEmailVerified: isDev ? true : false,
 				},
 			});
 		}
