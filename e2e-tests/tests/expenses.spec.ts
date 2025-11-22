@@ -45,7 +45,11 @@ test.describe('Expenses Acceptance Tests', () => {
 			await page.check('input#terms');
 			await page.click('button[type="submit"]');
 			
-			await expect(page).toHaveURL('/join-house');
+			await expect(page).toHaveURL('/login');
+
+			await page.fill('input[name="email"]', testUser1.email);
+			await page.fill('input[name="password"]', testUser1.password);
+			await page.click('button[type="submit"]');
 			
 			// Create house for user 1
 			await page.waitForSelector('h2:has-text("Create a new house")', { timeout: 10000 });
@@ -65,7 +69,11 @@ test.describe('Expenses Acceptance Tests', () => {
 			await page.check('input#terms');
 			await page.click('button[type="submit"]');
 			
-			await expect(page).toHaveURL('/join-house');
+			await expect(page).toHaveURL('/login');
+
+			await page.fill('input[name="email"]', testUser2.email);
+			await page.fill('input[name="password"]', testUser2.password);
+			await page.click('button[type="submit"]');
 			
 			// Create house for user 2
 			await page.waitForSelector('h2:has-text("Create a new house")', { timeout: 10000 });

@@ -6,11 +6,13 @@ import { AuthController } from './auth.controller';
 import { UsersController } from './users.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
+import { EmailModule } from '../shared/email/email.module';
 
 @Module({
 	imports: [
 		PrismaModule,
 		PassportModule,
+		EmailModule,
 		JwtModule.register({
 			secret: process.env.JWT_SECRET || 'your-secret-key',
 			signOptions: { expiresIn: '15m' },
