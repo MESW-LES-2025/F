@@ -16,6 +16,7 @@ export default function RegisterPage() {
   const { register } = useAuth()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [success, setSuccess] = useState(false)
   const [passwordMismatch, setPasswordMismatch] = useState(false)
   const [formData, setFormData] = useState({
     name: "",
@@ -46,7 +47,8 @@ export default function RegisterPage() {
 
     try {
       await register(formData.email, formData.username, formData.password, formData.name)
-      router.push("/join-house");
+      // Redirect to login
+      router.push("/login");
     } catch (err) {
       setError(err instanceof Error ? err.message : "Registration failed. Please try again.")
     } finally {
