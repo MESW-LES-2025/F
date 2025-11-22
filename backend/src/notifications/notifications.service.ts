@@ -25,6 +25,7 @@ export class NotificationsService {
 				title: dto.title,
 				body: dto.body,
 				actionUrl: dto.actionUrl,
+				houseId: dto.houseId,
 				deliveredTo: {
 					createMany: {
 						data: users.map((user) => {
@@ -76,6 +77,7 @@ export class NotificationsService {
 						actionUrl: true,
 						level: true,
 						category: true,
+						houseId: true,
 					},
 				},
 			},

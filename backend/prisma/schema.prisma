@@ -55,6 +55,7 @@ model House {
   pantryItems    PantryItem[]
   tasks          Task[]
   expenses       Expense[]
+  notifications  Notification[]
 }
 
 model HouseToUser {
@@ -165,6 +166,8 @@ model Notification {
   body        String?
   actionUrl   String?
   createdAt   DateTime @default(now())
+  houseId     String?  @db.Uuid
+  house       House?   @relation(fields: [houseId], references: [id], onDelete: Cascade)
 
   deliveredTo NotificationToUser[]
 }
@@ -212,6 +215,7 @@ enum NotificationCategory {
   HOUSE
   PANTRY 
   EXPENSES 
+  SCRUM
   OTHER
 }
 

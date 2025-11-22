@@ -11,6 +11,7 @@ import { CheckCheck, RefreshCcw, Bell, Home, ChefHat, Wallet, Info } from "lucid
 import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { useHouse } from "@/lib/house-context";
 
 function iconForCategory(cat: string | null | undefined) {
   switch (cat) {
@@ -20,8 +21,25 @@ function iconForCategory(cat: string | null | undefined) {
       return <ChefHat className="h-4 w-4 text-emerald-600" />;
     case "EXPENSES":
       return <Wallet className="h-4 w-4 text-amber-600" />;
+    case "SCRUM":
+      return <CheckCheck className="h-4 w-4 text-purple-600" />;
     default:
       return <Info className="h-4 w-4 text-gray-500" />;
+  }
+}
+
+function getLevelColor(level: string | null | undefined) {
+  switch (level) {
+    case "URGENT":
+      return "border-red-500";
+    case "HIGH":
+      return "border-orange-500";
+    case "MEDIUM":
+      return "border-yellow-500";
+    case "LOW":
+      return "border-blue-500";
+    default:
+      return "border-transparent";
   }
 }
 
@@ -42,6 +60,7 @@ export default function NotificationsPage() {
   const { toast } = useToast();
   const searchParams = useSearchParams();
   const router = useRouter();
+  const { houses, setSelectedHouse } = useHouse();
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
@@ -119,7 +138,7 @@ export default function NotificationsPage() {
     }
   };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "OTHER"];
+  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "OTHER"];
 
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
@@ -246,9 +265,8 @@ export default function NotificationsPage() {
                             size="sm"
                             onClick={() => markOne(n.id || n.notification.id)}
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                            asChild
                           >
-                            <a href={n.notification.actionUrl}>Open</a>
+                            Open
                           </Button>
                         )}
                         <Button

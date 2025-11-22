@@ -10,6 +10,8 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { notificationService } from "@/lib/notification-service";
 import { UserNotification } from "@/lib/types";
 import { cn } from "@/lib/utils";
+import { useHouse } from "@/lib/house-context";
+import { useRouter } from "next/navigation";
 
 function timeAgo(iso: string): string {
   const then = new Date(iso).getTime();
@@ -32,6 +34,8 @@ export function NotificationsBell({ className }: { className?: string }) {
   const [showCenter, setShowCenter] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
+  const { houses, setSelectedHouse } = useHouse();
+  const router = useRouter();
   const displayed = useMemo(() => items.filter((n) => !n.isRead), [items]);
   const centerItems = useMemo(() => {
     return items.filter((n) => {
@@ -90,6 +94,27 @@ export function NotificationsBell({ className }: { className?: string }) {
     } catch {}
   };
 
+  const handleOpen = async (n: UserNotification, url?: string | null) => {
+    try {
+      await markOne(n.id || n.notification.id);
+      
+      // Context switch if houseId != NULL
+      if (n.notification.houseId) {
+        const targetHouse = houses.find(h => h.id === n.notification.houseId);
+        if (targetHouse) {
+          setSelectedHouse(targetHouse);
+        }
+      }
+
+      if (url) {
+        router.push(url);
+        setOpen(false);
+      }
+    } catch (error) {
+      console.error("Failed to handle notification open", error);
+    }
+  };
+
   const categoryIcon = (cat: string | null | undefined) => {
     switch (cat) {
       case "HOUSE":
@@ -98,13 +123,24 @@ export function NotificationsBell({ className }: { className?: string }) {
         return <ChefHat className="h-4 w-4 text-emerald-600" />;
       case "EXPENSES":
         return <Wallet className="h-4 w-4 text-amber-600" />;
+      case "SCRUM":
+        return <CheckCheck className="h-4 w-4 text-purple-600" />;
       default:
         return <Info className="h-4 w-4 text-gray-500" />;
     }
   };
 
+  const getLevelColor = (level: string | null | undefined) => {
+    switch (level) {
+      case "URGENT": return "border-l-red-500";
+      case "HIGH": return "border-l-orange-500";
+      case "MEDIUM": return "border-l-yellow-500";
+      case "LOW": return "border-l-blue-500";
+      default: return "border-l-transparent";
+    }
+  };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "OTHER"];
+  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "OTHER"];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -165,7 +201,8 @@ export function NotificationsBell({ className }: { className?: string }) {
                     <li
                       key={n.notification.id}
                       className={cn(
-                        "px-4 py-3 flex gap-3 transition-colors",
+                        "px-4 py-3 flex gap-3 transition-colors border-l-2",
+                        getLevelColor(n.notification.level),
                         !n.isRead ? "bg-background hover:bg-muted/60" : "hover:bg-muted/40"
                       )}
                     >
@@ -194,11 +231,10 @@ export function NotificationsBell({ className }: { className?: string }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => markOne(n.id || n.notification.id)}
+                              onClick={() => handleOpen(n, safeUrl)}
                               className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                              asChild
                             >
-                              <a href={safeUrl}>Open</a>
+                              Open
                             </Button>
                           )}
                           <Button
@@ -249,7 +285,7 @@ export function NotificationsBell({ className }: { className?: string }) {
                     const rawUrl = n.notification.actionUrl;
                     const safeUrl = rawUrl && n.notification.category === 'HOUSE' ? '/invite' : rawUrl;
                     return (
-                      <li key={n.notification.id} className={cn("px-4 py-3 flex gap-3 transition-colors", !n.isRead ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50")}>
+                      <li key={n.notification.id} className={cn("px-4 py-3 flex gap-3 transition-colors border-l-2", getLevelColor(n.notification.level), !n.isRead ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50")}>
                         <div className="mt-0.5">{categoryIcon(category)}</div>
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-start justify-between gap-2">
@@ -276,11 +312,10 @@ export function NotificationsBell({ className }: { className?: string }) {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markOne(n.id || n.notification.id)}
+                                onClick={() => handleOpen(n, safeUrl)}
                                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                                asChild
                               >
-                                <a href={safeUrl}>Open</a>
+                                Open
                               </Button>
                             )}
                             <Button

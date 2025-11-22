@@ -5,12 +5,17 @@ import {
 	BadRequestException,
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
+import { NotificationCategory, NotificationLevel } from '@prisma/client';
 import { CreateTaskDto } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
 export class TasksService {
-	constructor(private prisma: PrismaService) {}
+	constructor(
+		private prisma: PrismaService,
+		private notificationsService: NotificationsService,
+	) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
 		const { title, description, assigneeId, deadline, houseId } =
@@ -95,6 +100,21 @@ export class TasksService {
 				},
 			},
 		});
+
+		// Emit SCRUM assignment notification (first commit minimal feature)
+		try {
+			await this.notificationsService.create({
+				category: NotificationCategory.SCRUM,
+				level: NotificationLevel.LOW,
+				title: `Task assigned: ${task.title}`,
+				body: `You were assigned '${task.title}' in house ${task.house.name}. Deadline: ${task.deadline.toLocaleDateString()}`,
+				userIds: [task.assigneeId],
+				actionUrl: '/activities',
+				houseId: task.houseId,
+			});
+		} catch (err) {
+			console.error('[TasksService] Failed to create assignment notification', err);
+		}
 
 		return task;
 	}
@@ -458,12 +478,6 @@ export class TasksService {
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
-		console.log(
-			'[TasksService] findByHouse called with houseId:',
-			houseId,
-			'archived:',
-			archived,
-		);
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId,
@@ -501,15 +515,6 @@ export class TasksService {
 				createdAt: 'desc',
 			},
 		});
-		console.log(
-			'[TasksService] findByHouse returning',
-			tasks.length,
-			'tasks',
-		);
-		console.log(
-			'[TasksService] Task houseIds:',
-			tasks.map((t) => ({ title: t.title, houseId: t.houseId })),
-		);
 		return tasks;
 	}
 

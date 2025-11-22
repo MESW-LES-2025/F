@@ -64,7 +64,7 @@ export interface User {
 }
 
 // Notifications
-export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "OTHER";
+export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "SCRUM" | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
@@ -75,6 +75,7 @@ export interface NotificationPayload {
   actionUrl?: string | null;
   level?: NotificationLevel | null;
   category?: NotificationCategory | null;
+  houseId?: string | null;
 }
 
 export interface UserNotification {

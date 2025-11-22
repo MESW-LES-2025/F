@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
 	NotFoundException,
 	ForbiddenException,
@@ -30,6 +31,10 @@ describe('TasksService', () => {
 			findMany: jest.fn(),
 			findFirst: jest.fn(),
 		},
+	};
+
+	const mockNotificationsService = {
+		create: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 	};
 
 	const mockAssignee = {
@@ -75,6 +80,10 @@ describe('TasksService', () => {
 				{
 					provide: PrismaService,
 					useValue: mockPrismaService,
+				},
+				{
+					provide: NotificationsService,
+					useValue: mockNotificationsService,
 				},
 			],
 		}).compile();
@@ -161,6 +170,13 @@ describe('TasksService', () => {
 					},
 				},
 			});
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					category: expect.any(String),
+					title: expect.stringContaining('Task assigned'),
+					userIds: [createTaskDto.assigneeId],
+				}),
+			);
 		});
 
 		it('should throw NotFoundException when assignee does not exist', async () => {
