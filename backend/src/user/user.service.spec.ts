@@ -652,6 +652,7 @@ describe('UserService', () => {
 				level: NotificationLevel.MEDIUM,
 				category: NotificationCategory.HOUSE,
 				actionUrl: '/invite',
+				houseId: mockHouse.id,
 			});
 
 			expect(result).toEqual(notificationResult);

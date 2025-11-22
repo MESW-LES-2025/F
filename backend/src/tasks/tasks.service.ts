@@ -426,6 +426,34 @@ export class TasksService {
 			},
 		});
 
+		if (task.status !== 'done' && updatedTask.status === 'done') {
+			try {
+				const memberships = await this.prisma.houseToUser.findMany({
+					where: { houseId: updatedTask.houseId },
+					select: { userId: true },
+				});
+				const userIds = memberships.map((m) => m.userId);
+				const actorUser =
+					updatedTask.createdById === userId
+						? updatedTask.createdBy
+						: updatedTask.assigneeId === userId
+							? updatedTask.assignee
+							: null;
+				const actorName = actorUser?.name || 'A member';
+				await this.notificationsService.create({
+					category: NotificationCategory.SCRUM,
+					level: NotificationLevel.MEDIUM,
+					title: `Task completed: ${updatedTask.title}`,
+					body: `${actorName} marked '${updatedTask.title}' as done in house ${updatedTask.house.name}.`,
+					userIds,
+					actionUrl: '/activities',
+					houseId: updatedTask.houseId,
+				});
+			} catch (err) {
+				console.error('[TasksService] Failed to create completion notification', err);
+			}
+		}
+
 		return updatedTask;
 	}
 

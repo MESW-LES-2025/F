@@ -589,6 +589,29 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.delete).toHaveBeenCalledWith({
 				where: { id: 'task-123' },
 			});
+
+		}); 
+
+		it('should emit completion notification when status transitions to done', async () => {
+			const previousTask = { ...mockTask, status: 'doing' };
+			const completedTask = { ...mockTask, status: 'done' };
+			mockPrismaService.task.findUnique.mockResolvedValue(previousTask);
+			mockPrismaService.task.update.mockResolvedValue(completedTask);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123' },
+				{ userId: 'user-456' },
+			]);
+
+			await service.update('task-123', { status: TaskStatus.DONE }, 'user-456');
+
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					category: 'SCRUM',
+					title: expect.stringContaining('Task completed'),
+					userIds: expect.arrayContaining(['user-123', 'user-456']),
+					actionUrl: '/activities',
+				})
+			);
 		});
 
 		it('should throw ForbiddenException when user is not the creator', async () => {
