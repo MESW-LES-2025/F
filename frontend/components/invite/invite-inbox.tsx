@@ -95,13 +95,13 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
   };
 
   const handleAccept = async (invite: UserNotification) => {
-  const notificationId = invite.id || invite.notification.id;
-    const houseId = invite.notification.actionUrl;
+    const notificationId = invite.id || invite.notification.id;
+    const houseId = invite.notification.houseId;
 
     if (!houseId) {
       toast({
-        title: "Invite is missing data",
-        description: "Ask your house to resend the invite.",
+        title: "Invite is missing house reference",
+        description: "Ask a member to resend a fresh invite.",
         variant: "destructive",
       });
       return;
@@ -123,7 +123,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         throw new Error("Joining the house failed. Please try again later.");
       }
 
-      await notificationService.markAsRead(notificationId);
+      await notificationService.dismiss(notificationId);
       // Remove after acceptance
       setInvites((current) =>
         current.filter((item) => item.notification.id !== notificationId)
@@ -134,8 +134,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         description: `You are now part of ${house.name}.`,
       });
 
-      await onRefreshHouses?.();
-      router.push(`/?houseId=${joinResult.houseId}`);
+  await onRefreshHouses?.();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to accept invite.";

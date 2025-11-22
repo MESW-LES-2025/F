@@ -266,6 +266,7 @@ export class UserService {
 			level: NotificationLevel.MEDIUM,
 			category: NotificationCategory.HOUSE,
 			actionUrl: '/invite',
+			houseId: existingHouse.id,
 		});
 	}
 }
