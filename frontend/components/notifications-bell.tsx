@@ -45,9 +45,9 @@ export function NotificationsBell({ className }: { className?: string }) {
     });
   }, [items, activeCategory, showUnreadOnly]);
 
-  const fetchAll = async () => {
+  const fetchAll = async (silent = false) => {
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       // Fetch both read and unread
       const all = await notificationService.list();
       const sorted = [...all].sort(
@@ -55,13 +55,13 @@ export function NotificationsBell({ className }: { className?: string }) {
       );
       setItems(sorted.slice(0, 30));
     } catch {} finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   };
 
   useEffect(() => {
     fetchAll();
-    const id = setInterval(fetchAll, 60000);
+    const id = setInterval(() => fetchAll(true), 10000);
     return () => clearInterval(id);
   }, []);
 

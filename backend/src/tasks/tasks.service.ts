@@ -101,19 +101,21 @@ export class TasksService {
 			},
 		});
 
-		// Emit SCRUM assignment notification (first commit minimal feature)
-		try {
-			await this.notificationsService.create({
-				category: NotificationCategory.SCRUM,
-				level: NotificationLevel.LOW,
-				title: `Task assigned: ${task.title}`,
-				body: `You were assigned '${task.title}' in house ${task.house.name}. Deadline: ${task.deadline.toLocaleDateString()}`,
-				userIds: [task.assigneeId],
-				actionUrl: '/activities',
-				houseId: task.houseId,
-			});
-		} catch (err) {
-			console.error('[TasksService] Failed to create assignment notification', err);
+		// Emit SCRUM assignment notification
+		if (task.assigneeId !== task.createdById) {    // send only if assignee is different from the creator
+			try {
+				await this.notificationsService.create({
+					category: NotificationCategory.SCRUM,
+					level: NotificationLevel.LOW,
+					title: `Task assigned: ${task.title}`,
+					body: `You were assigned '${task.title}' in house ${task.house.name}. Deadline: ${task.deadline.toLocaleDateString()}`,
+					userIds: [task.assigneeId],
+					actionUrl: '/activities',
+					houseId: task.houseId,
+				});
+			} catch (err) {
+				console.error('[TasksService] Failed to create assignment notification', err);
+			}
 		}
 
 		return task;
