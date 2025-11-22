@@ -6,7 +6,6 @@ import { UserNotification, NotificationCategory } from "@/lib/types";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { CheckCheck, RefreshCcw, Bell, Home, ChefHat, Wallet, Info } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -140,6 +139,22 @@ export default function NotificationsPage() {
 
   const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "OTHER"];
 
+  const handleOpen = async (n: UserNotification) => {
+    const id = n.id || n.notification.id;
+    try {
+      await markOne(id);
+      // Switch house context if present
+      if (n.notification.houseId) {
+        const target = houses.find(h => h.id === n.notification.houseId);
+        if (target) setSelectedHouse(target);
+      }
+      const url = n.notification.actionUrl;
+      if (url) router.push(url);
+    } catch (e) {
+      console.error('Failed to open notification', e);
+    }
+  };
+
   const totalPages = Math.max(1, Math.ceil(items.length / pageSize));
   const currentPage = Math.min(page, totalPages);
   const startIndex = (currentPage - 1) * pageSize;
@@ -151,8 +166,7 @@ export default function NotificationsPage() {
         <h1 className="text-2xl font-semibold">Notifications</h1>
         <p className="text-sm text-muted-foreground">All your recent activity and system messages.</p>
       </div>
-
-      <Card className="p-4 space-y-4">
+  <Card className="p-4 flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Bell className="h-5 w-5 text-primary" />
@@ -222,8 +236,7 @@ export default function NotificationsPage() {
           </div>
         ) : (
           <>
-          <ScrollArea className="max-h-[40vh]">
-            <ul className="divide-y">
+          <ul className="divide-y">
               {pageItems.map(n => {
                 const isUnread = !n.isRead;
                 const isFocused = focusId === n.notification.id;
@@ -263,7 +276,7 @@ export default function NotificationsPage() {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => markOne(n.id || n.notification.id)}
+                            onClick={() => handleOpen(n)}
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                           >
                             Open
@@ -283,8 +296,7 @@ export default function NotificationsPage() {
                 );
               })}
             </ul>
-          </ScrollArea>
-          <div className="mt-7 flex items-center justify-between text-xs text-muted-foreground">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>
               Page {currentPage} of {totalPages}
             </span>
