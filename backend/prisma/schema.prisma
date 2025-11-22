@@ -27,6 +27,11 @@ model User {
   createdTasks     Task[]         @relation("CreatedTasks")
   paidExpenses     Expense[]      @relation("PaidExpenses")
   notifications    NotificationToUser[]
+  resetToken       String?        @db.VarChar(500)
+  resetTokenExpiry DateTime?
+  isEmailVerified  Boolean        @default(false)
+  verificationToken String?       @db.VarChar(500)
+  googleId         String?        @unique @db.VarChar(255)
 }
 
 model RefreshToken {

@@ -61,6 +61,7 @@ export interface User {
   avatar?: string;
   imageUrl?: string;
   createdAt?: string;
+  googleId?: string;
 }
 
 // Notifications

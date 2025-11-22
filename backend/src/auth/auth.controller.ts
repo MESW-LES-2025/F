@@ -1,4 +1,14 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+	Controller,
+	Post,
+	Body,
+	UseGuards,
+	Request,
+	Get,
+	Res,
+} from '@nestjs/common';
+import { Request as ExpressRequest, Response } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 import {
 	ApiTags,
 	ApiOperation,
@@ -10,6 +20,9 @@ import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { ForgotPasswordDto } from './dto/forgot-password.dto';
+import { ResetPasswordDto } from './dto/reset-password.dto';
+import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { UserRequest } from '../shared/types/user_request';
 
@@ -77,5 +90,61 @@ export class AuthController {
 		@Body() dto: ChangePasswordDto,
 	) {
 		return this.authService.changePassword(req.user.userId, dto);
+	}
+
+	@Post('forgot-password')
+	@ApiOperation({ summary: 'Request password reset' })
+	@ApiResponse({
+		status: 200,
+		description: 'Reset link sent if email exists',
+	})
+	async forgotPassword(@Body() forgotPasswordDto: ForgotPasswordDto) {
+		return this.authService.forgotPassword(forgotPasswordDto);
+	}
+
+	@Post('reset-password')
+	@ApiOperation({ summary: 'Reset password' })
+	@ApiResponse({ status: 200, description: 'Password successfully reset' })
+	@ApiResponse({ status: 401, description: 'Invalid or expired token' })
+	async resetPassword(@Body() resetPasswordDto: ResetPasswordDto) {
+		return this.authService.resetPassword(resetPasswordDto);
+	}
+
+	@Post('verify-email')
+	@ApiOperation({ summary: 'Verify email address' })
+	@ApiResponse({ status: 200, description: 'Email successfully verified' })
+	@ApiResponse({ status: 401, description: 'Invalid verification token' })
+	async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
+		return this.authService.verifyEmail(verifyEmailDto.token);
+	}
+
+	@Get('google')
+	@UseGuards(AuthGuard('google'))
+	@ApiOperation({ summary: 'Google login' })
+	googleAuth() {
+		// Initiates the Google OAuth2 flow
+	}
+
+	@Get('google/callback')
+	@UseGuards(AuthGuard('google'))
+	@ApiOperation({ summary: 'Google login callback' })
+	googleAuthRedirect(
+		@Request()
+		req: ExpressRequest & {
+			user: { access_token: string; refresh_token: string };
+		},
+		@Res() res: Response,
+	) {
+		const { access_token, refresh_token } = req.user;
+
+		// Ensure CORS_ORIGIN doesn't have a trailing slash
+		const origin = process.env.CORS_ORIGIN
+			? process.env.CORS_ORIGIN.replace(/\/$/, '')
+			: 'http://localhost:8080';
+
+		// Redirect to frontend with tokens
+		res.redirect(
+			`${origin}/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`,
+		);
 	}
 }
