@@ -132,7 +132,11 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
                   formatter={(value: number) => `$${value.toFixed(2)}`}
                   labelFormatter={(label) => `Category: ${label}`}
                 />
-                <Bar dataKey="total" fill="hsl(var(--primary))" />
+                <Bar dataKey="total">
+                  {categories.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">

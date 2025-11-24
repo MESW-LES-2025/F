@@ -643,6 +643,7 @@ export class ExpenseService {
 		const expenses = await this.prisma.expense.findMany({
 			where: {
 				houseId,
+				category: { not: 'SETTLEMENT' },
 				date: {
 					gte: startDate,
 				},
