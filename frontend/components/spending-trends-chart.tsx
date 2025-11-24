@@ -103,9 +103,9 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
               <Line
                 type="monotone"
                 dataKey="total"
-                stroke="hsl(var(--primary))"
+                stroke="var(--primary)"
                 strokeWidth={2}
-                dot={{ fill: 'hsl(var(--primary))' }}
+                dot={{ fill: 'var(--primary)' }}
               />
             </LineChart>
           </ResponsiveContainer>
