@@ -9,7 +9,12 @@ export function proxy(request: NextRequest) {
   const isAuthenticated = !!accessToken
 
   // Public routes that don't require authentication
-  const isPublicRoute = pathname.startsWith("/login") || pathname.startsWith("/register")
+  const isPublicRoute = 
+    pathname.startsWith("/login") || 
+    pathname.startsWith("/register") || 
+    pathname.startsWith("/forgot-password") || 
+    pathname.startsWith("/reset-password") ||
+    pathname.startsWith("/verify-email")
 
   // If not authenticated and trying to access protected route, redirect to login
   if (!isAuthenticated && !isPublicRoute) {
