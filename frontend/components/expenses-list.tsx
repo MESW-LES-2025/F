@@ -18,6 +18,8 @@ interface ExpensesListProps {
   filterCategory: string
   filterDateFrom: string
   filterDateTo: string
+  compact?: boolean
+  limit?: number
 }
 
 export function ExpensesList({
@@ -28,6 +30,8 @@ export function ExpensesList({
   filterCategory,
   filterDateFrom,
   filterDateTo,
+  compact = false,
+  limit,
 }: ExpensesListProps) {
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [isLoading, setIsLoading] = useState(true)
@@ -88,12 +92,17 @@ export function ExpensesList({
       return sortOrder === "asc" ? comparison : -comparison
     })
 
+    // Apply limit if specified
+    if (limit) {
+      result = result.slice(0, limit)
+    }
+
     return result
-  }, [expenses, sortField, sortOrder, filterCategory, filterDateFrom, filterDateTo])
+  }, [expenses, sortField, sortOrder, filterCategory, filterDateFrom, filterDateTo, limit])
 
   if (isLoading) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 flex items-center justify-center">
+      <div className={compact ? "p-4 flex items-center justify-center" : "bg-white rounded-lg border border-gray-200 p-8 flex items-center justify-center"}>
         <Spinner className="w-8 h-8" />
       </div>
     )
@@ -101,7 +110,7 @@ export function ExpensesList({
 
   if (error) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-4">
+      <div className={compact ? "p-2" : "bg-white rounded-lg border border-gray-200 p-4"}>
         <Alert variant="destructive">
           <AlertDescription>{error}</AlertDescription>
         </Alert>
@@ -111,8 +120,50 @@ export function ExpensesList({
 
   if (expenses.length === 0) {
     return (
-      <div className="bg-white rounded-lg border border-gray-200 p-8 text-center">
+      <div className={compact ? "p-4 text-center text-sm text-muted-foreground" : "bg-white rounded-lg border border-gray-200 p-8 text-center"}>
         <p className="text-gray-500">No expenses recorded yet. Add your first expense to get started!</p>
+      </div>
+    )
+  }
+
+  if (compact) {
+    return (
+      <div className="space-y-2">
+        {filteredAndSortedExpenses.map((expense) => {
+          const splitCount = expense.splitWith.length
+
+          return (
+            <div key={expense.id} className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md transition-colors cursor-pointer">
+              <div className="flex items-center gap-3 flex-1 min-w-0">
+                <Avatar className="w-8 h-8">
+                  <AvatarImage src={expense.paidByAvatar || "/placeholder.svg"} />
+                  <AvatarFallback>
+                    {expense.paidBy
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2 mb-0.5">
+                    <p className="text-sm font-medium text-gray-900 truncate">{expense.title}</p>
+                    <Badge variant="secondary" className="text-xs shrink-0">
+                      {expense.category}
+                    </Badge>
+                  </div>
+                  <p className="text-xs text-gray-500">
+                    {expense.paidBy} • {format(expense.date, "MMM d")}
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right shrink-0">
+                <p className="text-sm font-bold text-gray-900">{expense.amount.toFixed(2)}€</p>
+              </div>
+            </div>
+          )
+        })}
       </div>
     )
   }
@@ -134,7 +185,7 @@ export function ExpensesList({
           const perPersonAmount = expense.amount / splitCount
 
           return (
-            <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors">
+            <div key={expense.id} className="p-4 hover:bg-gray-50 transition-colors cursor-pointer">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-1">
                   <Avatar className="w-10 h-10">
