@@ -59,7 +59,9 @@ export class ExpenseController {
 	}
 
 	@Get('balances')
-	@ApiOperation({ summary: 'Get balances and settlement suggestions for a house' })
+	@ApiOperation({
+		summary: 'Get balances and settlement suggestions for a house',
+	})
 	@ApiQuery({
 		name: 'houseId',
 		required: true,
@@ -121,7 +123,9 @@ export class ExpenseController {
 		description: 'Category breakdown retrieved successfully',
 	})
 	@ApiResponse({ status: 404, description: 'House not found' })
-	async getCategoryBreakdown(@Query('houseId') houseId: string): Promise<unknown> {
+	async getCategoryBreakdown(
+		@Query('houseId') houseId: string,
+	): Promise<unknown> {
 		return this.expenseService.getCategoryBreakdown(houseId);
 	}
 

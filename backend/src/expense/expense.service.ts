@@ -9,7 +9,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Injectable()
 export class ExpenseService {
-	constructor(private prisma: PrismaService) { }
+	constructor(private prisma: PrismaService) {}
 
 	async create(createExpenseDto: CreateExpenseDto): Promise<unknown> {
 		const {
@@ -665,7 +665,8 @@ export class ExpenseService {
 					// Get start of week (Monday)
 					const weekStart = new Date(expenseDate);
 					const day = weekStart.getDay();
-					const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+					const diff =
+						weekStart.getDate() - day + (day === 0 ? -6 : 1);
 					weekStart.setDate(diff);
 					weekStart.setHours(0, 0, 0, 0);
 					key = weekStart.toISOString().split('T')[0];
@@ -700,7 +701,8 @@ export class ExpenseService {
 				case 'week': {
 					const weekStart = new Date(currentDate);
 					const day = weekStart.getDay();
-					const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+					const diff =
+						weekStart.getDate() - day + (day === 0 ? -6 : 1);
 					weekStart.setDate(diff);
 					weekStart.setHours(0, 0, 0, 0);
 					key = weekStart.toISOString().split('T')[0];
@@ -760,7 +762,7 @@ export class ExpenseService {
 		const expenses = await this.prisma.expense.findMany({
 			where: {
 				houseId,
-				category: { not: 'SETTLEMENT' }
+				category: { not: 'SETTLEMENT' },
 			},
 		});
 
