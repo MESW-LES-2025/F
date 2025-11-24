@@ -528,17 +528,17 @@ export class ExpenseService {
 				// For settlements:
 				// - paidById is the person paying (FROM)
 				// - splitWith[0] is the person receiving (TO)
-				// The payer's balance decreases (they paid money out)
+				// The payer's balance increases (they paid off their debt)
 				const payerData = balanceData.get(expense.paidById);
 				if (payerData) {
-					payerData.balance -= expense.amount;
+					payerData.balance += expense.amount;
 				}
 
-				// The receiver's balance increases (they received money)
+				// The receiver's balance decreases (debt was settled)
 				if (expense.splitWith.length > 0) {
 					const receiverData = balanceData.get(expense.splitWith[0]);
 					if (receiverData) {
-						receiverData.balance += expense.amount;
+						receiverData.balance -= expense.amount;
 					}
 				}
 			} else {
