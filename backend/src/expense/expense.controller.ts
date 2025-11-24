@@ -42,6 +42,89 @@ export class ExpenseController {
 		return this.expenseService.create(createExpenseDto);
 	}
 
+	@Get('summary')
+	@ApiOperation({ summary: 'Get expense summary for a house' })
+	@ApiQuery({
+		name: 'houseId',
+		required: true,
+		description: 'House ID to get summary for',
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'Expense summary retrieved successfully',
+	})
+	@ApiResponse({ status: 404, description: 'House not found' })
+	async getSummary(@Query('houseId') houseId: string): Promise<unknown> {
+		return this.expenseService.getSummary(houseId);
+	}
+
+	@Get('balances')
+	@ApiOperation({ summary: 'Get balances and settlement suggestions for a house' })
+	@ApiQuery({
+		name: 'houseId',
+		required: true,
+		description: 'House ID to get balances for',
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'Balances retrieved successfully',
+	})
+	@ApiResponse({ status: 404, description: 'House not found' })
+	async getBalances(@Query('houseId') houseId: string): Promise<unknown> {
+		return this.expenseService.getBalances(houseId);
+	}
+
+	@Get('trends')
+	@ApiOperation({ summary: 'Get spending trends over time for a house' })
+	@ApiQuery({
+		name: 'houseId',
+		required: true,
+		description: 'House ID to get trends for',
+	})
+	@ApiQuery({
+		name: 'period',
+		required: false,
+		enum: ['day', 'week', 'month'],
+		description: 'Period to group by (default: day)',
+	})
+	@ApiQuery({
+		name: 'days',
+		required: false,
+		description: 'Number of days to look back (default: 30)',
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'Spending trends retrieved successfully',
+	})
+	@ApiResponse({ status: 404, description: 'House not found' })
+	async getSpendingOverTime(
+		@Query('houseId') houseId: string,
+		@Query('period') period?: 'day' | 'week' | 'month',
+		@Query('days') days?: string,
+	): Promise<unknown> {
+		return this.expenseService.getSpendingOverTime(
+			houseId,
+			period || 'day',
+			days ? parseInt(days) : 30,
+		);
+	}
+
+	@Get('categories')
+	@ApiOperation({ summary: 'Get spending breakdown by category for a house' })
+	@ApiQuery({
+		name: 'houseId',
+		required: true,
+		description: 'House ID to get category breakdown for',
+	})
+	@ApiResponse({
+		status: 200,
+		description: 'Category breakdown retrieved successfully',
+	})
+	@ApiResponse({ status: 404, description: 'House not found' })
+	async getCategoryBreakdown(@Query('houseId') houseId: string): Promise<unknown> {
+		return this.expenseService.getCategoryBreakdown(houseId);
+	}
+
 	@Get()
 	@ApiOperation({ summary: 'Get all expenses or filter by house' })
 	@ApiQuery({

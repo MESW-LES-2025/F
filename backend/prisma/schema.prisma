@@ -203,6 +203,7 @@ enum ExpenseCategory {
   FOOD
   ENTERTAINMENT
   TRANSPORTATION
+  SETTLEMENT
   OTHER
 }
 

@@ -2,9 +2,14 @@
 
 import { useState } from "react"
 import { ExpensesHeader } from "@/components/expenses-header"
-import { ExpensesStats } from "@/components/expenses-stats"
+import { ExpenseQuickStats } from "@/components/expense-quick-stats"
 import { ExpensesList } from "@/components/expenses-list"
+import { BalancesWidget } from "@/components/balances-widget"
+import { SpendingTrendsChart } from "@/components/spending-trends-chart"
+import { CategoryBreakdownChart } from "@/components/category-breakdown-chart"
 import { useHouse } from "@/lib/house-context"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 
 export default function ExpensesPage() {
   const { selectedHouse } = useHouse()
@@ -76,16 +81,71 @@ export default function ExpensesPage() {
         sortOrder={sortOrder}
         onSortOrderChange={handleSortOrderChange}
       />
-      <ExpensesStats houseId={houseId} refreshTrigger={refreshTrigger} />
-      <ExpensesList 
-        houseId={houseId} 
-        refreshTrigger={refreshTrigger}
-        sortField={sortField}
-        sortOrder={sortOrder}
-        filterCategory={filterCategory}
-        filterDateFrom={filterDateFrom}
-        filterDateTo={filterDateTo}
-      />
+      
+      {/* Quick Stats Overview */}
+      <ExpenseQuickStats houseId={houseId} key={`stats-${refreshTrigger}`} />
+
+      {/* Main Content with Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="overview" className="cursor-pointer">Overview</TabsTrigger>
+          <TabsTrigger value="expenses" className="cursor-pointer">Expenses</TabsTrigger>
+          <TabsTrigger value="balances" className="cursor-pointer">Balances</TabsTrigger>
+          <TabsTrigger value="analytics" className="cursor-pointer">Analytics</TabsTrigger>
+        </TabsList>
+
+        {/* Overview Tab - Dashboard with key insights */}
+        <TabsContent value="overview" className="space-y-6">
+          <div className="grid gap-6 md:grid-cols-2">
+            <BalancesWidget houseId={houseId} key={`balances-${refreshTrigger}`} onRefresh={handleExpenseCreated} />
+            <Card>
+              <CardHeader>
+                <CardTitle>Recent Expenses</CardTitle>
+                <CardDescription>Latest transactions in your household</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <ExpensesList 
+                  houseId={houseId} 
+                  refreshTrigger={refreshTrigger}
+                  sortField="date"
+                  sortOrder="desc"
+                  filterCategory="all"
+                  filterDateFrom=""
+                  filterDateTo=""
+                  compact={true}
+                  limit={5}
+                />
+              </CardContent>
+            </Card>
+          </div>
+          <SpendingTrendsChart houseId={houseId} key={`trends-${refreshTrigger}`} />
+        </TabsContent>
+
+        {/* Expenses Tab - Full expense list */}
+        <TabsContent value="expenses" className="space-y-6">
+          <ExpensesList 
+            houseId={houseId} 
+            refreshTrigger={refreshTrigger}
+            sortField={sortField}
+            sortOrder={sortOrder}
+            filterCategory={filterCategory}
+            filterDateFrom={filterDateFrom}
+            filterDateTo={filterDateTo}
+          />
+        </TabsContent>
+
+        {/* Balances Tab - Detailed balances and settlements */}
+        <TabsContent value="balances" className="space-y-6">
+          <BalancesWidget houseId={houseId} key={`balances-detail-${refreshTrigger}`} onRefresh={handleExpenseCreated} />
+        </TabsContent>
+
+        {/* Analytics Tab - Charts and insights */}
+        <TabsContent value="analytics" className="space-y-6">
+          <SpendingTrendsChart houseId={houseId} key={`trends-analytics-${refreshTrigger}`} />
+          <CategoryBreakdownChart houseId={houseId} key={`category-${refreshTrigger}`} />
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
+
