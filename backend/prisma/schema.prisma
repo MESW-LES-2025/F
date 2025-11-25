@@ -107,6 +107,8 @@ model PantryToItem {
   quantity       Float
   updatedAt      DateTime   @updatedAt
   expiryDate     DateTime?
+  lastLowStockNotificationAt DateTime?
+  lastExpiryNotificationAt   DateTime?
   item           PantryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   user           User       @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
   pantry         Pantry     @relation(fields: [pantryId], references: [id], onDelete: Cascade)
