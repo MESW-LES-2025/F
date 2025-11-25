@@ -5,6 +5,8 @@ import { NotFoundException } from '@nestjs/common';
 import { CreateNotificationDto } from './dto/create-notification.dto';
 import { FindAllNotificationsByUserDto } from './dto/find-all-by-user.dto';
 
+const asMatcher = <T>(value: unknown) => value as T;
+
 describe('NotificationsService', () => {
 	let service: NotificationsService;
 
@@ -116,37 +118,37 @@ describe('NotificationsService', () => {
 
 			const result = await service.findAllByUser('u1', filters);
 
-				expect(
-					mockPrismaService.notificationToUser.findMany,
-				).toHaveBeenCalledWith({
-					where: {
-						userId: 'u1',
-						deletedAt: null,
-						isRead: false,
-						notification: {
-							category: 'HOUSE',
-							level: 'HIGH',
+			expect(
+				mockPrismaService.notificationToUser.findMany,
+			).toHaveBeenCalledWith({
+				where: {
+					userId: 'u1',
+					deletedAt: null,
+					isRead: false,
+					notification: {
+						category: 'HOUSE',
+						level: 'HIGH',
+					},
+				},
+				select: {
+					id: true,
+					userId: true,
+					isRead: true,
+					readAt: true,
+					createdAt: true,
+					notification: {
+						select: {
+							id: true,
+							title: true,
+							body: true,
+							actionUrl: true,
+							level: true,
+							category: true,
+							houseId: true,
 						},
 					},
-					select: {
-						id: true,
-						userId: true,
-						isRead: true,
-						readAt: true,
-						createdAt: true,
-						notification: {
-							select: {
-								id: true,
-								title: true,
-								body: true,
-								actionUrl: true,
-								level: true,
-								category: true,
-								houseId: true,
-							},
-						},
-					},
-				});
+				},
+			});
 
 			expect(result).toEqual(mockNotifications);
 		});
@@ -160,28 +162,28 @@ describe('NotificationsService', () => {
 
 			await service.findOneByUser('u1', 'notif1');
 
-				expect(
-					mockPrismaService.notificationToUser.findFirst,
-				).toHaveBeenCalledWith({
-					where: { id: 'notif1', userId: 'u1', deletedAt: null },
-					select: {
-						id: true,
-						userId: true,
-						isRead: true,
-						readAt: true,
-						createdAt: true,
-						notification: {
-							select: {
-								id: true,
-								title: true,
-								body: true,
-								actionUrl: true,
-								level: true,
-								category: true,
-							},
+			expect(
+				mockPrismaService.notificationToUser.findFirst,
+			).toHaveBeenCalledWith({
+				where: { id: 'notif1', userId: 'u1', deletedAt: null },
+				select: {
+					id: true,
+					userId: true,
+					isRead: true,
+					readAt: true,
+					createdAt: true,
+					notification: {
+						select: {
+							id: true,
+							title: true,
+							body: true,
+							actionUrl: true,
+							level: true,
+							category: true,
 						},
 					},
-				});
+				},
+			});
 		});
 	});
 
@@ -204,16 +206,20 @@ describe('NotificationsService', () => {
 
 			mockPrismaService.notificationToUser.update.mockResolvedValue({
 				success: true,
+			} as { success: boolean });
+
+			const result: { success: boolean } =
+				await service.markOneAsReadByUser('u1', 'notif1');
+
+			expect(
+				mockPrismaService.notificationToUser.update,
+			).toHaveBeenCalledWith({
+				where: { id: 'ntu1' },
+				data: {
+					isRead: true,
+					readAt: asMatcher<Date>(expect.any(Date)),
+				},
 			});
-
-			const result = await service.markOneAsReadByUser('u1', 'notif1');
-
-				expect(
-					mockPrismaService.notificationToUser.update,
-				).toHaveBeenCalledWith({
-					where: { id: 'ntu1' },
-					data: expect.objectContaining({ isRead: true, readAt: expect.any(Date) }),
-				});
 
 			expect(result).toEqual({ success: true });
 		});
@@ -235,16 +241,20 @@ describe('NotificationsService', () => {
 
 			mockPrismaService.notificationToUser.updateMany.mockResolvedValue({
 				count: 1,
+			} as { count: number });
+
+			const result: { count: number } =
+				await service.markAllAsReadByUser('u1');
+
+			expect(
+				mockPrismaService.notificationToUser.updateMany,
+			).toHaveBeenCalledWith({
+				where: { userId: 'u1', deletedAt: null },
+				data: {
+					isRead: true,
+					readAt: asMatcher<Date>(expect.any(Date)),
+				},
 			});
-
-			const result = await service.markAllAsReadByUser('u1');
-
-				expect(
-					mockPrismaService.notificationToUser.updateMany,
-				).toHaveBeenCalledWith({
-					where: { userId: 'u1', deletedAt: null },
-					data: expect.objectContaining({ isRead: true, readAt: expect.any(Date) }),
-				});
 
 			expect(result).toEqual({ count: 1 });
 		});

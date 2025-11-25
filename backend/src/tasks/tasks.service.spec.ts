@@ -10,6 +10,8 @@ import {
 import { CreateTaskDto, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
+const asMatcher = <T>(value: unknown) => value as T;
+
 describe('TasksService', () => {
 	let service: TasksService;
 
@@ -33,7 +35,7 @@ describe('TasksService', () => {
 		},
 	};
 
-	const mockNotificationsService = {
+	const mockNotificationsService: Pick<NotificationsService, 'create'> = {
 		create: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 	};
 
@@ -172,8 +174,10 @@ describe('TasksService', () => {
 			});
 			expect(mockNotificationsService.create).toHaveBeenCalledWith(
 				expect.objectContaining({
-					category: expect.any(String),
-					title: expect.stringContaining('Task assigned'),
+					category: asMatcher<string>(expect.any(String)),
+					title: asMatcher<string>(
+						expect.stringContaining('Task assigned'),
+					),
 					userIds: [createTaskDto.assigneeId],
 				}),
 			);
@@ -589,8 +593,7 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.delete).toHaveBeenCalledWith({
 				where: { id: 'task-123' },
 			});
-
-		}); 
+		});
 
 		it('should emit completion notification when status transitions to done', async () => {
 			const previousTask = { ...mockTask, status: 'doing' };
@@ -602,15 +605,23 @@ describe('TasksService', () => {
 				{ userId: 'user-456' },
 			]);
 
-			await service.update('task-123', { status: TaskStatus.DONE }, 'user-456');
+			await service.update(
+				'task-123',
+				{ status: TaskStatus.DONE },
+				'user-456',
+			);
 
 			expect(mockNotificationsService.create).toHaveBeenCalledWith(
 				expect.objectContaining({
 					category: 'SCRUM',
-					title: expect.stringContaining('Task completed'),
-					userIds: expect.arrayContaining(['user-123', 'user-456']),
-					actionUrl: '/activities',
-				})
+					title: asMatcher<string>(
+						expect.stringContaining('Task completed'),
+					),
+					userIds: asMatcher<string[]>(
+						expect.arrayContaining(['user-123', 'user-456']),
+					),
+					actionUrl: asMatcher<string>('/activities'),
+				}),
 			);
 		});
 
