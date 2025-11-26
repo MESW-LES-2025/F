@@ -6,21 +6,25 @@ import Link from "next/link";
 import { userService } from "@/lib/user-service";
 import { CriticalActionModal } from "../shared/modal/critical-action-modal";
 import { SuccessActionModal } from "../shared/modal/success-modal";
+import { useHouse } from "@/lib/house-context";
 
 interface HouseCardProps {
   house: House;
+  from: "login" | "management";
 }
 
-export function HouseCard({ house }: HouseCardProps) {
+export function HouseCard({ house, from }: HouseCardProps) {
   const [hover, setHover] = useState(false);
   const [openCriticalModal, setOpenCriticalModal] = useState(false);
   const [openSuccessModal, setOpenSuccessModal] = useState(false);
+  const { setSelectedHouse, houses } = useHouse();
 
   return (
     <Card className="p-4 bg-white border border-gray-200 transition-transform duration-300 hover:scale-105 hover:shadow-lg">
       <div className="flex items-center gap-3">
         <Link
-          href={`/?houseId=${house.id}`}
+          onClick={() => setSelectedHouse(house)}
+          href={`/`}
           className="flex-1 flex items-center gap-3"
         >
           <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
@@ -35,22 +39,24 @@ export function HouseCard({ house }: HouseCardProps) {
           </div>
         </Link>
 
-        <div
-          className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center cursor-pointer"
-          onMouseEnter={() => setHover(true)}
-          onMouseLeave={() => setHover(false)}
-          onClick={(e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            setOpenCriticalModal(true);
-          }}
-        >
-          {hover ? (
-            <DoorOpen className="w-5 h-5 text-red-600" />
-          ) : (
-            <DoorClosed className="w-5 h-5 text-red-600" />
-          )}
-        </div>
+        {from == "management" && houses.length > 1 && (
+          <div
+            className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center cursor-pointer"
+            onMouseEnter={() => setHover(true)}
+            onMouseLeave={() => setHover(false)}
+            onClick={(e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpenCriticalModal(true);
+            }}
+          >
+            {hover ? (
+              <DoorOpen className="w-5 h-5 text-red-600" />
+            ) : (
+              <DoorClosed className="w-5 h-5 text-red-600" />
+            )}
+          </div>
+        )}
       </div>
 
       <CriticalActionModal
