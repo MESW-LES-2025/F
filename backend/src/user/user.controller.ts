@@ -87,7 +87,6 @@ export class UserController {
 	@ApiOperation({ summary: 'User can leave a house' })
 	@Delete('leave-house')
 	async leaveHouse(@Request() req: UserRequest, @Query() dto: LeaveHouseDto) {
-		console.log('to aqui')
 		return await this.userService.leaveHouse(req.user.userId, dto.houseId);
 	}
 
