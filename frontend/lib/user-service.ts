@@ -1,7 +1,12 @@
-import { apiPost } from "./api-client";
+import { apiDelete, apiPost } from "./api-client";
+import { HouseToUser } from "./types";
 
 export interface JoinHousePayload {
   inviteCode: string;
+}
+
+export interface LeaveHousePayload {
+  houseId: string;
 }
 
 export interface JoinHouseResponse {
@@ -28,6 +33,20 @@ class UserService {
     );
 
     return userToHouse;
+  }
+
+  /**
+   * Leave a house.
+   */
+  async leaveHouse(houseData: LeaveHousePayload): Promise<HouseToUser> {
+    const deletedHouse = await apiDelete<HouseToUser>(
+      `/user/leave-house?houseId=${houseData.houseId}`,
+      {
+        requiresAuth: true,
+      }
+    );
+
+    return deletedHouse;
   }
 
   async inviteUserToHouse(payload: InviteUserPayload): Promise<void> {

@@ -9,6 +9,7 @@ import {
 	Post,
 	UseInterceptors,
 	UploadedFile,
+	Query,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
@@ -18,6 +19,7 @@ import { ApiBearerAuth, ApiOperation } from '@nestjs/swagger';
 import { UserRequest } from 'src/shared/types/user_request';
 import { JoinHouseDto } from './dto/join-house.dto';
 import { InviteToHouseDto } from './dto/invite-to-house.dto';
+import { LeaveHouseDto } from './dto/leave-house.dto';
 
 @Controller('user')
 export class UserController {
@@ -78,6 +80,15 @@ export class UserController {
 			req.user.userId,
 			joinHouseDto,
 		);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'User can leave a house' })
+	@Delete('leave-house')
+	async leaveHouse(@Request() req: UserRequest, @Query() dto: LeaveHouseDto) {
+		console.log('to aqui')
+		return await this.userService.leaveHouse(req.user.userId, dto.houseId);
 	}
 
 	@UseGuards(JwtAuthGuard)

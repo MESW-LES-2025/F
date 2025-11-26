@@ -3,9 +3,9 @@
 import { useEffect, useState } from "react";
 import { houseService } from "@/lib/house-service";
 import { House } from "@/lib/types";
-import { HouseList } from "@/components/house-list";
-import { JoinHouseForm } from "@/components/house-join-form";
-import { CreateHouseForm } from "@/components/house-create-form";
+import { HouseList } from "@/components/house/house-list";
+import { JoinHouseForm } from "@/components/house/house-join-form";
+import { CreateHouseForm } from "@/components/house/house-create-form";
 
 export default function SettingsPage() {
   const [houses, setHouses] = useState<House[]>([]);

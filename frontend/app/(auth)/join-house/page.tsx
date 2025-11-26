@@ -1,6 +1,6 @@
 "use client";
 
-import { JoinHouseForm } from "@/components/house-join-form";
+import { JoinHouseForm } from "@/components/house/house-join-form";
 import { CreateHouseForm } from "@/components/house-create-form";
 
 export default function SettingsPage() {

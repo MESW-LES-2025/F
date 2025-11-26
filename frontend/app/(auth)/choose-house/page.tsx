@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { houseService } from "@/lib/house-service";
 import { House } from "@/lib/types";
-import { HouseList } from "@/components/house-list";
+import { HouseList } from "@/components/house/house-list";
 
 export default function SettingsPage() {
   const [houses, setHouses] = useState<House[]>([]);
