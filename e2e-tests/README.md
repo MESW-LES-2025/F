@@ -20,7 +20,3 @@ npm run test
 # Run tests with UI
 npm run test:ui
 ```
-
-## Test Coverage
-
-- **Auth**: Complete coverage of user registration, login and logout flows

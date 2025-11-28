@@ -98,10 +98,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setIsLoading(true);
     try {
       const response = await authService.register(email, username, password, name);
-      setUser(response.user);
-      setIsAuthenticated(true);
-      // Store user in sessionStorage for quick access
-      sessionStorage.setItem('user', JSON.stringify(response.user));
+      return response;
     } finally {
       setIsLoading(false);
     }

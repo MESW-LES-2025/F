@@ -17,16 +17,18 @@ test.describe('Auth Acceptance Tests', () => {
 			
 			// Provide valid email and password
 			await page.fill('input[name="name"]', testUser.name);
-		await page.fill('input[name="username"]', testUser.username);
-		await page.fill('input[name="email"]', testUser.email);
-		await page.fill('input[name="password"]', testUser.password);
-		await page.fill('input[name="confirmPassword"]', testUser.password);
-		await page.check('input#terms');
-		await page.click('button[type="submit"]');
-		
-		// User is redirected to join-house page
-		await expect(page).toHaveURL('/join-house');
-	});		test('An error message is displayed if any required field is empty', async ({ page }) => {
+			await page.fill('input[name="username"]', testUser.username);
+			await page.fill('input[name="email"]', testUser.email);
+			await page.fill('input[name="password"]', testUser.password);
+			await page.fill('input[name="confirmPassword"]', testUser.password);
+			await page.check('input#terms');
+			await page.click('button[type="submit"]');
+			
+			// User is redirected to login page
+			await expect(page).toHaveURL('/login');
+		});		
+
+		test('An error message is displayed if any required field is empty', async ({ page }) => {
 			await page.goto('/register');
 			
 			// Submit form with empty email
@@ -72,7 +74,7 @@ test.describe('Auth Acceptance Tests', () => {
 			await page.click('button[type="submit"]');
 			
 			// Error message is displayed
-			await expect(page.getByText(/email or username already/i)).toBeVisible();
+			await expect(page.getByText(/(?=.*already)(?=.*(user|email))/i)).toBeVisible();
 		});
 	});
 

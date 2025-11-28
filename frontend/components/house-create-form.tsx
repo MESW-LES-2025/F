@@ -73,13 +73,13 @@ export function CreateHouseForm({ isRegister = false }: CreateHouseFormProps) {
           />
         </div>
 
-        <Button onClick={handleCreateHouse} disabled={isSaving}>
+        <Button id="create-house-btn" onClick={handleCreateHouse} disabled={isSaving}>
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
 
         {successMessageCreate && (
           <Alert>
-            <AlertDescription>{successMessageCreate}</AlertDescription>
+            <AlertDescription id="create-house-success">{successMessageCreate}</AlertDescription>
           </Alert>
         )}
 
