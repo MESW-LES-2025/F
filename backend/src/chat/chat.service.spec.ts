@@ -145,6 +145,51 @@ describe('ChatService', () => {
 				service.create(dtoParentDiffHouse, 'user1', 'house1'),
 			).rejects.toThrow(BadRequestException);
 		});
+
+		it('should create a chat message with parentId', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockMembership,
+			);
+			mockPrismaService.chatMessage.findUnique.mockResolvedValue({
+				id: 'parent',
+				houseId: 'house1',
+			});
+			mockPrismaService.chatMessage.create.mockResolvedValue({
+				...mockMessage,
+				parentId: 'parent',
+			});
+
+			const dto: CreateChatMessageDto = {
+				content: 'Reply',
+				parentId: 'parent',
+			} as CreateChatMessageDto;
+			const result = await service.create(dto, 'user1', 'house1');
+
+			expect(mockPrismaService.chatMessage.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						parentId: 'parent',
+					}) as object,
+				}),
+			);
+			expect(result.parentId).toBe('parent');
+		});
+		it('should throw BadRequestException if content is missing or not string', async () => {
+			const dtoMissing = {} as CreateChatMessageDto;
+			await expect(
+				service.create(dtoMissing, 'user1', 'house1'),
+			).rejects.toThrow(BadRequestException);
+		});
+
+		it('should throw BadRequestException if content is empty', async () => {
+			const dtoEmpty: CreateChatMessageDto = {
+				content: '   ',
+			} as CreateChatMessageDto;
+			await expect(
+				service.create(dtoEmpty, 'user1', 'house1'),
+			).rejects.toThrow(BadRequestException);
+		});
 	});
 
 	describe('update', () => {
@@ -187,6 +232,27 @@ describe('ChatService', () => {
 			await expect(
 				service.update('msg1', notAuthorUpdateDto, 'user1'),
 			).rejects.toThrow(ForbiddenException);
+		});
+		it('should throw BadRequestException if content is missing or not string', async () => {
+			mockPrismaService.chatMessage.findFirst.mockResolvedValue(
+				mockMessage,
+			);
+			const dtoMissing = {} as UpdateChatMessageDto;
+			await expect(
+				service.update('msg1', dtoMissing, 'user1'),
+			).rejects.toThrow(BadRequestException);
+		});
+
+		it('should throw BadRequestException if content is empty', async () => {
+			mockPrismaService.chatMessage.findFirst.mockResolvedValue(
+				mockMessage,
+			);
+			const dtoEmpty: UpdateChatMessageDto = {
+				content: '   ',
+			} as UpdateChatMessageDto;
+			await expect(
+				service.update('msg1', dtoEmpty, 'user1'),
+			).rejects.toThrow(BadRequestException);
 		});
 	});
 
@@ -266,6 +332,37 @@ describe('ChatService', () => {
 			expect(res.messages.length).toBe(5);
 		});
 
+		it('should use default limit if not provided', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockMembership,
+			);
+			mockPrismaService.chatMessage.findMany.mockResolvedValue([]);
+
+			await service.read('house1', 'user1');
+
+			expect(mockPrismaService.chatMessage.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					take: 21,
+				}),
+			);
+		});
+
+		it('should use cursor if provided', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockMembership,
+			);
+			mockPrismaService.chatMessage.findMany.mockResolvedValue([]);
+			await service.read('house1', 'user1', 20, 'cursorId');
+			expect(mockPrismaService.chatMessage.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					cursor: { id: 'cursorId' },
+					skip: 1,
+				}),
+			);
+		});
+
 		it('should throw NotFound if house not found', async () => {
 			mockPrismaService.house.findUnique.mockResolvedValue(null);
 			await expect(service.read('bad', 'user1', 20)).rejects.toThrow(
@@ -279,6 +376,58 @@ describe('ChatService', () => {
 			await expect(service.read('house1', 'user1', 20)).rejects.toThrow(
 				ForbiddenException,
 			);
+		});
+	});
+
+	describe('markMessagesAsRead', () => {
+		it('should return count 0 if no messageIds provided', async () => {
+			const res = await service.markMessagesAsRead([], 'user1');
+			expect(res).toEqual({ count: 0 });
+		});
+
+		it('should filter existing logs and create new ones', async () => {
+			mockPrismaService.messageReadLog.findMany.mockResolvedValue([
+				{ messageId: 'msg1' },
+			]);
+			mockPrismaService.messageReadLog.createMany.mockResolvedValue({
+				count: 1,
+			});
+			mockPrismaService.chatMessage.findMany.mockResolvedValue([
+				{ id: 'msg2', houseId: 'house1' },
+			]);
+			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+
+			const res = await service.markMessagesAsRead(
+				['msg1', 'msg2'],
+				'user1',
+			);
+
+			expect(
+				mockPrismaService.messageReadLog.createMany,
+			).toHaveBeenCalledWith({
+				data: [{ messageId: 'msg2', userId: 'user1' }],
+				skipDuplicates: true,
+			});
+			expect(mockWebsocketService.trigger).toHaveBeenCalledWith(
+				'house-house1-chat',
+				'message-read',
+				expect.objectContaining({
+					messageId: 'msg2',
+					userId: 'user1',
+				}),
+			);
+			expect(res).toEqual({ count: 1 });
+		});
+
+		it('should return count 0 if all messages already read', async () => {
+			mockPrismaService.messageReadLog.findMany.mockResolvedValue([
+				{ messageId: 'msg1' },
+			]);
+			const res = await service.markMessagesAsRead(['msg1'], 'user1');
+			expect(
+				mockPrismaService.messageReadLog.createMany,
+			).not.toHaveBeenCalled();
+			expect(res).toEqual({ count: 0 });
 		});
 	});
 });

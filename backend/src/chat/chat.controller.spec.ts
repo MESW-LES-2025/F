@@ -15,6 +15,7 @@ describe('ChatController', () => {
 		update: jest.fn(),
 		remove: jest.fn(),
 		read: jest.fn(),
+		markMessagesAsRead: jest.fn(),
 	};
 
 	beforeEach(async () => {
@@ -24,6 +25,7 @@ describe('ChatController', () => {
 		}).compile();
 
 		controller = module.get<ChatController>(ChatController);
+		jest.clearAllMocks();
 	});
 
 	it('should be defined', () => {
@@ -73,6 +75,21 @@ describe('ChatController', () => {
 		mockService.read.mockResolvedValue(readResult);
 		const req: UserRequest = { user: { userId: 'user1' } };
 		const query: ReadChatMessagesDto = { limit: 20 } as ReadChatMessagesDto;
+		const res = await controller.read('house1', query, req);
+		expect(mockService.read).toHaveBeenCalledWith(
+			'house1',
+			'user1',
+			20,
+			undefined,
+		);
+		expect(res).toEqual(readResult);
+	});
+
+	it('read should use default limit if query limit is missing', async () => {
+		const readResult = { messages: [], nextCursor: null };
+		mockService.read.mockResolvedValue(readResult);
+		const req: UserRequest = { user: { userId: 'user1' } };
+		const query = {} as ReadChatMessagesDto;
 		const res = await controller.read('house1', query, req);
 		expect(mockService.read).toHaveBeenCalledWith(
 			'house1',
@@ -137,5 +154,17 @@ describe('ChatController', () => {
 		await expect(controller.deleteMessage('msg1', req)).rejects.toThrow(
 			'not found',
 		);
+	});
+
+	it('markMessagesAsRead should call service.markMessagesAsRead', async () => {
+		mockService.markMessagesAsRead.mockResolvedValue({ count: 1 });
+		const req: UserRequest = { user: { userId: 'user1' } };
+		const dto = { messageIds: ['msg1'] };
+		const res = await controller.markMessagesAsRead(dto, req);
+		expect(mockService.markMessagesAsRead).toHaveBeenCalledWith(
+			['msg1'],
+			'user1',
+		);
+		expect(res).toEqual({ count: 1 });
 	});
 });
