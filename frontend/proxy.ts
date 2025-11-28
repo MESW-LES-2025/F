@@ -14,7 +14,8 @@ export function proxy(request: NextRequest) {
     pathname.startsWith("/register") || 
     pathname.startsWith("/forgot-password") || 
     pathname.startsWith("/reset-password") ||
-    pathname.startsWith("/verify-email")
+    pathname.startsWith("/verify-email") ||
+    pathname.startsWith("/auth")
 
   // If not authenticated and trying to access protected route, redirect to login
   if (!isAuthenticated && !isPublicRoute) {

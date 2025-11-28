@@ -33,11 +33,15 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
       }
 
       try {
+        // Fetch read and unread
         const data = await notificationService.list({
           category: "HOUSE",
-          isRead: false,
         });
-        setInvites(data);
+        // Newest first
+        const sorted = [...data].sort(
+          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        );
+        setInvites(sorted);
       } catch (error) {
         const message =
           error instanceof Error ? error.message : "Failed to load invites.";
@@ -58,20 +62,24 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     loadInvites(true);
   }, [loadInvites]);
 
-  const removeInviteFromList = (notificationId: string) => {
+  const updateInviteAsRead = (notificationId: string) => {
     setInvites((current) =>
-      current.filter((item) => item.notification.id !== notificationId)
+      current.map((item) =>
+        item.notification.id === notificationId
+          ? { ...item, isRead: true, readAt: new Date().toISOString() }
+          : item
+      )
     );
   };
 
-  const handleDismiss = async (notificationId: string) => {
-    setActionId(notificationId);
+  const handleDismiss = async (notificationRowOrNotificationId: string) => {
+    setActionId(notificationRowOrNotificationId);
     try {
-      await notificationService.markAsRead(notificationId);
-      removeInviteFromList(notificationId);
+      await notificationService.dismiss(notificationRowOrNotificationId);
+      setInvites((current) => current.filter((item) => !(item.id === notificationRowOrNotificationId || item.notification.id === notificationRowOrNotificationId)));
       toast({
         title: "Invite dismissed",
-        description: "You can join later using the invite code if needed.",
+        description: "You can still join later via invite code if shared.",
       });
     } catch (error) {
       const message =
@@ -87,13 +95,13 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
   };
 
   const handleAccept = async (invite: UserNotification) => {
-    const notificationId = invite.notification.id;
-    const houseId = invite.notification.actionUrl;
+    const notificationId = invite.id || invite.notification.id;
+    const houseId = invite.notification.houseId;
 
     if (!houseId) {
       toast({
-        title: "Invite is missing data",
-        description: "Ask your house to resend the invite.",
+        title: "Invite is missing house reference",
+        description: "Ask a member to resend a fresh invite.",
         variant: "destructive",
       });
       return;
@@ -115,16 +123,18 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         throw new Error("Joining the house failed. Please try again later.");
       }
 
-      await notificationService.markAsRead(notificationId);
-      removeInviteFromList(notificationId);
+      await notificationService.dismiss(notificationId);
+      // Remove after acceptance
+      setInvites((current) =>
+        current.filter((item) => item.notification.id !== notificationId)
+      );
 
       toast({
         title: "Welcome to the house",
         description: `You are now part of ${house.name}.`,
       });
 
-      await onRefreshHouses?.();
-      router.push(`/?houseId=${joinResult.houseId}`);
+  await onRefreshHouses?.();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to accept invite.";
@@ -180,7 +190,10 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
           {invites.map((invite) => (
             <div
               key={invite.notification.id}
-              className="rounded-lg border border-border bg-card p-4 hover:bg-accent/40 transition-colors"
+              className={"rounded-lg border border-border p-4 transition-colors " +
+                (invite.isRead
+                  ? "bg-muted/40 hover:bg-muted/50"
+                  : "bg-card hover:bg-accent/40")}
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>
@@ -195,6 +208,11 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
                   <p className="text-xs text-muted-foreground">
                     Received {new Date(invite.createdAt).toLocaleString()}
                   </p>
+                  {invite.isRead && (
+                    <p className="text-xs text-green-700 mt-1">
+                      Read • Pending action (Dismiss or Accept)
+                    </p>
+                  )}
                 </div>
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <Button

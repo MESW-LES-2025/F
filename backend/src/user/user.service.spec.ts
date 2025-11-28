@@ -72,6 +72,9 @@ describe('UserService', () => {
 			create: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
+			delete: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>;
 		};
 	};
 
@@ -113,6 +116,9 @@ describe('UserService', () => {
 				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 			create: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			delete: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 		},
@@ -599,6 +605,7 @@ describe('UserService', () => {
 				notificationId: 'notification-id',
 				isRead: false,
 				readAt: null,
+				deletedAt: null,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			});
@@ -650,10 +657,73 @@ describe('UserService', () => {
 				userIds: [mockInvitedUser.id],
 				level: NotificationLevel.MEDIUM,
 				category: NotificationCategory.HOUSE,
-				actionUrl: mockHouse.id,
+				actionUrl: '/invite',
+				houseId: mockHouse.id,
 			});
 
 			expect(result).toEqual(notificationResult);
+		});
+	});
+
+	describe('leaveHouse', () => {
+		const mockHouse = {
+			id: 'house-id-1',
+			name: 'Test House',
+			invitationCode: 'INV123',
+			createdAt: new Date(),
+			updatedAt: new Date(),
+		};
+
+		const mockHouseToUser = {
+			id: 'houseToUser-id-1',
+			houseId: mockHouse.id,
+			userId: 'user-id-1',
+			role: null,
+			joinedAt: new Date(),
+		};
+
+		it('throws NotFoundException if house does not exist', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValueOnce(null);
+
+			await expect(
+				service.leaveHouse('user-id-1', 'invalid-house-id'),
+			).rejects.toThrow(NotFoundException);
+
+			expect(mockPrismaService.house.findUnique).toHaveBeenCalledWith({
+				where: { id: 'invalid-house-id' },
+			});
+		});
+
+		it('throws NotFoundException if user is not in the house', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValueOnce(null);
+
+			await expect(
+				service.leaveHouse('user-id-1', mockHouse.id),
+			).rejects.toThrow(NotFoundException);
+
+			expect(
+				mockPrismaService.houseToUser.findFirst,
+			).toHaveBeenCalledWith({
+				where: { houseId: mockHouse.id, userId: 'user-id-1' },
+			});
+		});
+
+		it('deletes the houseToUser relation and returns it if user is in the house', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockHouseToUser,
+			);
+			mockPrismaService.houseToUser.delete.mockResolvedValue(
+				mockHouseToUser,
+			);
+
+			const result = await service.leaveHouse('user-id-1', mockHouse.id);
+
+			expect(mockPrismaService.houseToUser.delete).toHaveBeenCalledWith({
+				where: { id: mockHouseToUser.id },
+			});
+			expect(result).toEqual(mockHouseToUser);
 		});
 	});
 });

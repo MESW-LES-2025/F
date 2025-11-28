@@ -1,4 +1,14 @@
-import { Controller, Post, Body, UseGuards, Request } from '@nestjs/common';
+import {
+	Controller,
+	Post,
+	Body,
+	UseGuards,
+	Request,
+	Get,
+	Res,
+} from '@nestjs/common';
+import { Request as ExpressRequest, Response } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 import {
 	ApiTags,
 	ApiOperation,
@@ -106,5 +116,35 @@ export class AuthController {
 	@ApiResponse({ status: 401, description: 'Invalid verification token' })
 	async verifyEmail(@Body() verifyEmailDto: VerifyEmailDto) {
 		return this.authService.verifyEmail(verifyEmailDto.token);
+	}
+
+	@Get('google')
+	@UseGuards(AuthGuard('google'))
+	@ApiOperation({ summary: 'Google login' })
+	googleAuth() {
+		// Initiates the Google OAuth2 flow
+	}
+
+	@Get('google/callback')
+	@UseGuards(AuthGuard('google'))
+	@ApiOperation({ summary: 'Google login callback' })
+	googleAuthRedirect(
+		@Request()
+		req: ExpressRequest & {
+			user: { access_token: string; refresh_token: string };
+		},
+		@Res() res: Response,
+	) {
+		const { access_token, refresh_token } = req.user;
+
+		// Ensure CORS_ORIGIN doesn't have a trailing slash
+		const origin = process.env.CORS_ORIGIN
+			? process.env.CORS_ORIGIN.replace(/\/$/, '')
+			: 'http://localhost:8080';
+
+		// Redirect to frontend with tokens
+		res.redirect(
+			`${origin}/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`,
+		);
 	}
 }

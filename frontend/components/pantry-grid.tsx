@@ -166,13 +166,13 @@ export function PantryGrid({ items, pantryHouseId, pantryId }: PantryGridProps) 
                     <span className="font-medium text-gray-900">
                       {editingId === item.id ? (
                         <div className="flex items-center gap-2">
-                          <TextInput
-                            type="number"
-                            value={editingValue as any}
-                            onChange={(e) => setEditingValue(e.target.value === "" ? "" : Number(e.target.value))}
-                            className="w-28 h-8"
-                            step={item.unit?.toLowerCase().includes("g") ? "1" : "1"}
-                          />
+                            <TextInput
+                              type="number"
+                              value={String(editingValue)}
+                              onChange={(e) => setEditingValue(e.target.value === "" ? "" : Number(e.target.value))}
+                              className="w-28 h-8"
+                              step={item.unit?.toLowerCase().includes("g") ? "1" : "1"}
+                            />
                           <UiButton size="sm" onClick={async () => {
                             const parsed = Number(editingValue)
                             if (Number.isNaN(parsed) || parsed < 0) {
