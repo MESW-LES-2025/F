@@ -7,6 +7,7 @@ import { userService } from "@/lib/user-service";
 import { CriticalActionModal } from "../shared/modal/critical-action-modal";
 import { SuccessActionModal } from "../shared/modal/success-modal";
 import { useHouse } from "@/lib/house-context";
+import { useRouter } from "next/navigation";
 
 interface HouseCardProps {
   house: House;
@@ -17,7 +18,9 @@ export function HouseCard({ house, from }: HouseCardProps) {
   const [hover, setHover] = useState(false);
   const [openCriticalModal, setOpenCriticalModal] = useState(false);
   const [openSuccessModal, setOpenSuccessModal] = useState(false);
+  const [housesLenBefore, setHousesLenBefore] = useState(0);
   const { setSelectedHouse, houses } = useHouse();
+  const router = useRouter();
 
   return (
     <Card className="p-4 bg-white border border-gray-200 transition-transform duration-300 hover:scale-105 hover:shadow-lg">
@@ -39,7 +42,7 @@ export function HouseCard({ house, from }: HouseCardProps) {
           </div>
         </Link>
 
-        {from == "management" && houses.length > 1 && (
+        {from == "management" && (
           <div
             className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center cursor-pointer"
             onMouseEnter={() => setHover(true)}
@@ -66,6 +69,8 @@ export function HouseCard({ house, from }: HouseCardProps) {
         text={`Are you sure you want to leave house ${house.name}?`}
         onAction={async () => {
           try {
+            setHousesLenBefore(houses.length);
+
             const response = await userService.leaveHouse({
               houseId: house.id,
             });
@@ -83,7 +88,11 @@ export function HouseCard({ house, from }: HouseCardProps) {
         onOpenChange={(open) => {
           setOpenSuccessModal(open);
           if (!open) {
-            window.location.reload();
+            if (housesLenBefore > 1) {
+              window.location.reload();
+            } else {
+              router.push("/join-house");
+            }
           }
         }}
         text={`You have successfully left house ${house.name}`}
