@@ -27,6 +27,10 @@ class NotificationService {
   async markAllAsRead(): Promise<void> {
     await apiPatch("/notifications", {}, { requiresAuth: true });
   }
+
+  async dismiss(notificationId: string): Promise<void> {
+    await apiPatch(`/notifications/${notificationId}/dismiss`, {}, { requiresAuth: true });
+  }
 }
 
 export const notificationService = new NotificationService();

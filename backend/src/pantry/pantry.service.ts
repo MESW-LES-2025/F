@@ -1,10 +1,14 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { UpdatePantryDto } from './dto/update-pantry.dto';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from 'src/notifications/notifications.service';
 
 @Injectable()
 export class PantryService {
-	constructor(private prisma: PrismaService) {}
+	constructor(
+		private prisma: PrismaService,
+		private notificationsService: NotificationsService,
+	) {}
 
 	// The pantry create will only be called when a new house is created
 	async create(houseId: string) {
@@ -99,7 +103,7 @@ export class PantryService {
 
 		const existingItems = await this.prisma.pantryToItem.findMany({
 			where: { pantryId: pantry.id },
-			select: { itemId: true, id: true },
+			select: { itemId: true, id: true, quantity: true },
 		});
 
 		const existingItemIds = existingItems.map((i) => i.itemId);
@@ -144,6 +148,39 @@ export class PantryService {
 					if (i.expiryDate) {
 						updateData.expiryDate = new Date(i.expiryDate);
 					}
+
+					const isLowStock =
+						typeof i.quantity === 'number' && i.quantity <= 1;
+					if (isLowStock) {
+						const houseUsers = await this.prisma.houseToUser.findMany({
+							where: { houseId },
+							select: { userId: true },
+						});
+
+						const pantryItem = await this.prisma.pantryItem.findUnique({
+							where: { id: i.itemId },
+							select: {
+							name: true,
+							measurementUnit: true,
+							},
+						});
+
+						const userIds = houseUsers.map((u) => u.userId);
+
+						if (userIds.length > 0) {
+							const itemName = pantryItem?.name ?? 'Pantry item';
+							await this.notificationsService.create({
+								category: 'PANTRY',
+								level: 'MEDIUM',
+								title: `${itemName} is low on stock in the Pantry!`,
+								body: undefined,
+								userIds,
+								houseId,
+								actionUrl: undefined,
+							});
+						}
+					}
+
 					return await this.prisma.pantryToItem.update({
 						where: {
 							pantryId_itemId: {

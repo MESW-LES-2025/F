@@ -246,9 +246,11 @@ export class UserService {
 				where: {
 					userId: existingUser.id,
 					isRead: false,
+					deletedAt: null,
 					notification: {
 						category: NotificationCategory.HOUSE,
-						actionUrl: house.id,
+						body: { contains: house.invitationCode },
+						actionUrl: '/invite',
 					},
 				},
 			});
@@ -265,7 +267,8 @@ export class UserService {
 			userIds: [existingUser.id],
 			level: NotificationLevel.MEDIUM,
 			category: NotificationCategory.HOUSE,
-			actionUrl: house.id,
+			actionUrl: '/invite',
+			houseId: existingHouse.id,
 		});
 	}
 }

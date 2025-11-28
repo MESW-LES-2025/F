@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PantryService } from './pantry.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import { NotFoundException } from '@nestjs/common';
 
 describe('PantryService', () => {
@@ -29,6 +30,10 @@ describe('PantryService', () => {
 				{
 					provide: PrismaService,
 					useValue: mockPrisma,
+				},
+				{
+					provide: NotificationsService,
+					useValue: { create: jest.fn() },
 				},
 			],
 		}).compile();

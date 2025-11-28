@@ -599,6 +599,7 @@ describe('UserService', () => {
 				notificationId: 'notification-id',
 				isRead: false,
 				readAt: null,
+				deletedAt: null,
 				createdAt: new Date(),
 				updatedAt: new Date(),
 			});
@@ -650,7 +651,8 @@ describe('UserService', () => {
 				userIds: [mockInvitedUser.id],
 				level: NotificationLevel.MEDIUM,
 				category: NotificationCategory.HOUSE,
-				actionUrl: mockHouse.id,
+				actionUrl: '/invite',
+				houseId: mockHouse.id,
 			});
 
 			expect(result).toEqual(notificationResult);

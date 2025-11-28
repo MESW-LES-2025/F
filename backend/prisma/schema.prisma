@@ -60,6 +60,7 @@ model House {
   pantryItems    PantryItem[]
   tasks          Task[]
   expenses       Expense[]
+  notifications  Notification[]
 }
 
 model HouseToUser {
@@ -111,6 +112,8 @@ model PantryToItem {
   quantity       Float
   updatedAt      DateTime   @updatedAt
   expiryDate     DateTime?
+  lastLowStockNotificationAt DateTime?
+  lastExpiryNotificationAt   DateTime?
   item           PantryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   user           User       @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
   pantry         Pantry     @relation(fields: [pantryId], references: [id], onDelete: Cascade)
@@ -170,6 +173,8 @@ model Notification {
   body        String?
   actionUrl   String?
   createdAt   DateTime @default(now())
+  houseId     String?  @db.Uuid
+  house       House?   @relation(fields: [houseId], references: [id], onDelete: Cascade)
 
   deliveredTo NotificationToUser[]
 }
@@ -184,9 +189,11 @@ model NotificationToUser {
   updatedAt       DateTime @updatedAt
   user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   notification    Notification    @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  deletedAt       DateTime?
 
   @@index([userId, isRead])
   @@index([notificationId])
+  @@index([userId, deletedAt])
 }
 
 enum PantryCategory {
@@ -216,6 +223,7 @@ enum NotificationCategory {
   HOUSE
   PANTRY 
   EXPENSES 
+  SCRUM
   OTHER
 }
 

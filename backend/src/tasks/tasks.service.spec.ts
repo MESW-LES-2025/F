@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TasksService } from './tasks.service';
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 import {
 	NotFoundException,
 	ForbiddenException,
@@ -8,6 +9,8 @@ import {
 } from '@nestjs/common';
 import { CreateTaskDto, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+
+const asMatcher = <T>(value: unknown) => value as T;
 
 describe('TasksService', () => {
 	let service: TasksService;
@@ -30,6 +33,10 @@ describe('TasksService', () => {
 			findMany: jest.fn(),
 			findFirst: jest.fn(),
 		},
+	};
+
+	const mockNotificationsService: Pick<NotificationsService, 'create'> = {
+		create: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 	};
 
 	const mockAssignee = {
@@ -75,6 +82,10 @@ describe('TasksService', () => {
 				{
 					provide: PrismaService,
 					useValue: mockPrismaService,
+				},
+				{
+					provide: NotificationsService,
+					useValue: mockNotificationsService,
 				},
 			],
 		}).compile();
@@ -161,6 +172,15 @@ describe('TasksService', () => {
 					},
 				},
 			});
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					category: asMatcher<string>(expect.any(String)),
+					title: asMatcher<string>(
+						expect.stringContaining('Task assigned'),
+					),
+					userIds: [createTaskDto.assigneeId],
+				}),
+			);
 		});
 
 		it('should throw NotFoundException when assignee does not exist', async () => {
@@ -573,6 +593,36 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.delete).toHaveBeenCalledWith({
 				where: { id: 'task-123' },
 			});
+		});
+
+		it('should emit completion notification when status transitions to done', async () => {
+			const previousTask = { ...mockTask, status: 'doing' };
+			const completedTask = { ...mockTask, status: 'done' };
+			mockPrismaService.task.findUnique.mockResolvedValue(previousTask);
+			mockPrismaService.task.update.mockResolvedValue(completedTask);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123' },
+				{ userId: 'user-456' },
+			]);
+
+			await service.update(
+				'task-123',
+				{ status: TaskStatus.DONE },
+				'user-456',
+			);
+
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					category: 'SCRUM',
+					title: asMatcher<string>(
+						expect.stringContaining('Task completed'),
+					),
+					userIds: asMatcher<string[]>(
+						expect.arrayContaining(['user-123', 'user-456']),
+					),
+					actionUrl: asMatcher<string>('/activities'),
+				}),
+			);
 		});
 
 		it('should throw ForbiddenException when user is not the creator', async () => {
