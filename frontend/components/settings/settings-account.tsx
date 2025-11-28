@@ -11,14 +11,11 @@ import { useAuth } from "@/lib/auth-context";
 import { profileService } from "@/lib/profile-service";
 
 export default function AccountSettings() {
-  const router = useRouter();
-  const { logout, user, logoutAllDevices, updateUser } = useAuth();
+  const { user, updateUser } = useAuth();
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [username, setUsername] = useState("");
   const [isSaving, setIsSaving] = useState(false);
-  const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [logoutAllLoading, setLogoutAllLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -54,10 +51,12 @@ export default function AccountSettings() {
             id="email"
             type="email"
             value={email}
-            onChange={(e: ChangeEvent<HTMLInputElement>) =>
-              setEmail(e.target.value)
-            }
+            disabled
+            className="bg-muted text-muted-foreground cursor-not-allowed"
           />
+          <p className="text-xs text-muted-foreground">
+            Email cannot be changed
+          </p>
         </div>
         <div className="grid gap-2">
           <Label htmlFor="username">Username</Label>
@@ -74,16 +73,16 @@ export default function AccountSettings() {
             setError(null);
             setSuccessMessage(null);
 
-            if (!name || !email || !username) {
+            if (!name || !username) {
               setError("Please fill in all fields");
               return;
             }
 
             setIsSaving(true);
             try {
+              // Don't send email in update
               const updated = await profileService.updateProfile({
                 name,
-                email,
                 username,
               });
               setSuccessMessage("Profile updated successfully");
