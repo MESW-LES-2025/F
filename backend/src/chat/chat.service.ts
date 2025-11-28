@@ -313,18 +313,20 @@ export class ChatService {
 		const now = new Date();
 
 		// Trigger events
-		for (const msg of messages) {
-			this.websocketService.trigger(
-				`house-${msg.houseId}-chat`,
-				'message-read',
-				{
-					messageId: msg.id,
-					userId,
-					readAt: now.toISOString(),
-					user,
-				},
-			);
-		}
+		await Promise.all(
+			messages.map((msg) =>
+				this.websocketService.trigger(
+					`house-${msg.houseId}-chat`,
+					'message-read',
+					{
+						messageId: msg.id,
+						userId,
+						readAt: now.toISOString(),
+						user,
+					},
+				),
+			),
+		);
 
 		return { count: newIds.length };
 	}

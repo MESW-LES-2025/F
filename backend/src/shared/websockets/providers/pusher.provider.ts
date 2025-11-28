@@ -29,7 +29,7 @@ export class PusherWebsocketProvider implements WebsocketProvider {
 		} catch (error) {
 			this.logger.error(
 				`Failed to trigger event ${event} on channel ${channel}`,
-				error.stack,
+				error instanceof Error ? error.stack : String(error),
 			);
 			throw error;
 		}
