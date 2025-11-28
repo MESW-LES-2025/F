@@ -63,6 +63,32 @@ export interface User {
   createdAt?: string;
 }
 
+export interface ChatMessageUserSummary {
+  id: string;
+  name: string;
+  imageUrl?: string; // optional avatar/image
+}
+
+export interface ChatMessage {
+  id: string;
+  content: string;
+  userId: string;
+  houseId: string;
+  parentId?: string | null;
+  parent?: Partial<ChatMessage> | null;
+  user?: ChatMessageUserSummary | null;
+  createdAt: string;
+  updatedAt: string;
+  readLogs?: {
+    userId: string;
+    readAt: string;
+    user: {
+      id: string;
+      name: string;
+    };
+  }[];
+}
+
 // Notifications
 export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "OTHER";
 
