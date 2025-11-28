@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -17,6 +18,7 @@ import * as multer from 'multer';
 	providers: [AppService],
 	imports: [
 		MulterModule.register({ storage: multer.memoryStorage() }),
+		ScheduleModule.forRoot(),
 		AuthModule,
 		HouseModule,
 		PantryModule,

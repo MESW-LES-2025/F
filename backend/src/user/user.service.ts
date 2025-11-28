@@ -29,6 +29,7 @@ export class UserService {
 				username: true,
 				name: true,
 				imageUrl: true,
+				googleId: true,
 				createdAt: true,
 				updatedAt: true,
 			},
@@ -50,12 +51,11 @@ export class UserService {
 			throw new NotFoundException('User not found');
 		}
 
-		const { email, username, name } = updateUserDto;
+		const { username, name } = updateUserDto;
 
 		const updated = await this.prisma.user.update({
 			where: { id },
 			data: {
-				...(email ? { email } : {}),
 				...(username ? { username } : {}),
 				...(name !== undefined ? { name } : {}),
 			},
@@ -64,6 +64,8 @@ export class UserService {
 				email: true,
 				username: true,
 				name: true,
+				imageUrl: true,
+				googleId: true,
 				createdAt: true,
 				updatedAt: true,
 			},
@@ -244,9 +246,11 @@ export class UserService {
 				where: {
 					userId: existingUser.id,
 					isRead: false,
+					deletedAt: null,
 					notification: {
 						category: NotificationCategory.HOUSE,
-						actionUrl: house.id,
+						body: { contains: house.invitationCode },
+						actionUrl: '/invite',
 					},
 				},
 			});
@@ -263,7 +267,8 @@ export class UserService {
 			userIds: [existingUser.id],
 			level: NotificationLevel.MEDIUM,
 			category: NotificationCategory.HOUSE,
-			actionUrl: house.id,
+			actionUrl: '/invite',
+			houseId: existingHouse.id,
 		});
 	}
 
