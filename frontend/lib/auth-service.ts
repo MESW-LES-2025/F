@@ -149,7 +149,7 @@ class AuthService {
     return !!this.accessToken;
   }
 
-  private setTokens(accessToken: string, refreshToken: string): void {
+  public setTokens(accessToken: string, refreshToken: string): void {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
 

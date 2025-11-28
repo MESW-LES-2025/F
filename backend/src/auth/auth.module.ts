@@ -5,6 +5,7 @@ import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { UsersController } from './users.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { GoogleStrategy } from './strategies/google.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
 import { EmailModule } from '../shared/email/email.module';
 
@@ -19,7 +20,7 @@ import { EmailModule } from '../shared/email/email.module';
 		}),
 	],
 	controllers: [AuthController, UsersController],
-	providers: [AuthService, JwtStrategy],
+	providers: [AuthService, JwtStrategy, GoogleStrategy],
 	exports: [AuthService],
 })
 export class AuthModule {}

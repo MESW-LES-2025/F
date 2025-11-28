@@ -31,6 +31,7 @@ model User {
   resetTokenExpiry DateTime?
   isEmailVerified  Boolean        @default(false)
   verificationToken String?       @db.VarChar(500)
+  googleId         String?        @unique @db.VarChar(255)
 }
 
 model RefreshToken {
