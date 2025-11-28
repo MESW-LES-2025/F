@@ -26,6 +26,7 @@ describe('UserController', () => {
 			.fn()
 			.mockResolvedValue({ houseId: 'house-id-1' }),
 		inviteToHouse: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
+		leaveHouse: jest.fn().mockResolvedValue({ houseId: 'house-id-1' }),
 	};
 
 	const mockHouseService = {
@@ -125,5 +126,23 @@ describe('UserController', () => {
 		);
 
 		expect(result).toEqual(mockNotificationResult);
+	});
+
+	it('leaveHouse should call userService.leaveHouse and return success', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		const dto = { houseId: 'house-id-1' };
+
+		const mockLeaveResult = { success: true };
+		mockUserService.leaveHouse = jest
+			.fn()
+			.mockResolvedValue(mockLeaveResult);
+
+		const result = await controller.leaveHouse(req, dto);
+
+		expect(mockUserService.leaveHouse).toHaveBeenCalledWith(
+			mockUser.id,
+			dto.houseId,
+		);
+		expect(result).toEqual(mockLeaveResult);
 	});
 });

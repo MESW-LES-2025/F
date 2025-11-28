@@ -271,4 +271,29 @@ export class UserService {
 			houseId: existingHouse.id,
 		});
 	}
+
+	async leaveHouse(userId: string, houseId: string) {
+		const house = await this.prisma.house.findUnique({
+			where: { id: houseId },
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found');
+		}
+
+		const existingRelation = await this.prisma.houseToUser.findFirst({
+			where: {
+				houseId: house.id,
+				userId,
+			},
+		});
+
+		if (!existingRelation) {
+			throw new NotFoundException('The user is not in the house');
+		}
+
+		return await this.prisma.houseToUser.delete({
+			where: { id: existingRelation.id },
+		});
+	}
 }

@@ -87,3 +87,11 @@ export interface UserNotification {
   createdAt: string;
   notification: NotificationPayload;
 }
+
+export interface HouseToUser {
+  id: string;
+  houseId: string;
+  userId: string;
+  joinedAt: Date;
+  role: string | null;
+}
