@@ -5,7 +5,7 @@ import { houseService } from "@/lib/house-service";
 import { House } from "@/lib/types";
 import { HouseList } from "@/components/house-list";
 
-export default function SettingsPage() {
+export default function ChooseHousePage() {
   const [houses, setHouses] = useState<House[]>([]);
 
   useEffect(() => {
