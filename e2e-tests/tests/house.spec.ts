@@ -69,12 +69,8 @@ test.describe("House Acceptance Tests", () => {
       await page.fill('input[name="password"]', testUser1.password);
       await page.click('button[type="submit"]');
 
-      // User is redirected to the login page
-      await expect(page).toHaveURL("/login");
-
-	  await page.fill('input[name="email"]', testUser1.email);
-	  await page.fill('input[name="password"]', testUser1.password);
-	  await page.click('button[type="submit"]');
+      // User is redirected to join house page (since they have no house)
+      await expect(page).toHaveURL("/join-house");
 
       // Fill in create house form with
       await page.fill("#house-name", testHouses[0].name);
