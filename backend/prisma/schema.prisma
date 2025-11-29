@@ -32,6 +32,8 @@ model User {
   isEmailVerified  Boolean        @default(false)
   verificationToken String?       @db.VarChar(500)
   googleId         String?        @unique @db.VarChar(255)
+  chatMessages      ChatMessage[]
+  MessageReadLog    MessageReadLog[]
 }
 
 model RefreshToken {
@@ -60,6 +62,7 @@ model House {
   pantryItems    PantryItem[]
   tasks          Task[]
   expenses       Expense[]
+  chatMessages   ChatMessage[]
   notifications  Notification[]
 }
 
@@ -194,6 +197,41 @@ model NotificationToUser {
   @@index([userId, isRead])
   @@index([notificationId])
   @@index([userId, deletedAt])
+}
+
+model ChatMessage {
+  id        String        @id @default(uuid()) @db.Uuid
+  content   String        @db.VarChar(500)
+  userId    String        @db.Uuid
+  houseId   String        @db.Uuid
+  parentId  String?       @db.Uuid
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+  user      User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  house     House         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  parent    ChatMessage?  @relation("MessageReplies", fields: [parentId], references: [id], onDelete: SetNull)
+  replies   ChatMessage[] @relation("MessageReplies")
+
+  readLogs MessageReadLog[]
+
+  @@index([userId])
+  @@index([houseId])
+  @@index([userId, houseId])
+  @@index([parentId])
+}
+
+model MessageReadLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  messageId String   @db.Uuid
+  userId    String   @db.Uuid
+  readAt    DateTime @default(now())
+
+  message ChatMessage @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  user    User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([messageId, userId])
+  @@index([messageId])
+  @@index([userId])
 }
 
 enum PantryCategory {

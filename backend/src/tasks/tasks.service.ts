@@ -102,7 +102,8 @@ export class TasksService {
 		});
 
 		// Emit SCRUM assignment notification
-		if (task.assigneeId !== task.createdById) {    // send only if assignee is different from the creator
+		if (task.assigneeId !== task.createdById) {
+			// send only if assignee is different from the creator
 			try {
 				await this.notificationsService.create({
 					category: NotificationCategory.SCRUM,
@@ -114,7 +115,10 @@ export class TasksService {
 					houseId: task.houseId,
 				});
 			} catch (err) {
-				console.error('[TasksService] Failed to create assignment notification', err);
+				console.error(
+					'[TasksService] Failed to create assignment notification',
+					err,
+				);
 			}
 		}
 
@@ -450,7 +454,10 @@ export class TasksService {
 					houseId: updatedTask.houseId,
 				});
 			} catch (err) {
-				console.error('[TasksService] Failed to create completion notification', err);
+				console.error(
+					'[TasksService] Failed to create completion notification',
+					err,
+				);
 			}
 		}
 

@@ -6,15 +6,15 @@ env:
   VERCEL_PROD_DOMAIN: ${{ secrets.VERCEL_PROD_DOMAIN }}
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "frontend/**"   # Only trigger when files in /frontend change
+  workflow_run:
+    workflows: ["Acceptance Tests"]
+    types:
+      - completed
 
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     steps:
       - uses: actions/checkout@v4
 

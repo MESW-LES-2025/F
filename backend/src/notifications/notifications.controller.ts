@@ -66,10 +66,7 @@ export class NotificationsController {
 	@ApiOperation({ summary: 'Dismiss one notification for a user' })
 	@Patch(':id/dismiss')
 	dismissOneByUser(@Param('id') id: string, @Request() req: UserRequest) {
-		return this.notificationsService.dismissOneByUser(
-			req.user.userId,
-			id,
-		);
+		return this.notificationsService.dismissOneByUser(req.user.userId, id);
 	}
 
 	@UseGuards(JwtAuthGuard)
