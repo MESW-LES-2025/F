@@ -56,7 +56,6 @@ class AuthService {
         password,
         name,
       });
-      this.setTokens(data.access_token, data.refresh_token);
       return data;
     } catch (error) {
       if (error instanceof ApiError) {
@@ -150,7 +149,7 @@ class AuthService {
     return !!this.accessToken;
   }
 
-  private setTokens(accessToken: string, refreshToken: string): void {
+  public setTokens(accessToken: string, refreshToken: string): void {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
 
@@ -170,6 +169,36 @@ class AuthService {
       // Remove from cookies only
       this.removeCookie('access_token');
       this.removeCookie('refresh_token');
+    }
+  }
+
+  /**
+   * Request password reset
+   */
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    return apiPost<{ message: string }>('/auth/forgot-password', { email });
+  }
+
+  /**
+   * Reset password
+   */
+  async resetPassword(token: string, password: string): Promise<{ message: string }> {
+    return apiPost<{ message: string }>('/auth/reset-password', { token, password });
+  }
+
+  /**
+   * Verify email
+   */
+  async verifyEmail(token: string): Promise<AuthResponse> {
+    try {
+      const data = await apiPost<AuthResponse>('/auth/verify-email', { token });
+      this.setTokens(data.access_token, data.refresh_token);
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw error;
     }
   }
 }

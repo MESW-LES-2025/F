@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { AuthModule } from './auth/auth.module';
@@ -10,6 +11,7 @@ import { UserModule } from './user/user.module';
 import { ExpenseModule } from './expense/expense.module';
 import { MulterModule } from '@nestjs/platform-express';
 import { NotificationsModule } from './notifications/notifications.module';
+import { ChatModule } from './chat/chat.module';
 import * as multer from 'multer';
 
 @Module({
@@ -17,6 +19,7 @@ import * as multer from 'multer';
 	providers: [AppService],
 	imports: [
 		MulterModule.register({ storage: multer.memoryStorage() }),
+		ScheduleModule.forRoot(),
 		AuthModule,
 		HouseModule,
 		PantryModule,
@@ -25,6 +28,7 @@ import * as multer from 'multer';
 		UserModule,
 		ExpenseModule,
 		NotificationsModule,
+		ChatModule,
 	],
 })
 export class AppModule {}

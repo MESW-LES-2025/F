@@ -44,8 +44,12 @@ test.describe("House Acceptance Tests", () => {
       await page.check("input#terms");
       await page.click('button[type="submit"]');
 
-      // User is redirected to join house page
-      await expect(page).toHaveURL("/join-house");
+      // User is redirected to login page
+      await expect(page).toHaveURL("/login");
+
+	  await page.fill('input[name="email"]', testUser1.email);
+	  await page.fill('input[name="password"]', testUser1.password);
+	  await page.click('button[type="submit"]');
 
       // Timeout
       await page.waitForTimeout(1000);
@@ -65,8 +69,12 @@ test.describe("House Acceptance Tests", () => {
       await page.fill('input[name="password"]', testUser1.password);
       await page.click('button[type="submit"]');
 
-      // User is redirected to the join house page
-      await expect(page).toHaveURL("/join-house");
+      // User is redirected to the login page
+      await expect(page).toHaveURL("/login");
+
+	  await page.fill('input[name="email"]', testUser1.email);
+	  await page.fill('input[name="password"]', testUser1.password);
+	  await page.click('button[type="submit"]');
 
       // Fill in create house form with
       await page.fill("#house-name", testHouses[0].name);
@@ -137,8 +145,12 @@ test.describe("House Acceptance Tests", () => {
       await page.check("input#terms");
       await page.click('button[type="submit"]');
 
-      // User is redirected to join house page
-      await expect(page).toHaveURL("/join-house");
+      // User is redirected to login page
+      await expect(page).toHaveURL("/login");
+
+	  await page.fill('input[name="email"]', testUser2.email);
+	  await page.fill('input[name="password"]', testUser2.password);
+	  await page.click('button[type="submit"]');
 
       // Timeout
       await page.waitForTimeout(1000);

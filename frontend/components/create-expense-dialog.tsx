@@ -170,6 +170,22 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
 
     try {
       // Create the expense via API
+      // For today's date, use current time; for past dates, use noon to avoid timezone issues
+      const selectedDate = new Date(formData.date)
+      const today = new Date()
+      today.setHours(0, 0, 0, 0)
+      selectedDate.setHours(0, 0, 0, 0)
+
+      let expenseDate: Date
+      if (selectedDate.getTime() === today.getTime()) {
+        // Use current timestamp for today
+        expenseDate = new Date()
+      } else {
+        // Use noon for past dates to avoid timezone edge cases
+        expenseDate = new Date(formData.date)
+        expenseDate.setHours(12, 0, 0, 0)
+      }
+
       const newExpense = await createExpense({
         amount: parseFloat(formData.amount),
         description: formData.description.trim(),
@@ -177,7 +193,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         paidById: formData.paidBy,
         houseId: selectedHouse.id,
         splitWith: formData.splitWith,
-        date: new Date(formData.date).toISOString(),
+        date: expenseDate.toISOString(),
       })
 
       // Call the callback with the new expense

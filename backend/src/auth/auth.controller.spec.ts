@@ -12,6 +12,7 @@ describe('AuthController', () => {
 		refreshToken: jest.fn(),
 		logout: jest.fn(),
 		logoutAll: jest.fn(),
+		verifyEmail: jest.fn(),
 	};
 
 	const mockUser = {
@@ -155,6 +156,27 @@ describe('AuthController', () => {
 			expect(result).toEqual(logoutAllResponse);
 			expect(mockAuthService.logoutAll).toHaveBeenCalledWith(
 				mockRequest.user.userId,
+			);
+		});
+	});
+
+	describe('verifyEmail', () => {
+		const verifyEmailDto = {
+			token: 'valid_verification_token',
+		};
+
+		it('should verify email', async () => {
+			const verifyResponse = {
+				message: 'Email verified successfully',
+				user: mockUser,
+			};
+			mockAuthService.verifyEmail.mockResolvedValue(verifyResponse);
+
+			const result = await controller.verifyEmail(verifyEmailDto);
+
+			expect(result).toEqual(verifyResponse);
+			expect(mockAuthService.verifyEmail).toHaveBeenCalledWith(
+				verifyEmailDto.token,
 			);
 		});
 	});

@@ -25,6 +25,7 @@ export class NotificationsService {
 				title: dto.title,
 				body: dto.body,
 				actionUrl: dto.actionUrl,
+				houseId: dto.houseId,
 				deliveredTo: {
 					createMany: {
 						data: users.map((user) => {
@@ -42,7 +43,6 @@ export class NotificationsService {
 		userId: string,
 		filters: FindAllNotificationsByUserDto,
 	) {
-		// Ensure isRead is a boolean (query params may arrive as strings)
 		let isReadFilter: boolean | undefined;
 		const rawIsRead: unknown = (filters as Record<string, unknown>)?.isRead;
 		if (typeof rawIsRead === 'string') {
@@ -56,6 +56,7 @@ export class NotificationsService {
 		return await this.prisma.notificationToUser.findMany({
 			where: {
 				userId,
+				deletedAt: null,
 				...(isReadFilter !== undefined && { isRead: isReadFilter }),
 				notification: {
 					...(filters.category && { category: filters.category }),
@@ -63,6 +64,7 @@ export class NotificationsService {
 				},
 			},
 			select: {
+				id: true,
 				userId: true,
 				isRead: true,
 				readAt: true,
@@ -75,6 +77,7 @@ export class NotificationsService {
 						actionUrl: true,
 						level: true,
 						category: true,
+						houseId: true,
 					},
 				},
 			},
@@ -82,9 +85,11 @@ export class NotificationsService {
 	}
 
 	async findOneByUser(userId: string, notificationId: string) {
-		const notification = await this.prisma.notificationToUser.findFirst({
-			where: { notificationId, userId },
+		// Robust: allow param to be either NotificationToUser.id OR Notification.id
+		let notification = await this.prisma.notificationToUser.findFirst({
+			where: { id: notificationId, userId, deletedAt: null },
 			select: {
+				id: true,
 				userId: true,
 				isRead: true,
 				readAt: true,
@@ -103,6 +108,29 @@ export class NotificationsService {
 		});
 
 		if (!notification) {
+			notification = await this.prisma.notificationToUser.findFirst({
+				where: { notificationId, userId, deletedAt: null },
+				select: {
+					id: true,
+					userId: true,
+					isRead: true,
+					readAt: true,
+					createdAt: true,
+					notification: {
+						select: {
+							id: true,
+							title: true,
+							body: true,
+							actionUrl: true,
+							level: true,
+							category: true,
+						},
+					},
+				},
+			});
+		}
+
+		if (!notification) {
 			throw new NotFoundException(
 				'No notification found with the id provided',
 			);
@@ -111,11 +139,19 @@ export class NotificationsService {
 		return notification;
 	}
 
-	async markOneAsReadByUser(userId: string, notificationId: string) {
-		const existingNotification =
+	async markOneAsReadByUser(userId: string, paramId: string) {
+		// Try treating param as row id first; fallback to notificationId
+		let existingNotification =
 			await this.prisma.notificationToUser.findFirst({
-				where: { notificationId, userId },
+				where: { id: paramId, userId, deletedAt: null },
 			});
+
+		if (!existingNotification) {
+			existingNotification =
+				await this.prisma.notificationToUser.findFirst({
+					where: { notificationId: paramId, userId, deletedAt: null },
+				});
+		}
 
 		if (!existingNotification) {
 			throw new NotFoundException(
@@ -124,7 +160,7 @@ export class NotificationsService {
 		}
 
 		return this.prisma.notificationToUser.update({
-			where: { id: existingNotification.id, userId },
+			where: { id: existingNotification.id },
 			data: {
 				isRead: true,
 				readAt: new Date(),
@@ -135,7 +171,7 @@ export class NotificationsService {
 	async markAllAsReadByUser(userId: string) {
 		const existingNotifications =
 			await this.prisma.notificationToUser.findMany({
-				where: { userId },
+				where: { userId, deletedAt: null },
 			});
 
 		if (!existingNotifications.length) {
@@ -145,10 +181,37 @@ export class NotificationsService {
 		}
 
 		return this.prisma.notificationToUser.updateMany({
-			where: { userId },
+			where: { userId, deletedAt: null },
 			data: {
 				isRead: true,
 				readAt: new Date(),
+			},
+		});
+	}
+
+	async dismissOneByUser(userId: string, paramId: string) {
+		let existingNotification =
+			await this.prisma.notificationToUser.findFirst({
+				where: { id: paramId, userId, deletedAt: null },
+			});
+
+		if (!existingNotification) {
+			existingNotification =
+				await this.prisma.notificationToUser.findFirst({
+					where: { notificationId: paramId, userId, deletedAt: null },
+				});
+		}
+
+		if (!existingNotification) {
+			throw new NotFoundException(
+				'No notification found with the id provided',
+			);
+		}
+
+		return this.prisma.notificationToUser.update({
+			where: { id: existingNotification.id },
+			data: {
+				deletedAt: new Date(),
 			},
 		});
 	}

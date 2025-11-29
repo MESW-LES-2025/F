@@ -14,6 +14,8 @@ import {
   Menu,
   X,
   HousePlus,
+  Bell,
+  MessageSquare,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { cn } from "@/lib/utils";
@@ -25,7 +27,9 @@ const navigation = [
   { name: "Expenses", href: "/expenses", icon: Zap },
   { name: "Pantry", href: "/pantry", icon: Users },
   { name: "Activities", href: "/activities", icon: Calendar },
+  { name: "Chat", href: "/chat", icon: MessageSquare },
   { name: "House", href: "/house", icon: HousePlus },
+  { name: "Notifications", href: "/notifications", icon: Bell },
 ];
 
 const support = [
