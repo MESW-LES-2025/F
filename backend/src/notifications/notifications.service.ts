@@ -85,7 +85,7 @@ export class NotificationsService {
 	}
 
 	async findOneByUser(userId: string, notificationId: string) {
-    // Robust: allow param to be either NotificationToUser.id OR Notification.id
+		// Robust: allow param to be either NotificationToUser.id OR Notification.id
 		let notification = await this.prisma.notificationToUser.findFirst({
 			where: { id: notificationId, userId, deletedAt: null },
 			select: {
@@ -108,26 +108,26 @@ export class NotificationsService {
 		});
 
 		if (!notification) {
-				notification = await this.prisma.notificationToUser.findFirst({
-					where: { notificationId, userId, deletedAt: null },
-					select: {
-						id: true,
-						userId: true,
-						isRead: true,
-						readAt: true,
-						createdAt: true,
-						notification: {
-							select: {
-								id: true,
-								title: true,
-								body: true,
-								actionUrl: true,
-								level: true,
-								category: true,
-							},
+			notification = await this.prisma.notificationToUser.findFirst({
+				where: { notificationId, userId, deletedAt: null },
+				select: {
+					id: true,
+					userId: true,
+					isRead: true,
+					readAt: true,
+					createdAt: true,
+					notification: {
+						select: {
+							id: true,
+							title: true,
+							body: true,
+							actionUrl: true,
+							level: true,
+							category: true,
 						},
 					},
-				});
+				},
+			});
 		}
 
 		if (!notification) {

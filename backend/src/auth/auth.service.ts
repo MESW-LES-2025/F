@@ -343,7 +343,7 @@ export class AuthService {
 		});
 
 		// Generate token string
-		const payload = { sub: userId, type: 'refresh' };
+		const payload = { sub: userId, type: 'refresh', jti: uuidv4() };
 		const token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
 		// Store in database

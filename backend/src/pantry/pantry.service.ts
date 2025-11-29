@@ -152,18 +152,20 @@ export class PantryService {
 					const isLowStock =
 						typeof i.quantity === 'number' && i.quantity <= 1;
 					if (isLowStock) {
-						const houseUsers = await this.prisma.houseToUser.findMany({
-							where: { houseId },
-							select: { userId: true },
-						});
+						const houseUsers =
+							await this.prisma.houseToUser.findMany({
+								where: { houseId },
+								select: { userId: true },
+							});
 
-						const pantryItem = await this.prisma.pantryItem.findUnique({
-							where: { id: i.itemId },
-							select: {
-							name: true,
-							measurementUnit: true,
-							},
-						});
+						const pantryItem =
+							await this.prisma.pantryItem.findUnique({
+								where: { id: i.itemId },
+								select: {
+									name: true,
+									measurementUnit: true,
+								},
+							});
 
 						const userIds = houseUsers.map((u) => u.userId);
 
