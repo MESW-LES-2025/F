@@ -20,6 +20,15 @@ interface JwtPayload {
 	type?: string;
 }
 
+export interface GoogleUser {
+	email: string;
+	firstName: string;
+	lastName: string;
+	picture: string;
+	googleId: string;
+	accessToken: string;
+}
+
 @Injectable()
 export class AuthService {
 	constructor(
@@ -101,6 +110,7 @@ export class AuthService {
 				username: user.username,
 				name: user.name,
 				imageUrl: user.imageUrl,
+				googleId: user.googleId,
 			},
 		};
 	}
@@ -142,6 +152,7 @@ export class AuthService {
 				name: user.name,
 				imageUrl: user.imageUrl,
 				houses: user.houses,
+				googleId: user.googleId,
 			},
 		};
 	}
@@ -159,6 +170,7 @@ export class AuthService {
 				email: true,
 				password: true,
 				imageUrl: true,
+				googleId: true,
 				isEmailVerified: true,
 				verificationToken: true,
 				houses: {
@@ -221,6 +233,97 @@ export class AuthService {
 				name: user.name,
 				imageUrl: user.imageUrl,
 				houses: user.houses,
+				googleId: user.googleId,
+			},
+		};
+	}
+
+	async validateGoogleUser(googleUser: GoogleUser) {
+		const { email, firstName, lastName, picture, googleId } = googleUser;
+
+		// 1. Try to find user by googleId first
+		let user = await this.prisma.user.findUnique({
+			where: { googleId },
+		});
+
+		// 2. If not found by googleId, try to find by email
+		if (!user) {
+			user = await this.prisma.user.findFirst({
+				where: { email },
+			});
+
+			if (user) {
+				// If user exists by email but doesn't have googleId, link it
+				if (!user.googleId) {
+					user = await this.prisma.user.update({
+						where: { id: user.id },
+						data: {
+							googleId,
+							imageUrl: user.imageUrl || picture,
+							deletedAt: null, // Restore user if deleted
+						},
+					});
+				}
+			}
+		} else if (user.deletedAt) {
+			// If user exists by googleId but is deleted, restore it
+			user = await this.prisma.user.update({
+				where: { id: user.id },
+				data: { deletedAt: null },
+			});
+		}
+
+		if (user) {
+			// Generate tokens
+			const accessToken = this.generateToken(user.id, user.email);
+			const refreshToken = await this.createRefreshToken(user.id);
+
+			return {
+				access_token: accessToken,
+				refresh_token: refreshToken,
+				expires_in: 900,
+				user: {
+					id: user.id,
+					email: user.email,
+					username: user.username,
+					name: user.name,
+					imageUrl: user.imageUrl,
+					googleId: user.googleId,
+				},
+			};
+		}
+
+		// 3. Create new user if not found by googleId or email
+		const password = uuidv4(); // Generate random password
+		const hashedPassword = await bcrypt.hash(password, 10);
+		const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+
+		const newUser = await this.prisma.user.create({
+			data: {
+				email,
+				username,
+				password: hashedPassword,
+				name: `${firstName} ${lastName}`,
+				imageUrl: picture,
+				googleId,
+				isEmailVerified: true, // Google verified email
+			},
+		});
+
+		const accessToken = this.generateToken(newUser.id, newUser.email);
+		const refreshToken = await this.createRefreshToken(newUser.id);
+
+		return {
+			access_token: accessToken,
+			refresh_token: refreshToken,
+			expires_in: 900,
+			user: {
+				id: newUser.id,
+				email: newUser.email,
+				username: newUser.username,
+				name: newUser.name,
+				imageUrl: newUser.imageUrl,
+				googleId: newUser.googleId,
 			},
 		};
 	}
@@ -355,9 +458,16 @@ export class AuthService {
 		// Find user
 		const user = await this.prisma.user.findFirst({
 			where: { id: userId, deletedAt: null },
+			select: { id: true, password: true, googleId: true },
 		});
 		if (!user) {
 			throw new UnauthorizedException('User not found');
+		}
+
+		if (user.googleId) {
+			throw new UnauthorizedException(
+				'Google accounts cannot change password',
+			);
 		}
 
 		// Verify current password
@@ -388,6 +498,15 @@ export class AuthService {
 
 		if (!user) {
 			// Don't reveal if user exists
+			return {
+				message:
+					'If a user with this email exists, a password reset link has been sent.',
+			};
+		}
+
+		if (user.googleId) {
+			// Don't allow password reset for Google accounts
+			// We still return the same message to avoid enumeration, but we don't send the email
 			return {
 				message:
 					'If a user with this email exists, a password reset link has been sent.',

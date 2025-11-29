@@ -2,7 +2,10 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationsService } from './notifications.service';
 import { PrismaService } from 'src/prisma/prisma.service';
 import { NotFoundException } from '@nestjs/common';
-import { NotificationCategory, NotificationLevel } from '@prisma/client';
+import { CreateNotificationDto } from './dto/create-notification.dto';
+import { FindAllNotificationsByUserDto } from './dto/find-all-by-user.dto';
+
+const asMatcher = <T>(value: unknown) => value as T;
 
 describe('NotificationsService', () => {
 	let service: NotificationsService;
@@ -60,11 +63,11 @@ describe('NotificationsService', () => {
 				createdNotification,
 			);
 
-			const dto = {
+			const dto: CreateNotificationDto = {
 				title: 'Test',
 				body: 'Body',
-				level: NotificationLevel.MEDIUM,
-				category: NotificationCategory.HOUSE,
+				level: 'MEDIUM',
+				category: 'HOUSE',
 				userIds: ['u1', 'u2'],
 			};
 
@@ -107,10 +110,10 @@ describe('NotificationsService', () => {
 				mockNotifications,
 			);
 
-			const filters = {
+			const filters: FindAllNotificationsByUserDto = {
 				isRead: false,
-				category: NotificationCategory.HOUSE,
-				level: NotificationLevel.HIGH,
+				category: 'HOUSE',
+				level: 'HIGH',
 			};
 
 			const result = await service.findAllByUser('u1', filters);
@@ -120,6 +123,7 @@ describe('NotificationsService', () => {
 			).toHaveBeenCalledWith({
 				where: {
 					userId: 'u1',
+					deletedAt: null,
 					isRead: false,
 					notification: {
 						category: 'HOUSE',
@@ -127,6 +131,7 @@ describe('NotificationsService', () => {
 					},
 				},
 				select: {
+					id: true,
 					userId: true,
 					isRead: true,
 					readAt: true,
@@ -139,6 +144,7 @@ describe('NotificationsService', () => {
 							actionUrl: true,
 							level: true,
 							category: true,
+							houseId: true,
 						},
 					},
 				},
@@ -159,8 +165,9 @@ describe('NotificationsService', () => {
 			expect(
 				mockPrismaService.notificationToUser.findFirst,
 			).toHaveBeenCalledWith({
-				where: { notificationId: 'notif1', userId: 'u1' },
+				where: { id: 'notif1', userId: 'u1', deletedAt: null },
 				select: {
+					id: true,
 					userId: true,
 					isRead: true,
 					readAt: true,
@@ -199,15 +206,19 @@ describe('NotificationsService', () => {
 
 			mockPrismaService.notificationToUser.update.mockResolvedValue({
 				success: true,
-			});
+			} as { success: boolean });
 
-			const result = await service.markOneAsReadByUser('u1', 'notif1');
+			const result: { success: boolean } =
+				await service.markOneAsReadByUser('u1', 'notif1');
 
 			expect(
 				mockPrismaService.notificationToUser.update,
 			).toHaveBeenCalledWith({
-				where: { id: 'ntu1', userId: 'u1' },
-				data: { isRead: true, readAt: expect.any(Date) as Date },
+				where: { id: 'ntu1' },
+				data: {
+					isRead: true,
+					readAt: asMatcher<Date>(expect.any(Date)),
+				},
 			});
 
 			expect(result).toEqual({ success: true });
@@ -230,15 +241,19 @@ describe('NotificationsService', () => {
 
 			mockPrismaService.notificationToUser.updateMany.mockResolvedValue({
 				count: 1,
-			});
+			} as { count: number });
 
-			const result = await service.markAllAsReadByUser('u1');
+			const result: { count: number } =
+				await service.markAllAsReadByUser('u1');
 
 			expect(
 				mockPrismaService.notificationToUser.updateMany,
 			).toHaveBeenCalledWith({
-				where: { userId: 'u1' },
-				data: { isRead: true, readAt: expect.any(Date) as Date },
+				where: { userId: 'u1', deletedAt: null },
+				data: {
+					isRead: true,
+					readAt: asMatcher<Date>(expect.any(Date)),
+				},
 			});
 
 			expect(result).toEqual({ count: 1 });

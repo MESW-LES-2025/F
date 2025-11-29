@@ -31,6 +31,7 @@ model User {
   resetTokenExpiry  DateTime?
   isEmailVerified   Boolean              @default(false)
   verificationToken String?              @db.VarChar(500)
+  googleId         String?        @unique @db.VarChar(255)
   chatMessages      ChatMessage[]
   MessageReadLog    MessageReadLog[]
 }
@@ -62,6 +63,7 @@ model House {
   tasks          Task[]
   expenses       Expense[]
   chatMessages   ChatMessage[]
+  notifications  Notification[]
 }
 
 model HouseToUser {
@@ -113,6 +115,8 @@ model PantryToItem {
   quantity       Float
   updatedAt      DateTime   @updatedAt
   expiryDate     DateTime?
+  lastLowStockNotificationAt DateTime?
+  lastExpiryNotificationAt   DateTime?
   item           PantryItem @relation(fields: [itemId], references: [id], onDelete: Cascade)
   user           User       @relation(fields: [modifiedByUser], references: [id], onDelete: Cascade)
   pantry         Pantry     @relation(fields: [pantryId], references: [id], onDelete: Cascade)
@@ -165,13 +169,15 @@ model Expense {
 }
 
 model Notification {
-  id        String                @id @default(uuid()) @db.Uuid
-  category  NotificationCategory?
-  level     NotificationLevel?
-  title     String
-  body      String?
-  actionUrl String?
-  createdAt DateTime              @default(now())
+  id          String   @id @default(uuid()) @db.Uuid
+  category    NotificationCategory?
+  level       NotificationLevel?
+  title       String
+  body        String?
+  actionUrl   String?
+  createdAt   DateTime @default(now())
+  houseId     String?  @db.Uuid
+  house       House?   @relation(fields: [houseId], references: [id], onDelete: Cascade)
 
   deliveredTo NotificationToUser[]
 }
@@ -186,6 +192,7 @@ model NotificationToUser {
   updatedAt      DateTime     @updatedAt
   user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   notification   Notification @relation(fields: [notificationId], references: [id], onDelete: Cascade)
+  deletedAt       DateTime?
 
   @@index([userId, isRead])
   @@index([notificationId])
@@ -251,8 +258,9 @@ enum ExpenseCategory {
 
 enum NotificationCategory {
   HOUSE
-  PANTRY
-  EXPENSES
+  PANTRY 
+  EXPENSES 
+  SCRUM
   OTHER
 }
 

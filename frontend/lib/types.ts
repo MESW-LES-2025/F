@@ -61,6 +61,7 @@ export interface User {
   avatar?: string;
   imageUrl?: string;
   createdAt?: string;
+  googleId?: string;
 }
 
 export interface ChatMessageUserSummary {
@@ -90,7 +91,7 @@ export interface ChatMessage {
 }
 
 // Notifications
-export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "OTHER";
+export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "SCRUM" | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
@@ -101,12 +102,22 @@ export interface NotificationPayload {
   actionUrl?: string | null;
   level?: NotificationLevel | null;
   category?: NotificationCategory | null;
+  houseId?: string | null;
 }
 
 export interface UserNotification {
+  id?: string; 
   userId: string;
   isRead: boolean;
   readAt?: string | null;
   createdAt: string;
   notification: NotificationPayload;
+}
+
+export interface HouseToUser {
+  id: string;
+  houseId: string;
+  userId: string;
+  joinedAt: Date;
+  role: string | null;
 }

@@ -1,21 +1,35 @@
-"use client"
+"use client";
 
-import PantryAddItem from "./pantry-add-item"
-import { HouseSelector } from "./house-selector"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import type { Dispatch, SetStateAction } from "react"
+import PantryAddItem from "./pantry-add-item";
+import { HouseSelector } from "./house/house-selector";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import type { Dispatch, SetStateAction } from "react";
 
 interface PantryHeaderProps {
-  category: string
-  setCategory: Dispatch<SetStateAction<string>>
-  status: string
-  setStatus: Dispatch<SetStateAction<string>>
-  addedBy: string
-  setAddedBy: Dispatch<SetStateAction<string>>
-  onItemAdded?: () => void
+  category: string;
+  setCategory: Dispatch<SetStateAction<string>>;
+  status: string;
+  setStatus: Dispatch<SetStateAction<string>>;
+  addedBy: string;
+  setAddedBy: Dispatch<SetStateAction<string>>;
+  onItemAdded?: () => void;
 }
 
-export function PantryHeader({ category, setCategory, status, setStatus, addedBy, setAddedBy, onItemAdded }: PantryHeaderProps) {
+export function PantryHeader({
+  category,
+  setCategory,
+  status,
+  setStatus,
+  addedBy,
+  setAddedBy,
+  onItemAdded,
+}: PantryHeaderProps) {
   return (
     <div className="bg-white border-b border-gray-200">
       <div className="px-6 py-4">
@@ -43,7 +57,9 @@ export function PantryHeader({ category, setCategory, status, setStatus, addedBy
                 <SelectItem value="FRUITS">Fruits</SelectItem>
                 <SelectItem value="MEAT">Meat</SelectItem>
                 <SelectItem value="FROZEN">Frozen</SelectItem>
-                <SelectItem value="CONDIMENTS">Household / Condiments</SelectItem>
+                <SelectItem value="CONDIMENTS">
+                  Household / Condiments
+                </SelectItem>
                 <SelectItem value="BEVERAGES">Beverages</SelectItem>
               </SelectContent>
             </Select>
@@ -80,5 +96,5 @@ export function PantryHeader({ category, setCategory, status, setStatus, addedBy
         </div>
       </div>
     </div>
-  )
+  );
 }
