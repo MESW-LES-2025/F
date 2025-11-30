@@ -50,6 +50,14 @@ model RefreshToken {
   @@index([token])
 }
 
+model GoogleAuthCode {
+  code         String   @id @default(uuid()) @db.Uuid
+  accessToken  String
+  refreshToken String
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+}
+
 model House {
   id             String        @id @default(uuid()) @db.Uuid
   name           String
