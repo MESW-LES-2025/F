@@ -186,12 +186,11 @@ class AuthService {
     return apiPost<{ message: string }>('/auth/reset-password', { token, password });
   }
 
-  /**
-   * Verify email
-   */
-  async verifyEmail(token: string): Promise<AuthResponse> {
+  async exchangeGoogleCode(code: string): Promise<AuthResponse> {
     try {
-      const data = await apiPost<AuthResponse>('/auth/verify-email', { token });
+      const data = await apiPost<AuthResponse>('/auth/google/exchange', {
+        code,
+      });
       this.setTokens(data.access_token, data.refresh_token);
       return data;
     } catch (error) {
