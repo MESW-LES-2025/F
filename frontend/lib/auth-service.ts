@@ -106,6 +106,20 @@ class AuthService {
       throw error;
     }
   }
+
+  async verifyEmail(token: string): Promise<AuthResponse> {
+    try {
+      const data = await apiPost<AuthResponse>('/auth/verify-email', {
+        token,
+      });
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
 }
 
 export const authService = new AuthService();

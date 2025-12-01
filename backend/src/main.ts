@@ -18,6 +18,9 @@ async function bootstrap() {
 		maxAge: 3600,
 	});
 
+	// Required for secure cookies behind load balancer
+	app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
 	app.use(cookieParser());
 
 	// Secure HTTP headers
