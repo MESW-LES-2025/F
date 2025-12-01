@@ -209,14 +209,15 @@ export class AuthController {
 	}
 
 	private clearCookies(res: Response) {
+		const isProduction = process.env.NODE_ENV === 'production';
 		res.clearCookie('access_token', {
 			path: '/',
-			secure: true,
+			secure: isProduction,
 			sameSite: 'strict',
 		});
 		res.clearCookie('refresh_token', {
 			path: '/',
-			secure: true,
+			secure: isProduction,
 			sameSite: 'strict',
 		});
 	}
