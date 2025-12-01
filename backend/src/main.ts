@@ -19,10 +19,12 @@ async function bootstrap() {
 		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 3600,
+		preflightContinue: false,
+		optionsSuccessStatus: 204,
 	});
 
 	// Required for secure cookies behind load balancer
-	app.set('trust proxy', 1);
+	app.set('trust proxy', true);
 
 	app.use(cookieParser());
 
