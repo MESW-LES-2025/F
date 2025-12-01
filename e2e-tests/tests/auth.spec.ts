@@ -130,8 +130,8 @@ test.describe('Auth Acceptance Tests', () => {
 			await page.click('button[type="submit"]');
 			await expect(page).toHaveURL('/join-house');
 
-			await page.goto('/settings');
-			await expect(page).toHaveURL('/settings');
+			await page.goto('/settings-without-house');
+			await expect(page).toHaveURL('/settings-without-house');
 			await page.getByRole('button', { name: 'Log Out', exact: true }).click();
 			await expect(page).toHaveURL('/login');
 		});	
@@ -165,7 +165,7 @@ test.describe('Auth Acceptance Tests', () => {
 			await expect(page).toHaveURL('/join-house');
 
 			// Navigate to settings
-			await page.goto('/settings');
+			await page.goto('/settings-without-house');
 			
 			// Open delete dialog
 			await page.getByRole('button', { name: 'Delete Account' }).click();
