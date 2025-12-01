@@ -3,7 +3,7 @@
  * Handles authentication, error handling, and request/response transformation
  */
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
+const API_BASE_URL = '/api';
 
 // Token refresh lock to prevent concurrent refresh requests
 let isRefreshing = false;
@@ -75,7 +75,11 @@ async function refreshAccessToken(): Promise<boolean> {
  * Build URL with query parameters
  */
 function buildUrl(endpoint: string, params?: Record<string, string | number | boolean>): string {
-  const url = new URL(`${API_BASE_URL}${endpoint}`);
+  const fullPath = `${API_BASE_URL}${endpoint}`;
+  
+  // We need a base for URL constructor since fullPath is relative
+  const base = process.env.NEXT_PUBLIC_API_URL || 'http://dummy-base.com';
+  const url = new URL(fullPath, base);
   
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -83,7 +87,7 @@ function buildUrl(endpoint: string, params?: Record<string, string | number | bo
     });
   }
   
-  return url.toString();
+  return url.pathname + url.search;
 }
 
 /**

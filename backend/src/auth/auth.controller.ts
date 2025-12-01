@@ -194,22 +194,31 @@ export class AuthController {
 
 		res.cookie('access_token', accessToken, {
 			httpOnly: true,
-			secure: isProduction, // Always secure in prod
-			sameSite: isProduction ? 'none' : 'lax', // None for cross-site in prod, Lax for local dev
+			secure: isProduction,
+			sameSite: 'strict',
 			maxAge: 15 * 60 * 1000, // 15 minutes
 			path: '/',
 		});
 		res.cookie('refresh_token', refreshToken, {
 			httpOnly: true,
 			secure: isProduction,
-			sameSite: isProduction ? 'none' : 'lax',
+			sameSite: 'strict',
 			maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
 			path: '/',
 		});
 	}
 
 	private clearCookies(res: Response) {
-		res.clearCookie('access_token', { path: '/' });
-		res.clearCookie('refresh_token', { path: '/' });
+		const isProduction = process.env.NODE_ENV === 'production';
+		res.clearCookie('access_token', {
+			path: '/',
+			secure: isProduction,
+			sameSite: 'strict',
+		});
+		res.clearCookie('refresh_token', {
+			path: '/',
+			secure: isProduction,
+			sameSite: 'strict',
+		});
 	}
 }
