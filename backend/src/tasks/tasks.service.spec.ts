@@ -77,6 +77,8 @@ describe('TasksService', () => {
 			id: 'house-1',
 			name: 'Test House',
 		},
+		assigneeLinks: [],
+		assignedUsers: [],
 	};
 
 	beforeEach(async () => {
@@ -275,28 +277,10 @@ describe('TasksService', () => {
 			expect(result).toEqual(mockTasks);
 			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
 				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
+					assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					house: { select: { id: true, name: true } },
+					assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 				},
 				orderBy: {
 					createdAt: 'desc',
@@ -324,28 +308,10 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.findUnique).toHaveBeenCalledWith({
 				where: { id: 'task-123' },
 				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
+					assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					house: { select: { id: true, name: true } },
+					assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 				},
 			});
 		});
@@ -623,28 +589,10 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
 				where: { assigneeId: 'user-456' },
 				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
+					assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					house: { select: { id: true, name: true } },
+					assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 				},
 				orderBy: {
 					createdAt: 'desc',
@@ -673,28 +621,10 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith({
 				where: { status: 'todo' },
 				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
+					assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+					house: { select: { id: true, name: true } },
+					assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 				},
 				orderBy: {
 					createdAt: 'desc',

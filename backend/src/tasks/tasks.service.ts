@@ -132,70 +132,41 @@ export class TasksService {
 	}
 
 	async findAll() {
-		return this.prisma.task.findMany({
+		const tasks = await this.prisma.task.findMany({
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
-			orderBy: {
-				createdAt: 'desc',
-			},
+			orderBy: { createdAt: 'desc' },
 		});
+
+		// Map join rows to assignedUsers convenience field
+		return tasks.map((t) => ({
+			...t,
+			assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [],
+		}));
 	}
 
 	async findOne(id: string) {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
 		});
 
 		if (!task) {
 			throw new NotFoundException('Task not found');
 		}
-		return task;
+		return {
+			...task,
+			assignedUsers: (task as any).assigneeLinks?.map((l: any) => l.user) ?? [],
+		};
 	}
 
 	async findAllForUser(
@@ -217,7 +188,7 @@ export class TasksService {
 			return [];
 		}
 
-		return this.prisma.task.findMany({
+		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId: { in: houseIds },
 				assigneeId: filters?.assigneeId || undefined,
@@ -226,30 +197,19 @@ export class TasksService {
 					filters?.archived === 'true'
 						? true
 						: filters?.archived === 'false'
-							? false
-							: undefined,
+						? false
+						: undefined,
 			},
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
 				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
 			orderBy: { createdAt: 'desc' },
 		});
+
+		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
 	}
 
 	async archive(id: string, userId: string) {
@@ -535,36 +495,18 @@ export class TasksService {
 	}
 
 	async findByAssignee(assigneeId: string) {
-		return this.prisma.task.findMany({
+		const tasks = await this.prisma.task.findMany({
 			where: { assigneeId },
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
-			orderBy: {
-				createdAt: 'desc',
-			},
+			orderBy: { createdAt: 'desc' },
 		});
+
+		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
@@ -578,66 +520,27 @@ export class TasksService {
 						: {}),
 			},
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
-			orderBy: {
-				createdAt: 'desc',
-			},
+			orderBy: { createdAt: 'desc' },
 		});
-		return tasks;
+		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
 	}
 
 	async findByStatus(status: string) {
-		return this.prisma.task.findMany({
+		const tasks = await this.prisma.task.findMany({
 			where: { status },
 			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
+				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				house: { select: { id: true, name: true } },
+				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
 			},
-			orderBy: {
-				createdAt: 'desc',
-			},
+			orderBy: { createdAt: 'desc' },
 		});
+		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
 	}
 }
