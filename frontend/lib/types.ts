@@ -11,8 +11,9 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  assignee: string;
-  assigneeAvatar: string;
+  assignee?: string; // primary assignee display name
+  assigneeAvatar?: string;
+  assignedUsers?: { id: string; name: string; avatar?: string }[];
   status: "todo" | "doing" | "done";
   deadline?: Date;
   createdAt: Date;
@@ -20,6 +21,7 @@ export interface Task {
   houseName: string;
   archived: boolean;
   archivedAt?: Date | null;
+  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL';
 }
 
 export interface House {

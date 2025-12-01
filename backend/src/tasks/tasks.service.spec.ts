@@ -265,6 +265,49 @@ describe('TasksService', () => {
 			);
 			expect(callArg2.data.size).toBe('MEDIUM');
 		});
+
+		it('should persist taskToUser links and notify multiple assignees', async () => {
+			const createMultiDto: CreateTaskDto = {
+				title: 'Multi assign',
+				description: 'Assign to many',
+				assigneeId: undefined as unknown as string,
+				assignedUserIds: ['user-456', 'user-789'],
+				deadline: '2025-12-31T23:59:59.000Z',
+				houseId: 'house-1',
+			};
+
+			mockPrismaService.house.findUnique.mockResolvedValue({ id: 'house-1' });
+			// validate creator in house and each assignee in house
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce({ userId: 'user-123', houseId: 'house-1' })
+				.mockResolvedValueOnce({ userId: 'user-456', houseId: 'house-1' })
+				.mockResolvedValueOnce({ userId: 'user-789', houseId: 'house-1' });
+			mockPrismaService.user.findUnique
+				.mockImplementation(({ where }: any) => {
+					if (where.id === 'user-456') return Promise.resolve({ id: 'user-456', name: 'A' });
+					if (where.id === 'user-789') return Promise.resolve({ id: 'user-789', name: 'B' });
+					return Promise.resolve(null);
+				});
+			mockPrismaService.task.create.mockResolvedValue({ ...mockTask, id: 'task-multi' });
+			mockPrismaService.taskToUser.createMany.mockResolvedValue({ count: 2 });
+
+			await service.create(createMultiDto, 'user-123');
+
+			expect(mockPrismaService.task.create).toHaveBeenCalled();
+			expect(mockPrismaService.taskToUser.createMany).toHaveBeenCalledWith({
+				data: expect.arrayContaining([
+					expect.objectContaining({ userId: 'user-456' }),
+					expect.objectContaining({ userId: 'user-789' }),
+				]),
+				skipDuplicates: true,
+			});
+
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					userIds: expect.arrayContaining(['user-456', 'user-789']),
+				}),
+			);
+		});
 	});
 
 	describe('findAll', () => {
@@ -487,6 +530,41 @@ describe('TasksService', () => {
 			expect(mockPrismaService.task.update).toHaveBeenCalled();
 			const uCall = mockPrismaService.task.update.mock.calls[0][0];
 			expect(uCall.data.title).toBe(updateWithoutDeadline.title);
+		});
+
+		it('should replace taskToUser links and notify new assignees when assignedUserIds provided', async () => {
+			const updateDto: UpdateTaskDto = {
+				assignedUserIds: ['user-789', 'user-999'],
+			};
+
+			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.user.findUnique.mockImplementation(({ where }: any) => {
+				if (where.id === 'user-789') return Promise.resolve({ id: 'user-789', name: 'C' });
+				if (where.id === 'user-999') return Promise.resolve({ id: 'user-999', name: 'D' });
+				return Promise.resolve(null);
+			});
+			// permission checks
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue({ userId: 'user-123', houseId: 'house-1' });
+			mockPrismaService.task.update.mockResolvedValue({ ...mockTask, assigneeId: 'user-789' });
+			mockPrismaService.taskToUser.deleteMany.mockResolvedValue({ count: 1 });
+			mockPrismaService.taskToUser.createMany.mockResolvedValue({ count: 2 });
+
+			await service.update('task-123', updateDto, 'user-123');
+
+			expect(mockPrismaService.taskToUser.deleteMany).toHaveBeenCalledWith({ where: { taskId: 'task-123' } });
+			expect(mockPrismaService.taskToUser.createMany).toHaveBeenCalledWith({
+				data: expect.arrayContaining([
+					expect.objectContaining({ userId: 'user-789' }),
+					expect.objectContaining({ userId: 'user-999' }),
+				]),
+				skipDuplicates: true,
+			});
+
+			expect(mockNotificationsService.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					userIds: expect.arrayContaining(['user-789', 'user-999']),
+				}),
+			);
 		});
 	});
 

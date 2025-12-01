@@ -15,6 +15,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import {
   Select,
   SelectContent,
   SelectItem,
@@ -22,6 +29,7 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Plus } from "lucide-react"
 import { createTask } from "@/lib/tasks-service"
 import type { Task, User } from "@/lib/types"
@@ -42,7 +50,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const [formData, setFormData] = useState({
     title: "",
     description: "",
-    assignee: "",
+    assignedUserIds: [] as string[],
+    size: "",
     deadline: "",
   })
 
@@ -53,7 +62,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   })
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target
     setFormData((prev) => ({ ...prev, [name]: value }))
@@ -64,7 +73,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   }
 
   const handleAssigneeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, assignee: value }))
+    setFormData((prev) => ({ ...prev, assignedUserIds: [value] }))
     if (formErrors.assignee) {
       setFormErrors((prev) => ({ ...prev, assignee: false }))
     }
@@ -73,7 +82,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const validateForm = () => {
     const errors = {
       title: !formData.title.trim(),
-      assignee: !formData.assignee,
+      assignee: !(formData as any).assignedUserIds || (formData as any).assignedUserIds.length === 0,
       deadline: !formData.deadline,
     }
 
@@ -128,7 +137,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
       const newTask = await createTask({
         title: formData.title.trim(),
         description: formData.description.trim() || undefined,
-        assigneeId: formData.assignee,
+        assignedUserIds: (formData as any).assignedUserIds,
+        size: (formData as any).size || undefined,
         deadline: new Date(formData.deadline).toISOString(),
         houseId: selectedHouse.id,
       })
@@ -140,7 +150,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
       setFormData({
         title: "",
         description: "",
-        assignee: "",
+        assignedUserIds: [],
+        size: "",
         deadline: "",
       })
       setFormErrors({
@@ -162,7 +173,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
       setFormData({
         title: "",
         description: "",
-        assignee: "",
+        assignedUserIds: [],
+        size: "",
         deadline: "",
       })
       setFormErrors({
@@ -230,31 +242,65 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="assignee">
-                Assignee <span className="text-destructive">*</span>
+              <Label htmlFor="assignees">
+                Assignees <span className="text-destructive">*</span>
               </Label>
-              <Select
-                value={formData.assignee}
-                onValueChange={handleAssigneeChange}
-              >
-                <SelectTrigger
-                  id="assignee"
-                  aria-invalid={formErrors.assignee}
-                  className={formErrors.assignee ? "border-destructive" : ""}
-                >
-                  <SelectValue placeholder="Select a person" />
+              <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button type="button" variant="outline" className="w-full justify-between font-normal">
+                      {(formData.assignedUserIds && formData.assignedUserIds.length > 0) ? (
+                        <span className="text-xs text-gray-700 truncate">
+                          {users
+                            .filter(u => (formData.assignedUserIds || []).includes(u.id))
+                            .map(u => u.name.split(' ')[0])
+                            .join(', ')}
+                        </span>
+                      ) : (
+                        'Select assignees'
+                      )}
+                    </Button>
+                  </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 max-h-72 overflow-y-auto">
+                  <DropdownMenuLabel>Select one or more users</DropdownMenuLabel>
+                  {users.map((user) => (
+                    <DropdownMenuCheckboxItem
+                      key={user.id}
+                      checked={(formData.assignedUserIds || []).includes(user.id)}
+                      onCheckedChange={(checked) => {
+                        setFormData((prev) => {
+                          const ids = new Set(prev.assignedUserIds)
+                          if (checked) ids.add(user.id)
+                          else ids.delete(user.id)
+                          return { ...prev, assignedUserIds: Array.from(ids) }
+                        })
+                        if (formErrors.assignee) setFormErrors((prev) => ({ ...prev, assignee: false }))
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{user.name}</span>
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+              {formErrors.assignee && (
+                <p className="text-sm text-destructive">At least one assignee is required</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="size">Estimate</Label>
+              <Select value={(formData as any).size || ""} onValueChange={(v) => setFormData(prev => ({ ...prev, size: v }))}>
+                <SelectTrigger className="w-full" size="sm">
+                  <SelectValue placeholder="Select size (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="SMALL">Small</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LARGE">Large</SelectItem>
+                  <SelectItem value="XL">XL</SelectItem>
                 </SelectContent>
               </Select>
-              {formErrors.assignee && (
-                <p className="text-sm text-destructive">Assignee is required</p>
-              )}
             </div>
 
             <div className="space-y-2">
