@@ -12,12 +12,25 @@ import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import TermsAndConditionsModal from "./modal-terms-and-conditions";
 
+import { z } from "zod";
+
+const registerSchema = z.object({
+  name: z.string().min(1, "Name is required"),
+  username: z.string().min(3, "Username must be at least 3 characters"),
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(6, "Password must be at least 6 characters"),
+  confirmPassword: z.string(),
+}).refine((data) => data.password === data.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+});
+
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [passwordMismatch, setPasswordMismatch] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     name: "",
     username: "",
@@ -35,17 +48,29 @@ export default function RegisterPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === "confirmPassword" || name === "password") {
-      setPasswordMismatch(false);
+    // Clear field error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
 
-    if (formData.password !== formData.confirmPassword) {
-      setPasswordMismatch(true);
+    const result = registerSchema.safeParse(formData);
+
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        formattedErrors[issue.path[0]] = issue.message;
+      });
+      setFieldErrors(formattedErrors);
       return;
     }
 
@@ -109,7 +134,11 @@ export default function RegisterPage() {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8">
           {error && (
             <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error.split('\n').map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -122,11 +151,14 @@ export default function RegisterPage() {
                   name="name"
                   type="text"
                   placeholder="John Doe"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.name ? "border-red-500" : ""}`}
                   value={formData.name}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.name && (
+                  <p className="text-sm text-red-500">{fieldErrors.name}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -136,11 +168,14 @@ export default function RegisterPage() {
                   name="username"
                   type="text"
                   placeholder="johndoe"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.username ? "border-red-500" : ""}`}
                   value={formData.username}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.username && (
+                  <p className="text-sm text-red-500">{fieldErrors.username}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -150,11 +185,14 @@ export default function RegisterPage() {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.email ? "border-red-500" : ""}`}
                   value={formData.email}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.email && (
+                  <p className="text-sm text-red-500">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -164,11 +202,14 @@ export default function RegisterPage() {
                   name="password"
                   type="password"
                   placeholder="Create a strong password"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.password ? "border-red-500" : ""}`}
                   value={formData.password}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.password && (
+                  <p className="text-sm text-red-500">{fieldErrors.password}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -178,13 +219,13 @@ export default function RegisterPage() {
                   name="confirmPassword"
                   type="password"
                   placeholder="Re-enter your password"
-                  className={`h-11 ${passwordMismatch ? "border-red-500" : ""}`}
+                  className={`h-11 ${fieldErrors.confirmPassword ? "border-red-500" : ""}`}
                   value={formData.confirmPassword}
                   onChange={handleChange}
                   required
                 />
-                {passwordMismatch && (
-                  <p className="text-sm text-red-500">Passwords do not match</p>
+                {fieldErrors.confirmPassword && (
+                  <p className="text-sm text-red-500">{fieldErrors.confirmPassword}</p>
                 )}
               </div>
             </div>

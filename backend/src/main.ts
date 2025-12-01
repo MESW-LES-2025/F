@@ -1,9 +1,11 @@
 import { NestFactory } from '@nestjs/core';
+import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
+import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule);
+	const app = await NestFactory.create(AppModule, { bodyParser: false });
 
 	const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
 
@@ -15,6 +17,25 @@ async function bootstrap() {
 		allowedHeaders: ['Content-Type', 'Authorization'],
 		maxAge: 3600,
 	});
+
+	app.use(cookieParser());
+
+	// Secure HTTP headers
+	const helmet = await import('helmet');
+	app.use(helmet.default());
+
+	// Explicitly enable JSON body parser and disable URL-encoded to prevent CSRF
+	const bodyParser = await import('body-parser');
+	app.use(bodyParser.json({ limit: '10mb' }));
+
+	// Global validation pipe
+	app.useGlobalPipes(
+		new ValidationPipe({
+			whitelist: true,
+			transform: true,
+			forbidNonWhitelisted: true,
+		}),
+	);
 
 	// Global prefix for all routes
 	app.setGlobalPrefix('api/v1');

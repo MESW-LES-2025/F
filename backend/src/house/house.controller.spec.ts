@@ -20,6 +20,7 @@ describe('HouseController', () => {
 		findAll: jest.fn(),
 		findAllUserHouses: jest.fn(),
 		findOne: jest.fn(),
+		findHouseUsers: jest.fn(),
 	};
 
 	const mockReq = {
@@ -101,6 +102,21 @@ describe('HouseController', () => {
 
 			expect(result).toEqual(house);
 			expect(mockService.findOne).toHaveBeenCalledWith('h1');
+		});
+	});
+
+	describe('getHouseUsers', () => {
+		it('should return users of a house', async () => {
+			const users = [mockUser];
+			mockService.findHouseUsers.mockResolvedValue(users);
+
+			const result = await controller.getHouseUsers('h1', mockReq);
+
+			expect(result).toEqual(users);
+			expect(mockService.findHouseUsers).toHaveBeenCalledWith(
+				'h1',
+				mockReq.user.userId,
+			);
 		});
 	});
 });

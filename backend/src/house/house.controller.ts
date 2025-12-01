@@ -51,6 +51,14 @@ export class HouseController {
 		return this.houseService.findOne(id);
 	}
 
+	@ApiOperation({ summary: 'Find all users of a specific house' })
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@Get(':id/users')
+	getHouseUsers(@Param('id') id: string, @Request() req: UserRequest) {
+		return this.houseService.findHouseUsers(id, req.user.userId);
+	}
+
 	/* To-do: not implemented
   @Patch(':id')
   update(@Param('id') id: string, @Body() updateHouseDto: UpdateHouseDto) {
