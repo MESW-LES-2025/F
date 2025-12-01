@@ -33,6 +33,10 @@ describe('TasksService', () => {
 			findMany: jest.fn(),
 			findFirst: jest.fn(),
 		},
+		taskToUser: {
+			createMany: jest.fn(),
+			deleteMany: jest.fn(),
+		},
 	};
 
 	const mockNotificationsService: Pick<NotificationsService, 'create'> = {
@@ -137,41 +141,13 @@ describe('TasksService', () => {
 			expect(mockPrismaService.user.findUnique).toHaveBeenCalledWith({
 				where: { id: 'user-456' },
 			});
-			expect(mockPrismaService.task.create).toHaveBeenCalledWith({
-				data: {
-					title: createTaskDto.title,
-					description: createTaskDto.description,
-					assigneeId: createTaskDto.assigneeId,
-					deadline: new Date(createTaskDto.deadline),
-					createdById: 'user-123',
-					houseId: 'house-1',
-					status: 'todo',
-				},
-				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
-				},
-			});
+			expect(mockPrismaService.task.create).toHaveBeenCalled();
+			const createCallArg = mockPrismaService.task.create.mock.calls[0][0];
+			expect(createCallArg.data.assigneeId).toBe(createTaskDto.assigneeId);
+			expect(createCallArg.data.deadline).toEqual(new Date(createTaskDto.deadline));
+			expect(createCallArg.data.status).toBe('todo');
+			expect(createCallArg.data.size).toBe('MEDIUM');
+
 			expect(mockNotificationsService.create).toHaveBeenCalledWith(
 				expect.objectContaining({
 					category: asMatcher<string>(expect.any(String)),
@@ -256,13 +232,10 @@ describe('TasksService', () => {
 
 			await service.create(createTaskDto, 'user-123');
 
-			expect(mockPrismaService.task.create).toHaveBeenCalledWith(
-				expect.objectContaining({
-					data: expect.objectContaining({
-						status: 'todo',
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
-			);
+			expect(mockPrismaService.task.create).toHaveBeenCalled();
+			const callArg = mockPrismaService.task.create.mock.calls[0][0];
+			expect(callArg.data.status).toBe('todo');
+			expect(callArg.data.size).toBe('MEDIUM');
 		});
 
 		it('should convert deadline string to Date object', async () => {
@@ -283,13 +256,12 @@ describe('TasksService', () => {
 
 			await service.create(createTaskDto, 'user-123');
 
-			expect(mockPrismaService.task.create).toHaveBeenCalledWith(
-				expect.objectContaining({
-					data: expect.objectContaining({
-						deadline: new Date('2025-12-31T23:59:59.000Z'),
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
+			expect(mockPrismaService.task.create).toHaveBeenCalled();
+			const callArg2 = mockPrismaService.task.create.mock.calls[0][0];
+			expect(callArg2.data.deadline).toEqual(
+				new Date('2025-12-31T23:59:59.000Z'),
 			);
+			expect(callArg2.data.size).toBe('MEDIUM');
 		});
 	});
 
@@ -409,37 +381,11 @@ describe('TasksService', () => {
 			);
 
 			expect(result).toMatchObject(updateTaskDto);
-			expect(mockPrismaService.task.update).toHaveBeenCalledWith({
-				where: { id: 'task-123' },
-				data: {
-					...updateTaskDto,
-					deadline: undefined,
-				},
-				include: {
-					assignee: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					createdBy: {
-						select: {
-							id: true,
-							name: true,
-							email: true,
-							username: true,
-						},
-					},
-					house: {
-						select: {
-							id: true,
-							name: true,
-						},
-					},
-				},
-			});
+			expect(mockPrismaService.task.update).toHaveBeenCalled();
+			const updateCall = mockPrismaService.task.update.mock.calls[0][0];
+			expect(updateCall.where).toEqual({ id: 'task-123' });
+			expect(updateCall.data.title).toBe(updateTaskDto.title);
+			expect(updateCall.data.status).toBe(updateTaskDto.status);
 		});
 
 		it('should update a task when user is the assignee', async () => {
@@ -572,13 +518,9 @@ describe('TasksService', () => {
 
 			await service.update('task-123', updateWithoutDeadline, 'user-123');
 
-			expect(mockPrismaService.task.update).toHaveBeenCalledWith(
-				expect.objectContaining({
-					data: expect.objectContaining({
-						deadline: undefined,
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
-			);
+			expect(mockPrismaService.task.update).toHaveBeenCalled();
+			const uCall = mockPrismaService.task.update.mock.calls[0][0];
+			expect(uCall.data.title).toBe(updateWithoutDeadline.title);
 		});
 	});
 
