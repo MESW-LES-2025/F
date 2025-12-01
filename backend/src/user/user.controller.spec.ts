@@ -5,6 +5,7 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserRequest } from 'src/shared/types/user_request';
 import { HouseService } from 'src/house/house.service';
 import { House } from '@prisma/client';
+import { Response } from 'express';
 
 describe('UserController', () => {
 	let controller: UserController;
@@ -78,8 +79,14 @@ describe('UserController', () => {
 
 	it('removeCurrent should soft-delete and return success', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
-		const result = await controller.removeCurrent(req);
+		const clearCookie = jest.fn();
+		const res = { clearCookie } as unknown as Response;
+		const result = await controller.removeCurrent(req, res);
 		expect(mockUserService.remove).toHaveBeenCalledWith(mockUser.id);
+		expect(clearCookie).toHaveBeenCalledWith('access_token', { path: '/' });
+		expect(clearCookie).toHaveBeenCalledWith('refresh_token', {
+			path: '/',
+		});
 		expect(result).toEqual({ success: true });
 	});
 

@@ -12,11 +12,19 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 
+import { z } from "zod";
+
+const loginSchema = z.object({
+  email: z.string().email("Invalid email address"),
+  password: z.string().min(1, "Password is required"),
+});
+
 export default function LoginPage() {
   const router = useRouter();
   const { login } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -25,11 +33,32 @@ export default function LoginPage() {
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    // Clear field error when user types
+    if (fieldErrors[name]) {
+      setFieldErrors((prev) => {
+        const newErrors = { ...prev };
+        delete newErrors[name];
+        return newErrors;
+      });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setFieldErrors({});
+
+    const result = loginSchema.safeParse(formData);
+
+    if (!result.success) {
+      const formattedErrors: Record<string, string> = {};
+      result.error.issues.forEach((issue) => {
+        formattedErrors[issue.path[0]] = issue.message;
+      });
+      setFieldErrors(formattedErrors);
+      return;
+    }
+
     setIsLoading(true);
 
     try {
@@ -80,7 +109,11 @@ export default function LoginPage() {
         <div className="bg-white/80 backdrop-blur-sm rounded-2xl shadow-xl border border-gray-200/50 p-8">
           {error && (
             <Alert variant="destructive" className="mb-6">
-              <AlertDescription>{error}</AlertDescription>
+              <AlertDescription>
+                {error.split('\n').map((line, i) => (
+                  <div key={i}>{line}</div>
+                ))}
+              </AlertDescription>
             </Alert>
           )}
 
@@ -93,11 +126,14 @@ export default function LoginPage() {
                   name="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.email ? "border-red-500" : ""}`}
                   value={formData.email}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.email && (
+                  <p className="text-sm text-red-500">{fieldErrors.email}</p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -115,11 +151,14 @@ export default function LoginPage() {
                   name="password"
                   type="password"
                   placeholder="Enter your password"
-                  className="h-11"
+                  className={`h-11 ${fieldErrors.password ? "border-red-500" : ""}`}
                   value={formData.password}
                   onChange={handleChange}
                   required
                 />
+                {fieldErrors.password && (
+                  <p className="text-sm text-red-500">{fieldErrors.password}</p>
+                )}
               </div>
             </div>
 

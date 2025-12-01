@@ -24,8 +24,8 @@ import {
 import { Plus } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { apiGet, apiPost, apiPatch } from "@/lib/api-client"
-import { authService } from "@/lib/auth-service"
 import { useHouse } from "@/lib/house-context"
+import { useAuth } from "@/lib/auth-context"
 
 interface PantryAddItemProps {
   onItemAdded?: () => void
@@ -33,6 +33,7 @@ interface PantryAddItemProps {
 
 export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
   const { selectedHouse } = useHouse()
+  const { isAuthenticated } = useAuth()
   const [open, setOpen] = useState(false)
   const [name, setName] = useState("")
   const [quantity, setQuantity] = useState<number | undefined>(undefined)
@@ -41,7 +42,6 @@ export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
   const [category, setCategory] = useState("OTHER")
 
   const [pantryMap, setPantryMap] = useState<Record<string, string>>({})
-  const [notAuthenticated, setNotAuthenticated] = useState(false)
   const [isSaving, setIsSaving] = useState(false)
 
   const { toast } = useToast()
@@ -50,16 +50,6 @@ export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
     let mounted = true
 
     async function loadPantries() {
-      try {
-        if (!authService.isAuthenticated()) {
-          setNotAuthenticated(true)
-        } else {
-          setNotAuthenticated(false)
-        }
-      } catch (err) {
-        console.error('Failed checking auth', err)
-      }
-
       try {
         const allPantries: any = await apiGet('/pantry')
         if (Array.isArray(allPantries) && mounted) {
@@ -98,7 +88,7 @@ export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
       return
     }
 
-    if (!authService.isAuthenticated()) {
+    if (!isAuthenticated) {
       toast({ title: 'Login required', description: 'Please log in to create and add items to your pantry.' })
       return
     }
@@ -292,7 +282,7 @@ export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
           <DialogClose asChild>
             <Button variant="ghost" type="button" disabled={isSaving}>Cancel</Button>
           </DialogClose>
-          <Button type="submit" disabled={isSaving || notAuthenticated || !quantity || !selectedHouse}>
+          <Button type="submit" disabled={isSaving || !isAuthenticated || !quantity || !selectedHouse}>
             {isSaving ? 'Saving…' : 'Create'}
           </Button>
         </DialogFooter>

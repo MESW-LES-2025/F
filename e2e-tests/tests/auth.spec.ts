@@ -136,5 +136,54 @@ test.describe('Auth Acceptance Tests', () => {
 			await expect(page).toHaveURL('/login');
 		});	
 	});
+
+	test.describe('Delete Account', () => {
+		test('User can delete their account', async ({ page }) => {
+			// Create a unique user for deletion test
+			const deleteUser = {
+				name: 'Delete Test User',
+				username: `deluser${Date.now()}`,
+				email: `deltest${Date.now()}@example.com`,
+				password: 'TestPassword123!'
+			};
+
+			// Register
+			await page.goto('/register');
+			await page.fill('input[name="name"]', deleteUser.name);
+			await page.fill('input[name="username"]', deleteUser.username);
+			await page.fill('input[name="email"]', deleteUser.email);
+			await page.fill('input[name="password"]', deleteUser.password);
+			await page.fill('input[name="confirmPassword"]', deleteUser.password);
+			await page.check('input#terms');
+			await page.click('button[type="submit"]');
+			await expect(page).toHaveURL('/login');
+
+			// Login
+			await page.fill('input[name="email"]', deleteUser.email);
+			await page.fill('input[name="password"]', deleteUser.password);
+			await page.click('button[type="submit"]');
+			await expect(page).toHaveURL('/join-house');
+
+			// Navigate to settings
+			await page.goto('/settings');
+			
+			// Open delete dialog
+			await page.getByRole('button', { name: 'Delete Account' }).click();
+			
+			// Confirm deletion
+			await page.getByRole('button', { name: 'Delete account', exact: true }).click();
+
+			// Should be redirected to login
+			await expect(page).toHaveURL('/login');
+
+			// Try to login again (should fail)
+			await page.fill('input[name="email"]', deleteUser.email);
+			await page.fill('input[name="password"]', deleteUser.password);
+			await page.click('button[type="submit"]');
+
+			// Expect error message
+			await expect(page.getByText(/invalid credentials/i)).toBeVisible();
+		});
+	});
 });
 

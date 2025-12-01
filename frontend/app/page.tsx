@@ -8,6 +8,7 @@ import { MetricsCards } from "@/components/metrics-cards";
 import { ActivitiesBoard } from "@/components/activities-board";
 import { AppSidebar } from "@/components/app-sidebar";
 import { HouseProvider } from "@/lib/house-context";
+import { HouseRedirect } from "@/components/house/house-redirect";
 
 function HomeContent() {
   const router = useRouter();
@@ -37,6 +38,7 @@ function HomeContent() {
   // Authenticated - show dashboard
   return (
     <HouseProvider>
+      <HouseRedirect />
       <div className="flex min-h-screen bg-gray-50">
         <AppSidebar />
         <main className="flex-1 lg:ml-40 pt-16 lg:pt-0">
