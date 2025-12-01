@@ -10,17 +10,10 @@ async function bootstrap() {
 		bodyParser: false,
 	});
 
-	const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
-
 	// CORS configuration
 	app.enableCors({
-		origin: allowedOrigin,
+		origin: true,
 		credentials: true,
-		methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-		allowedHeaders: ['Content-Type', 'Authorization'],
-		maxAge: 3600,
-		preflightContinue: false,
-		optionsSuccessStatus: 204,
 	});
 
 	// Required for secure cookies behind load balancer
