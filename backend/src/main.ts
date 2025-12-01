@@ -1,11 +1,14 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
 async function bootstrap() {
-	const app = await NestFactory.create(AppModule, { bodyParser: false });
+	const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+		bodyParser: false,
+	});
 
 	const allowedOrigin = process.env.CORS_ORIGIN || 'http://localhost:8080';
 
@@ -19,7 +22,7 @@ async function bootstrap() {
 	});
 
 	// Required for secure cookies behind load balancer
-	app.getHttpAdapter().getInstance().set('trust proxy', 1);
+	app.set('trust proxy', 1);
 
 	app.use(cookieParser());
 
