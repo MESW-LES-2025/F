@@ -7,7 +7,7 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
-import { CreateTaskDto } from './dto/create-task.dto';
+import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
@@ -18,8 +18,15 @@ export class TasksService {
 	) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
-		const { title, description, assigneeId, deadline, houseId, assignedUserIds, size } =
-			createTaskDto as CreateTaskDto & { assignedUserIds?: string[]; size?: string };
+		const {
+			title,
+			description,
+			assigneeId,
+			deadline,
+			houseId,
+			assignedUserIds,
+			size,
+		} = createTaskDto;
 
 		// Verify house exists
 		const house = await this.prisma.house.findUnique({
@@ -42,12 +49,16 @@ export class TasksService {
 			throw new ForbiddenException('You do not belong to this house');
 		}
 
-
-		const assignees = assignedUserIds && assignedUserIds.length ? assignedUserIds : [assigneeId];
+		const assignees =
+			assignedUserIds && assignedUserIds.length
+				? assignedUserIds
+				: [assigneeId];
 
 		// Validate each assignee exists and is in the house
 		for (const aid of assignees) {
-			const user = await this.prisma.user.findUnique({ where: { id: aid } });
+			const user = await this.prisma.user.findUnique({
+				where: { id: aid },
+			});
 			if (!user) {
 				throw new NotFoundException('Assignee user not found');
 			}
@@ -56,7 +67,9 @@ export class TasksService {
 				where: { userId: aid, houseId },
 			});
 			if (!inHouse) {
-				throw new BadRequestException('Cannot assign task to user not in this house');
+				throw new BadRequestException(
+					'Cannot assign task to user not in this house',
+				);
 			}
 		}
 
@@ -71,7 +84,7 @@ export class TasksService {
 				createdById,
 				houseId,
 				status: 'todo',
-				size: size || 'MEDIUM',
+				size: size ?? TaskSize.MEDIUM,
 			},
 			include: {
 				assignee: {
@@ -102,16 +115,23 @@ export class TasksService {
 		if (assignees && assignees.length) {
 			try {
 				await this.prisma.taskToUser.createMany({
-					data: assignees.map((u) => ({ taskId: task.id, userId: u })),
+					data: assignees.map((u) => ({
+						taskId: task.id,
+						userId: u,
+					})),
 					skipDuplicates: true,
 				});
 			} catch (err) {
-				console.error('[TasksService] Failed to persist task assignees', err);
+				console.error(
+					'[TasksService] Failed to persist task assignees',
+					err,
+				);
 			}
 		}
 
-
-		const notifyUserIds = (assignees || []).filter((u) => u !== createdById);
+		const notifyUserIds = (assignees || []).filter(
+			(u) => u !== createdById,
+		);
 		if (notifyUserIds.length) {
 			try {
 				await this.notificationsService.create({
@@ -124,7 +144,10 @@ export class TasksService {
 					houseId: task.houseId,
 				});
 			} catch (err) {
-				console.error('[TasksService] Failed to create assignment notification', err);
+				console.error(
+					'[TasksService] Failed to create assignment notification',
+					err,
+				);
 			}
 		}
 
@@ -134,18 +157,56 @@ export class TasksService {
 	async findAll() {
 		const tasks = await this.prisma.task.findMany({
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 			orderBy: { createdAt: 'desc' },
 		});
 
 		// Map join rows to assignedUsers convenience field
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
 		return tasks.map((t) => ({
 			...t,
-			assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [],
+			assignedUsers:
+				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
 		}));
 	}
 
@@ -153,19 +214,57 @@ export class TasksService {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 		});
 
 		if (!task) {
 			throw new NotFoundException('Task not found');
 		}
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
 		return {
 			...task,
-			assignedUsers: (task as any).assigneeLinks?.map((l: any) => l.user) ?? [],
+			assignedUsers:
+				(task.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
 		};
 	}
 
@@ -197,19 +296,60 @@ export class TasksService {
 					filters?.archived === 'true'
 						? true
 						: filters?.archived === 'false'
-						? false
-						: undefined,
+							? false
+							: undefined,
 			},
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 			orderBy: { createdAt: 'desc' },
 		});
 
-		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
+		return tasks.map((t) => ({
+			...t,
+			assignedUsers:
+				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
+		}));
 	}
 
 	async archive(id: string, userId: string) {
@@ -337,26 +477,30 @@ export class TasksService {
 			}
 		}
 
-		const assignedUserIds = (updateTaskDto as any).assignedUserIds as
-			| string[]
-			| undefined;
+		const assignedUserIds = updateTaskDto.assignedUserIds;
 
 		if (assignedUserIds && assignedUserIds.length) {
 			for (const aid of assignedUserIds) {
-				const assignee = await this.prisma.user.findUnique({ where: { id: aid } });
+				const assignee = await this.prisma.user.findUnique({
+					where: { id: aid },
+				});
 				if (!assignee) {
 					throw new NotFoundException('Assignee user not found');
 				}
 
-				const assigneeInHouse = await this.prisma.houseToUser.findFirst({
-					where: {
-						userId: aid,
-						houseId: task.houseId,
+				const assigneeInHouse = await this.prisma.houseToUser.findFirst(
+					{
+						where: {
+							userId: aid,
+							houseId: task.houseId,
+						},
 					},
-				});
+				);
 
 				if (!assigneeInHouse) {
-					throw new BadRequestException('Cannot assign task to user not in this house');
+					throw new BadRequestException(
+						'Cannot assign task to user not in this house',
+					);
 				}
 			}
 		}
@@ -385,7 +529,10 @@ export class TasksService {
 			}
 		}
 
-		const dataToUpdate: any = { ...updateTaskDto };
+		type UpdateData = Omit<UpdateTaskDto, 'deadline'> & { deadline?: Date };
+		const dataToUpdate: Partial<UpdateData> = {
+			...updateTaskDto,
+		} as Partial<UpdateData>;
 		delete dataToUpdate.assignedUserIds;
 		if (dataToUpdate.deadline) {
 			dataToUpdate.deadline = new Date(dataToUpdate.deadline);
@@ -398,8 +545,8 @@ export class TasksService {
 			dataToUpdate.assigneeId = assignedUserIds[0];
 		}
 
-		if ((updateTaskDto as any).size !== undefined) {
-			dataToUpdate.size = (updateTaskDto as any).size;
+		if (updateTaskDto.size !== undefined) {
+			dataToUpdate.size = updateTaskDto.size;
 		}
 
 		const updatedTask = await this.prisma.task.update({
@@ -432,14 +579,59 @@ export class TasksService {
 		});
 
 		if (assignedUserIds && assignedUserIds.length) {
+			// Determine newly added assignees compared to current links
+			let previousAssigneeIds: string[] = [];
 			try {
-				await this.prisma.taskToUser.deleteMany({ where: { taskId: id } });
+				const existingLinks = await this.prisma.taskToUser.findMany({
+					where: { taskId: id },
+					select: { userId: true },
+				});
+				previousAssigneeIds = existingLinks.map((l) => l.userId);
+			} catch {
+				previousAssigneeIds = [];
+			}
+
+			const prevSet = new Set(previousAssigneeIds);
+			const addedAssigneeIds = assignedUserIds.filter(
+				(uid) => !prevSet.has(uid),
+			);
+
+			try {
+				await this.prisma.taskToUser.deleteMany({
+					where: { taskId: id },
+				});
 				await this.prisma.taskToUser.createMany({
-					data: assignedUserIds.map((u) => ({ taskId: id, userId: u })),
+					data: assignedUserIds.map((u) => ({
+						taskId: id,
+						userId: u,
+					})),
 					skipDuplicates: true,
 				});
 			} catch (err) {
-				console.error('[TasksService] Failed to update task assignees', err);
+				console.error(
+					'[TasksService] Failed to update task assignees',
+					err,
+				);
+			}
+
+			// Notify only newly added assignees
+			if (addedAssigneeIds.length) {
+				try {
+					await this.notificationsService.create({
+						category: NotificationCategory.SCRUM,
+						level: NotificationLevel.LOW,
+						title: `Task updated: ${updatedTask.title}`,
+						body: `You were assigned to '${updatedTask.title}' in house ${updatedTask.house.name}.`,
+						userIds: addedAssigneeIds,
+						actionUrl: '/activities',
+						houseId: updatedTask.houseId,
+					});
+				} catch (err) {
+					console.error(
+						'[TasksService] Failed to create update assignment notification',
+						err,
+					);
+				}
 			}
 		}
 
@@ -498,15 +690,56 @@ export class TasksService {
 		const tasks = await this.prisma.task.findMany({
 			where: { assigneeId },
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 			orderBy: { createdAt: 'desc' },
 		});
 
-		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
+		return tasks.map((t) => ({
+			...t,
+			assignedUsers:
+				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
+		}));
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
@@ -520,27 +753,109 @@ export class TasksService {
 						: {}),
 			},
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 			orderBy: { createdAt: 'desc' },
 		});
-		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
+		return tasks.map((t) => ({
+			...t,
+			assignedUsers:
+				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
+		}));
 	}
 
 	async findByStatus(status: string) {
 		const tasks = await this.prisma.task.findMany({
 			where: { status },
 			include: {
-				assignee: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
-				createdBy: { select: { id: true, name: true, email: true, username: true, imageUrl: true } },
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
 				house: { select: { id: true, name: true } },
-				assigneeLinks: { include: { user: { select: { id: true, name: true, imageUrl: true, username: true } } } },
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
 			},
 			orderBy: { createdAt: 'desc' },
 		});
-		return tasks.map((t) => ({ ...t, assignedUsers: (t as any).assigneeLinks?.map((l: any) => l.user) ?? [] }));
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
+		return tasks.map((t) => ({
+			...t,
+			assignedUsers:
+				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+					(l) => l.user,
+				) ?? [],
+		}));
 	}
 }
