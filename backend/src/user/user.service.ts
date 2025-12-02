@@ -89,11 +89,6 @@ export class UserService {
 			data: { deletedAt: new Date() },
 		});
 
-		// Remove user from all houses
-		await this.prisma.houseToUser.deleteMany({
-			where: { userId: id },
-		});
-
 		await this.prisma.refreshToken.updateMany({
 			where: { userId: id, isRevoked: false },
 			data: { isRevoked: true, revokedAt: new Date() },

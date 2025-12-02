@@ -65,37 +65,6 @@ export class HouseService {
 		});
 	}
 
-	async findHouseUsers(houseId: string, requestingUserId: string) {
-		const isMember = await this.prisma.houseToUser.findFirst({
-			where: {
-				userId: requestingUserId,
-				houseId: houseId,
-			},
-		});
-
-		if (!isMember) {
-			throw new UnauthorizedException(
-				'You are not a member of this house',
-			);
-		}
-
-		const houseUsers = await this.prisma.houseToUser.findMany({
-			where: { houseId },
-			include: {
-				user: {
-					select: {
-						id: true,
-						name: true,
-						username: true,
-						email: true,
-					},
-				},
-			},
-		});
-
-		return houseUsers.map((hu) => hu.user);
-	}
-
 	async findOne(id: string) {
 		return await this.prisma.house.findUnique({
 			where: { id },

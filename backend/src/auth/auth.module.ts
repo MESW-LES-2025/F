@@ -3,6 +3,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
+import { UsersController } from './users.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
 import { GoogleStrategy } from './strategies/google.strategy';
 import { PrismaModule } from '../prisma/prisma.module';
@@ -18,7 +19,7 @@ import { EmailModule } from '../shared/email/email.module';
 			signOptions: { expiresIn: '15m' },
 		}),
 	],
-	controllers: [AuthController],
+	controllers: [AuthController, UsersController],
 	providers: [AuthService, JwtStrategy, GoogleStrategy],
 	exports: [AuthService],
 })

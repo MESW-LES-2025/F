@@ -1,10 +1,7 @@
-/* eslint-disable @typescript-eslint/unbound-method */
 import { Test, TestingModule } from '@nestjs/testing';
 import { AuthController } from './auth.controller';
 import { AuthService } from './auth.service';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
-import { Request, Response } from 'express';
-import { UserRequest } from 'src/shared/types/user_request';
 
 describe('AuthController', () => {
 	let controller: AuthController;
@@ -66,14 +63,9 @@ describe('AuthController', () => {
 		it('should register a new user', async () => {
 			mockAuthService.register.mockResolvedValue(mockAuthResponse);
 
-			const mockResponse = {
-				cookie: jest.fn(),
-			} as unknown as Response;
-
-			const result = await controller.register(registerDto, mockResponse);
+			const result = await controller.register(registerDto);
 
 			expect(result).toEqual(mockAuthResponse);
-			expect(mockResponse.cookie).toHaveBeenCalledTimes(2); // access_token and refresh_token
 			expect(mockAuthService.register).toHaveBeenCalledWith(registerDto);
 		});
 	});
@@ -87,52 +79,61 @@ describe('AuthController', () => {
 		it('should login user with valid credentials', async () => {
 			mockAuthService.login.mockResolvedValue(mockAuthResponse);
 
-			const mockResponse = {
-				cookie: jest.fn(),
-			} as unknown as Response;
-
-			const result = await controller.login(loginDto, mockResponse);
+			const result = await controller.login(loginDto);
 
 			expect(result).toEqual(mockAuthResponse);
-			expect(mockResponse.cookie).toHaveBeenCalledTimes(2);
 			expect(mockAuthService.login).toHaveBeenCalledWith(loginDto);
 		});
 	});
 
 	describe('refresh', () => {
-		it('should refresh tokens', async () => {
-			const mockRequest = {
-				cookies: { refresh_token: 'valid_refresh_token' },
-			} as unknown as Request;
-			const mockResponse = {
-				cookie: jest.fn(),
-			} as unknown as Response;
+		const refreshTokenDto = {
+			refresh_token: 'valid_refresh_token',
+		};
 
-			mockAuthService.refreshToken.mockResolvedValue({
+		it('should refresh tokens', async () => {
+			const refreshResponse = {
 				access_token: 'new_access_token',
 				refresh_token: 'new_refresh_token',
-			});
+				expires_in: 900,
+			};
+			mockAuthService.refreshToken.mockResolvedValue(refreshResponse);
 
-			const result = await controller.refresh(mockRequest, mockResponse);
+			const result = await controller.refresh(refreshTokenDto);
 
-			expect(result).toEqual({ message: 'Token refreshed successfully' });
+			expect(result).toEqual(refreshResponse);
 			expect(mockAuthService.refreshToken).toHaveBeenCalledWith(
-				'valid_refresh_token',
+				refreshTokenDto.refresh_token,
 			);
-			expect(mockResponse.cookie).toHaveBeenCalledTimes(2);
 		});
 	});
 
 	describe('logout', () => {
-		it('should logout user and revoke refresh token', () => {
-			const mockResponse = {
-				clearCookie: jest.fn(),
-			} as unknown as Response;
+		const refreshTokenDto = {
+			refresh_token: 'valid_refresh_token',
+		};
 
-			const result = controller.logout(mockResponse);
+		it('should logout user and revoke refresh token', async () => {
+			const logoutResponse = { message: 'Successfully logged out' };
+			mockAuthService.logout.mockResolvedValue(logoutResponse);
 
-			expect(result).toEqual({ message: 'Successfully logged out' });
-			expect(mockResponse.clearCookie).toHaveBeenCalledTimes(2);
+			const result = await controller.logout(refreshTokenDto);
+
+			expect(result).toEqual(logoutResponse);
+			expect(mockAuthService.logout).toHaveBeenCalledWith(
+				refreshTokenDto.refresh_token,
+			);
+		});
+
+		it('should handle logout with invalid token', async () => {
+			const logoutResponse = { message: 'Successfully logged out' };
+			mockAuthService.logout.mockResolvedValue(logoutResponse);
+
+			const result = await controller.logout({
+				refresh_token: 'invalid_token',
+			});
+
+			expect(result).toEqual(logoutResponse);
 		});
 	});
 
@@ -142,7 +143,7 @@ describe('AuthController', () => {
 				userId: 'user-id-123',
 				email: 'test@example.com',
 			},
-		} as unknown as UserRequest;
+		};
 
 		it('should logout from all devices', async () => {
 			const logoutAllResponse = {

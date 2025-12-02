@@ -14,21 +14,6 @@ const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
-  async rewrites() {
-	if (process.env.VERCEL) {
-		const apiUrl = process.env.NEXT_PUBLIC_API_URL;
-		// Remove trailing slash if present to avoid double slashes
-		const cleanApiUrl = apiUrl.replace(/\/$/, '');
-		
-		return [
-		{
-			source: '/api/:path*',
-			destination: `${cleanApiUrl}/:path*`,
-		},
-		];
-	}
-	return [];
-  },
 }
 
 export default nextConfig
