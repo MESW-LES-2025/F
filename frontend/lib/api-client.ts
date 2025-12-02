@@ -3,11 +3,11 @@
  * Handles authentication, error handling, and request/response transformation
  */
 
-const API_BASE_URL = '/api';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api/v1';
 
 // Token refresh lock to prevent concurrent refresh requests
 let isRefreshing = false;
-let refreshPromise: Promise<boolean> | null = null;
+let refreshPromise: Promise<string | null> | null = null;
 
 export class ApiError extends Error {
   constructor(
@@ -31,10 +31,44 @@ interface ApiResponse<T> {
 }
 
 /**
- * Refresh access token using refresh token (via HttpOnly cookie)
+ * Get user's access token from cookies
+ */
+function getAccessToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  const nameEQ = 'access_token=';
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    cookie = cookie.trim();
+    if (cookie.indexOf(nameEQ) === 0) {
+      return decodeURIComponent(cookie.substring(nameEQ.length));
+    }
+  }
+  return null;
+}
+
+/**
+ * Get user's refresh token from cookies
+ */
+function getRefreshToken(): string | null {
+  if (typeof document === 'undefined') return null;
+  
+  const nameEQ = 'refresh_token=';
+  const cookies = document.cookie.split(';');
+  for (let cookie of cookies) {
+    cookie = cookie.trim();
+    if (cookie.indexOf(nameEQ) === 0) {
+      return decodeURIComponent(cookie.substring(nameEQ.length));
+    }
+  }
+  return null;
+}
+
+/**
+ * Refresh access token using refresh token
  * Handles concurrent refresh requests with a lock
  */
-async function refreshAccessToken(): Promise<boolean> {
+async function refreshAccessToken(): Promise<string | null> {
   // If already refreshing, wait for the existing refresh to complete
   if (isRefreshing && refreshPromise) {
     return refreshPromise;
@@ -43,25 +77,39 @@ async function refreshAccessToken(): Promise<boolean> {
   isRefreshing = true;
   refreshPromise = (async () => {
     try {
+      const refreshToken = getRefreshToken();
+      if (!refreshToken) {
+        console.warn('No refresh token available');
+        return null;
+      }
+
       // Call refresh endpoint WITHOUT requiresAuth to avoid infinite loop
-      // Credentials included automatically
       const response = await fetch(buildUrl('/auth/refresh'), {
-        method: 'GET',
+        method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        credentials: 'include',
+        body: JSON.stringify({ refresh_token: refreshToken }),
       });
 
       if (!response.ok) {
         console.error('Token refresh failed:', response.status);
-        return false;
+        // Clear tokens on failed refresh
+        clearAuthCookies();
+        return null;
       }
 
-      return true;
+      const data = (await response.json()) as { access_token: string; refresh_token: string };
+      
+      // Update cookies with new tokens
+      setCookie('access_token', data.access_token, 7);
+      setCookie('refresh_token', data.refresh_token, 7);
+
+      return data.access_token;
     } catch (error) {
       console.error('Token refresh error:', error);
-      return false;
+      clearAuthCookies();
+      return null;
     } finally {
       isRefreshing = false;
       refreshPromise = null;
@@ -72,14 +120,29 @@ async function refreshAccessToken(): Promise<boolean> {
 }
 
 /**
+ * Set cookie (client-side)
+ */
+function setCookie(name: string, value: string, days: number = 7): void {
+  if (typeof document === 'undefined') return;
+  const expires = new Date();
+  expires.setDate(expires.getDate() + days);
+  document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires.toUTCString()}`;
+}
+
+/**
+ * Clear authentication cookies
+ */
+function clearAuthCookies(): void {
+  if (typeof document === 'undefined') return;
+  document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+  document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;';
+}
+
+/**
  * Build URL with query parameters
  */
 function buildUrl(endpoint: string, params?: Record<string, string | number | boolean>): string {
-  const fullPath = `${API_BASE_URL}${endpoint}`;
-  
-  // We need a base for URL constructor since fullPath is relative
-  const base = process.env.NEXT_PUBLIC_API_URL || 'http://dummy-base.com';
-  const url = new URL(fullPath, base);
+  const url = new URL(`${API_BASE_URL}${endpoint}`);
   
   if (params) {
     Object.entries(params).forEach(([key, value]) => {
@@ -87,7 +150,7 @@ function buildUrl(endpoint: string, params?: Record<string, string | number | bo
     });
   }
   
-  return url.pathname + url.search;
+  return url.toString();
 }
 
 /**
@@ -103,12 +166,12 @@ function getErrorMessage(status: number, customMessage?: string, responseData?: 
   
   // Check if response contains a message from backend
   if (responseData && typeof responseData === 'object' && 'message' in responseData) {
-    const backendMessage = (responseData as Record<string, unknown>).message;
+    const backendMessage = (responseData as Record<string, unknown>).message as string;
     
-    if (Array.isArray(backendMessage)) {
-      return backendMessage.join('\n');
+    // Use backend message only if it's not a raw technical error
+    if (backendMessage && !backendMessage.toLowerCase().includes('error') && backendMessage.length < 100) {
+      return backendMessage;
     }
-
   }
   
   switch (status) {
@@ -203,6 +266,15 @@ async function request<T = unknown>(
       ...headers,
     };
 
+    // Add authorization if required
+    if (requiresAuth) {
+      const token = getAccessToken();
+      if (!token) {
+        throw new ApiError(401, 'Authentication required. Please log in.');
+      }
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     // Build URL with query parameters
     const url = buildUrl(endpoint, params);
 
@@ -211,7 +283,6 @@ async function request<T = unknown>(
       method,
       headers: requestHeaders,
       body: body ? JSON.stringify(body) : undefined,
-      credentials: 'include', // Always include cookies
       ...restOptions,
     });
 
@@ -229,38 +300,26 @@ async function request<T = unknown>(
       if (response.status === 401 && retryCount === 0 && requiresAuth) {
         console.log('Token expired, attempting to refresh...');
         
-        const refreshed = await refreshAccessToken();
-        if (refreshed) {
-          // Retry request with new token (cookies updated automatically)
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          // Retry request with new token
           console.log('Token refreshed, retrying request...');
           return request<T>(endpoint, options, retryCount + 1);
         } else {
           // Refresh failed, redirect to login
           console.error('Token refresh failed, redirecting to login');
           if (typeof window !== 'undefined') {
-            const currentPath = window.location.pathname;
-            const isPublicRoute = 
-              currentPath.startsWith("/login") || 
-              currentPath.startsWith("/register") || 
-              currentPath.startsWith("/forgot-password") || 
-              currentPath.startsWith("/reset-password") ||
-              currentPath.startsWith("/verify-email") ||
-              currentPath.startsWith("/auth");
-              
-            if (!isPublicRoute) {
-              window.location.href = '/login';
-            }
+            window.location.href = '/login';
           }
           throw new ApiError(401, 'Session expired. Please log in again.');
         }
       }
 
-      const rawMessage = (responseData as Record<string, unknown>)?.message;
-      const errorMessage = Array.isArray(rawMessage)
-        ? rawMessage.join('\n')
-        : rawMessage || getErrorMessage(response.status, undefined, responseData);
+      const errorMessage = 
+        (responseData as Record<string, unknown>)?.message ||
+        getErrorMessage(response.status, undefined, responseData);
       
-      throw new ApiError(response.status, String(errorMessage), responseData);
+      throw new ApiError(response.status, errorMessage, responseData);
     }
 
     return responseData as T;
@@ -354,6 +413,15 @@ export async function apiUpload<T = unknown>(
       });
     }
 
+    // Add authorization if required
+    if (requiresAuth) {
+      const token = getAccessToken();
+      if (!token) {
+        throw new ApiError(401, 'Authentication required. Please log in.');
+      }
+      requestHeaders['Authorization'] = `Bearer ${token}`;
+    }
+
     // Build URL with query parameters
     const url = buildUrl(endpoint, params);
 
@@ -362,7 +430,6 @@ export async function apiUpload<T = unknown>(
       method,
       headers: requestHeaders,
       body: formData,
-      credentials: 'include', // Always include cookies
       ...restOptions,
     });
 
@@ -380,8 +447,8 @@ export async function apiUpload<T = unknown>(
       if (response.status === 401 && requiresAuth) {
         console.log('Token expired, attempting to refresh...');
         
-        const refreshed = await refreshAccessToken();
-        if (refreshed) {
+        const newToken = await refreshAccessToken();
+        if (newToken) {
           // Retry request with new token
           console.log('Token refreshed, retrying request...');
           return apiUpload<T>(endpoint, formData, options);
@@ -389,10 +456,7 @@ export async function apiUpload<T = unknown>(
           // Refresh failed, redirect to login
           console.error('Token refresh failed, redirecting to login');
           if (typeof window !== 'undefined') {
-            const currentPath = window.location.pathname;
-            if (currentPath !== '/login' && currentPath !== '/register') {
-              window.location.href = '/login';
-            }
+            window.location.href = '/login';
           }
           throw new ApiError(401, 'Session expired. Please log in again.');
         }

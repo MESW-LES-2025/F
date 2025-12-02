@@ -10,10 +10,8 @@ import {
 	UseInterceptors,
 	UploadedFile,
 	Query,
-	Res,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import { Response } from 'express';
 import { UserService } from './user.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { JwtAuthGuard } from 'src/auth/guards/jwt-auth.guard';
@@ -50,14 +48,8 @@ export class UserController {
 	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Delete current authenticated user' })
 	@Delete()
-	async removeCurrent(
-		@Request() req: UserRequest,
-		@Res({ passthrough: true }) res: Response,
-	) {
-		const result = await this.userService.remove(req.user.userId);
-		res.clearCookie('access_token', { path: '/' });
-		res.clearCookie('refresh_token', { path: '/' });
-		return result;
+	async removeCurrent(@Request() req: UserRequest) {
+		return await this.userService.remove(req.user.userId);
 	}
 
 	@UseGuards(JwtAuthGuard)

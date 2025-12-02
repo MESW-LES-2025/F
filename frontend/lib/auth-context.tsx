@@ -27,22 +27,51 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Try to fetch profile to verify if we have valid HttpOnly cookies
-        const { apiGet } = await import('./api-client');
-        const profileData = await apiGet('/user', { requiresAuth: true });
-        
-        // Token is valid and profile retrieved
-        setUser(profileData as User);
-        setIsAuthenticated(true);
-        
-        // Update cached user in sessionStorage
-        sessionStorage.setItem('user', JSON.stringify(profileData));
+        const token = authService.getAccessToken();
+        if (token) {
+          // Token exists, but we should verify it's still valid by making a profile request
+          // If it fails, we'll refresh the token
+          try {
+            // Try to fetch profile to verify token is valid
+            const { apiGet } = await import('./api-client');
+            const profileData = await apiGet('/user', { requiresAuth: true });
+            
+            // Token is valid and profile retrieved
+            setUser(profileData as User);
+            setIsAuthenticated(true);
+            
+            // Update cached user in sessionStorage
+            sessionStorage.setItem('user', JSON.stringify(profileData));
+          } catch (error) {
+            // Profile fetch failed, but token refresh might have happened
+            // Check if we still have an authenticated token
+            const newToken = authService.getAccessToken();
+            if (newToken) {
+              // Token was refreshed, try profile again
+              try {
+                const { apiGet } = await import('./api-client');
+                const profileData = await apiGet('/user', { requiresAuth: true });
+                setUser(profileData as User);
+                setIsAuthenticated(true);
+                sessionStorage.setItem('user', JSON.stringify(profileData));
+              } catch (retryError) {
+                console.error('Failed to fetch profile after refresh:', retryError);
+                setIsAuthenticated(false);
+                sessionStorage.removeItem('user');
+              }
+            } else {
+              // No token available, user not authenticated
+              setIsAuthenticated(false);
+              sessionStorage.removeItem('user');
+            }
+          }
+        } else {
+          setIsAuthenticated(false);
+        }
+        setIsLoading(false);
       } catch (error) {
-        // Profile fetch failed, user not authenticated
-        // We don't need to check for tokens manually anymore as they are HttpOnly
+        console.error('Auth initialization failed:', error);
         setIsAuthenticated(false);
-        sessionStorage.removeItem('user');
-      } finally {
         setIsLoading(false);
       }
     };

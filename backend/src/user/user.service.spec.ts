@@ -75,9 +75,6 @@ describe('UserService', () => {
 			delete: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
-			deleteMany: jest.MockedFunction<
-				(...args: any[]) => Promise<{ count: number }>
-			>;
 		};
 	};
 
@@ -123,9 +120,6 @@ describe('UserService', () => {
 			>,
 			delete: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
-			>,
-			deleteMany: jest.fn() as jest.MockedFunction<
-				(...args: any[]) => Promise<{ count: number }>
 			>,
 		},
 	};
@@ -222,9 +216,6 @@ describe('UserService', () => {
 			mockPrismaService.refreshToken.updateMany.mockResolvedValue({
 				count: 2,
 			});
-			mockPrismaService.houseToUser.deleteMany.mockResolvedValue({
-				count: 1,
-			});
 
 			const result = await service.remove(mockUser.id);
 
@@ -234,11 +225,6 @@ describe('UserService', () => {
 			expect(mockPrismaService.user.update).toHaveBeenCalledWith({
 				where: { id: mockUser.id },
 				data: { deletedAt: expect.any(Date) as Date },
-			});
-			expect(
-				mockPrismaService.houseToUser.deleteMany,
-			).toHaveBeenCalledWith({
-				where: { userId: mockUser.id },
 			});
 			expect(
 				mockPrismaService.refreshToken.updateMany,

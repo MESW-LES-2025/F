@@ -6,7 +6,6 @@ import {
 	Request,
 	Get,
 	Res,
-	UnauthorizedException,
 } from '@nestjs/common';
 import { Request as ExpressRequest, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -19,6 +18,7 @@ import {
 import { AuthService } from './auth.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
+import { RefreshTokenDto } from './dto/refresh-token.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
 import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
@@ -35,46 +35,27 @@ export class AuthController {
 	@ApiOperation({ summary: 'Register a new user' })
 	@ApiResponse({ status: 201, description: 'User successfully registered' })
 	@ApiResponse({ status: 409, description: 'User already exists' })
-	async register(
-		@Body() registerDto: RegisterDto,
-		@Res({ passthrough: true }) res: Response,
-	) {
-		const data = await this.authService.register(registerDto);
-		this.setCookies(res, data.access_token, data.refresh_token);
-		return data;
+	async register(@Body() registerDto: RegisterDto) {
+		return this.authService.register(registerDto);
 	}
 
 	@Post('login')
 	@ApiOperation({ summary: 'Login user' })
 	@ApiResponse({ status: 200, description: 'User successfully logged in' })
 	@ApiResponse({ status: 401, description: 'Invalid credentials' })
-	async login(
-		@Body() loginDto: LoginDto,
-		@Res({ passthrough: true }) res: Response,
-	) {
-		const data = await this.authService.login(loginDto);
-		this.setCookies(res, data.access_token, data.refresh_token);
-		return data;
+	async login(@Body() loginDto: LoginDto) {
+		return this.authService.login(loginDto);
 	}
 
-	@Get('refresh')
+	@Post('refresh')
 	@ApiOperation({ summary: 'Refresh access token' })
 	@ApiResponse({ status: 200, description: 'Token refreshed successfully' })
 	@ApiResponse({
 		status: 401,
 		description: 'Invalid or expired refresh token',
 	})
-	async refresh(
-		@Request() req: ExpressRequest,
-		@Res({ passthrough: true }) res: Response,
-	) {
-		const refreshToken = req.cookies['refresh_token'] as string;
-		if (!refreshToken) {
-			throw new UnauthorizedException('No refresh token found');
-		}
-		const data = await this.authService.refreshToken(refreshToken);
-		this.setCookies(res, data.access_token, data.refresh_token);
-		return { message: 'Token refreshed successfully' };
+	async refresh(@Body() refreshTokenDto: RefreshTokenDto) {
+		return this.authService.refreshToken(refreshTokenDto.refresh_token);
 	}
 
 	@Post('logout')
@@ -83,9 +64,8 @@ export class AuthController {
 	@ApiOperation({ summary: 'Logout user and revoke refresh token' })
 	@ApiResponse({ status: 200, description: 'Successfully logged out' })
 	@ApiResponse({ status: 401, description: 'Unauthorized' })
-	logout(@Res({ passthrough: true }) res: Response) {
-		this.clearCookies(res);
-		return { message: 'Successfully logged out' };
+	async logout(@Body() refreshTokenDto: RefreshTokenDto) {
+		return this.authService.logout(refreshTokenDto.refresh_token);
 	}
 
 	@Post('logout-all')
@@ -176,49 +156,7 @@ export class AuthController {
 	@ApiOperation({ summary: 'Exchange google code for tokens' })
 	@ApiResponse({ status: 200, description: 'Tokens retrieved successfully' })
 	@ApiResponse({ status: 401, description: 'Invalid or expired code' })
-	async exchangeGoogleCode(
-		@Body('code') code: string,
-		@Res({ passthrough: true }) res: Response,
-	) {
-		const data = await this.authService.exchangeGoogleTokens(code);
-		this.setCookies(res, data.access_token, data.refresh_token);
-		return { message: 'Tokens retrieved successfully' };
-	}
-
-	private setCookies(
-		res: Response,
-		accessToken: string,
-		refreshToken: string,
-	) {
-		const isProduction = process.env.NODE_ENV === 'production';
-
-		res.cookie('access_token', accessToken, {
-			httpOnly: true,
-			secure: isProduction,
-			sameSite: 'strict',
-			maxAge: 15 * 60 * 1000, // 15 minutes
-			path: '/',
-		});
-		res.cookie('refresh_token', refreshToken, {
-			httpOnly: true,
-			secure: isProduction,
-			sameSite: 'strict',
-			maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
-			path: '/',
-		});
-	}
-
-	private clearCookies(res: Response) {
-		const isProduction = process.env.NODE_ENV === 'production';
-		res.clearCookie('access_token', {
-			path: '/',
-			secure: isProduction,
-			sameSite: 'strict',
-		});
-		res.clearCookie('refresh_token', {
-			path: '/',
-			secure: isProduction,
-			sameSite: 'strict',
-		});
+	async exchangeGoogleCode(@Body('code') code: string) {
+		return this.authService.exchangeGoogleTokens(code);
 	}
 }

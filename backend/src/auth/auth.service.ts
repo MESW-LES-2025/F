@@ -6,7 +6,6 @@ import {
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { PrismaService } from '../prisma/prisma.service';
-import { Prisma } from '@prisma/client';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
@@ -81,8 +80,7 @@ export class AuthService {
 	}
 
 	async register(registerDto: RegisterDto) {
-		const { username, password, name } = registerDto;
-		const email = registerDto.email.toLowerCase();
+		const { email, username, password, name } = registerDto;
 		const isDev = process.env.NODE_ENV === 'development';
 
 		const userByEmail = await this.prisma.user.findUnique({
@@ -127,37 +125,17 @@ export class AuthService {
 				},
 			});
 		} else {
-			try {
-				// Create user
-				user = await this.prisma.user.create({
-					data: {
-						email,
-						username,
-						password: hashedPassword,
-						name,
-						verificationToken: null,
-						isEmailVerified: isDev ? true : false,
-					},
-				});
-			} catch (error) {
-				if (
-					error instanceof Prisma.PrismaClientKnownRequestError &&
-					error.code === 'P2002'
-				) {
-					const target = error.meta?.target as string[];
-					if (target && target.includes('email')) {
-						throw new ConflictException(
-							'User with this email already exists',
-						);
-					}
-					if (target && target.includes('username')) {
-						throw new ConflictException(
-							'Username is already taken',
-						);
-					}
-				}
-				throw error;
-			}
+			// Create user
+			user = await this.prisma.user.create({
+				data: {
+					email,
+					username,
+					password: hashedPassword,
+					name,
+					verificationToken: null,
+					isEmailVerified: isDev ? true : false,
+				},
+			});
 		}
 
 		// Generate tokens with DB storage
@@ -174,7 +152,6 @@ export class AuthService {
 				username: user.username,
 				name: user.name,
 				imageUrl: user.imageUrl,
-				houses: [],
 				googleId: user.googleId,
 			},
 		};
@@ -216,7 +193,7 @@ export class AuthService {
 				username: user.username,
 				name: user.name,
 				imageUrl: user.imageUrl,
-				houses: user.houses.map((h) => ({ id: h.houseId })),
+				houses: user.houses,
 				googleId: user.googleId,
 			},
 		};
@@ -297,7 +274,7 @@ export class AuthService {
 				username: user.username,
 				name: user.name,
 				imageUrl: user.imageUrl,
-				houses: user.houses.map((h) => ({ id: h.houseId })),
+				houses: user.houses,
 				googleId: user.googleId,
 			},
 		};
