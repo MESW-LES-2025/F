@@ -20,6 +20,8 @@ describe('HouseController', () => {
 		findAll: jest.fn(),
 		findAllUserHouses: jest.fn(),
 		findOne: jest.fn(),
+		findHouseDetails: jest.fn(),
+		update: jest.fn(),
 	};
 
 	const mockReq = {
@@ -101,6 +103,50 @@ describe('HouseController', () => {
 
 			expect(result).toEqual(house);
 			expect(mockService.findOne).toHaveBeenCalledWith('h1');
+		});
+	});
+
+	describe('findHouseDetails', () => {
+		it('should return house details for the given id and user', async () => {
+			const houseDetails = { id: 'house1', name: 'Casa 1' };
+
+			mockService.findHouseDetails = jest
+				.fn()
+				.mockResolvedValue(houseDetails);
+
+			const result = await controller.findHouseDetails(
+				'house1',
+				mockReq as UserRequest,
+			);
+
+			expect(result).toEqual(houseDetails);
+			expect(mockService.findHouseDetails).toHaveBeenCalledWith(
+				'house1',
+				'user123',
+			);
+		});
+	});
+
+	describe('update', () => {
+		it('should update a house', async () => {
+			const houseId = 'house1';
+			const updateHouseDto = { name: 'Updated House' };
+			const mockResult = { id: houseId, name: 'Updated House' };
+
+			mockService.update = jest.fn().mockResolvedValue(mockResult);
+
+			const result = await controller.update(
+				houseId,
+				updateHouseDto,
+				mockReq as unknown as UserRequest,
+			);
+
+			expect(result).toEqual(mockResult);
+			expect(mockService.update).toHaveBeenCalledWith({
+				houseId,
+				dto: updateHouseDto,
+				userId: 'user123',
+			});
 		});
 	});
 });

@@ -3,6 +3,6 @@ import { IsUUID } from 'class-validator';
 
 export class LeaveHouseDto {
 	@ApiPropertyOptional({ example: '12345678' })
-  @IsUUID()
+	@IsUUID()
 	houseId: string;
 }

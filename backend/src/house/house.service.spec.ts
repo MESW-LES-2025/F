@@ -26,9 +26,17 @@ describe('HouseService', () => {
 			create: jest.fn(),
 			findMany: jest.fn(),
 			findUnique: jest.fn(),
+			findFirst: jest.fn(),
+			update: jest.fn(),
 		},
 		houseToUser: {
 			create: jest.fn(),
+			findFirst: jest.fn(),
+			delete: jest.fn(),
+			update: jest.fn(),
+		},
+		user: {
+			findMany: jest.fn(),
 		},
 	};
 
@@ -163,6 +171,215 @@ describe('HouseService', () => {
 			for (const char of code) {
 				expect(allowed).toContain(char);
 			}
+		});
+	});
+
+	describe('findHouseDetails', () => {
+		const mockHouse = {
+			id: 'house1',
+			name: 'Casa 1',
+			invitationCode: 'INV123',
+			createdAt: new Date(),
+		};
+
+		const mockUsers = [
+			{
+				email: 'test@example.com',
+				username: 'tester',
+				name: 'Tester',
+				imagePublicId: null,
+				houses: [{ role: 'OWNER' }],
+			},
+		];
+
+		it('should return house details and users successfully', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+
+			const result = await service.findHouseDetails('house1', 'user123');
+
+			expect(result).toEqual({
+				house: {
+					id: mockHouse.id,
+					name: mockHouse.name,
+					invitationCode: mockHouse.invitationCode,
+					createdAt: mockHouse.createdAt,
+				},
+				users: mockUsers,
+			});
+
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: {
+					id: 'house1',
+					users: {
+						some: { userId: 'user123' },
+					},
+				},
+			});
+
+			expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
+				where: {
+					houses: {
+						some: { houseId: mockHouse.id },
+					},
+				},
+				select: {
+					id: true,
+					email: true,
+					username: true,
+					name: true,
+					imagePublicId: true,
+					houses: {
+						where: { houseId: mockHouse.id },
+						select: { role: true },
+					},
+				},
+			});
+		});
+
+		it('should throw NotFoundException if house is not found', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.findHouseDetails('house1', 'user123'),
+			).rejects.toThrow(NotFoundException);
+
+			expect(mockPrismaService.user.findMany).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('update', () => {
+		const mockHouse = { id: 'house1', name: 'Old Name' };
+		const mockHouseToUser = { id: 'htu1', role: 'MEMBER' };
+
+		beforeEach(() => {
+			jest.clearAllMocks();
+		});
+
+		it('should update house name successfully', async () => {
+			const dto = { name: 'New House Name' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.house.update.mockResolvedValue({
+				...mockHouse,
+				name: dto.name,
+			});
+
+			const result = await service.update({
+				houseId: 'house1',
+				dto,
+				userId: 'user123',
+			});
+
+			expect(result).toEqual({ ...mockHouse, name: dto.name });
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: {
+					id: 'house1',
+					users: { some: { userId: 'user123', role: 'ADMIN' } },
+				},
+			});
+			expect(mockPrismaService.house.update).toHaveBeenCalledWith({
+				where: { id: 'house1' },
+				data: { name: dto.name },
+			});
+		});
+
+		it('should remove a user from the house', async () => {
+			const dto = { name: 'New Name', userToRemoveId: 'userToRemove' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockHouseToUser,
+			);
+			mockPrismaService.houseToUser.delete.mockResolvedValue(
+				mockHouseToUser,
+			);
+			mockPrismaService.house.update.mockResolvedValue({
+				...mockHouse,
+				name: dto.name,
+			});
+
+			const result = await service.update({
+				houseId: 'house1',
+				dto,
+				userId: 'user123',
+			});
+
+			expect(mockPrismaService.houseToUser.delete).toHaveBeenCalledWith({
+				where: {
+					id: mockHouseToUser.id,
+					houseId: 'house1',
+					userId: dto.userToRemoveId,
+				},
+			});
+			expect(result).toEqual({ ...mockHouse, name: dto.name });
+		});
+
+		it('should upgrade a user to admin', async () => {
+			const dto = { name: 'New Name', userToUpgradeId: 'userToUpgrade' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockHouseToUser,
+			);
+			mockPrismaService.houseToUser.update.mockResolvedValue({
+				...mockHouseToUser,
+				role: 'ADMIN',
+			});
+			mockPrismaService.house.update.mockResolvedValue({
+				...mockHouse,
+				name: dto.name,
+			});
+
+			const result = await service.update({
+				houseId: 'house1',
+				dto,
+				userId: 'user123',
+			});
+
+			expect(mockPrismaService.houseToUser.update).toHaveBeenCalledWith({
+				where: {
+					id: mockHouseToUser.id,
+					houseId: 'house1',
+					userId: dto.userToUpgradeId,
+				},
+				data: { role: 'ADMIN' },
+			});
+			expect(result).toEqual({ ...mockHouse, name: dto.name });
+		});
+
+		it('should throw NotFoundException if house not found', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.update({
+					houseId: 'house1',
+					dto: { name: 'x' },
+					userId: 'user123',
+				}),
+			).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw NotFoundException if user to remove not found', async () => {
+			const dto = { name: 'x', userToRemoveId: 'missingUser' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.update({ houseId: 'house1', dto, userId: 'user123' }),
+			).rejects.toThrow(NotFoundException);
+		});
+
+		it('should throw NotFoundException if user to upgrade not found', async () => {
+			const dto = { name: 'x', userToUpgradeId: 'missingUser' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.update({ houseId: 'house1', dto, userId: 'user123' }),
+			).rejects.toThrow(NotFoundException);
 		});
 	});
 });
