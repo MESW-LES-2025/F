@@ -22,6 +22,7 @@ describe('HouseController', () => {
 		findOne: jest.fn(),
 		findHouseDetails: jest.fn(),
 		update: jest.fn(),
+		remove: jest.fn(),
 	};
 
 	const mockReq = {
@@ -145,6 +146,26 @@ describe('HouseController', () => {
 			expect(mockService.update).toHaveBeenCalledWith({
 				houseId,
 				dto: updateHouseDto,
+				userId: 'user123',
+			});
+		});
+	});
+
+	describe('remove', () => {
+		it('should delete a house', async () => {
+			const houseId = 'house1';
+			const mockResult = { success: true };
+
+			mockService.remove = jest.fn().mockResolvedValue(mockResult);
+
+			const result = await controller.remove(
+				houseId,
+				mockReq as unknown as UserRequest,
+			);
+
+			expect(result).toEqual(mockResult);
+			expect(mockService.remove).toHaveBeenCalledWith({
+				houseId,
 				userId: 'user123',
 			});
 		});

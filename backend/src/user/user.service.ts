@@ -292,8 +292,43 @@ export class UserService {
 			throw new NotFoundException('The user is not in the house');
 		}
 
-		return await this.prisma.houseToUser.delete({
+		const deletedRelation = await this.prisma.houseToUser.delete({
 			where: { id: existingRelation.id },
 		});
+
+		if (deletedRelation.role == 'ADMIN') {
+			// turn next user to admin if this user was an admin and there are no more admins
+			const nextAdmin = await this.prisma.houseToUser.findFirst({
+				where: {
+					houseId: house.id,
+					role: 'ADMIN',
+				},
+			});
+
+			// if there is already another admin, do nothing
+			if (!nextAdmin) {
+				const nextUserRelation =
+					await this.prisma.houseToUser.findFirst({
+						where: {
+							houseId: house.id,
+						},
+					});
+
+				if (!nextUserRelation)
+					throw new NotFoundException('There are no more users');
+
+				await this.prisma.houseToUser.update({
+					where: {
+						id: nextUserRelation.id,
+						houseId: house.id,
+					},
+					data: {
+						role: 'ADMIN',
+					},
+				});
+			}
+		}
+
+		return deletedRelation;
 	}
 }

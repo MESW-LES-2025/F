@@ -1,4 +1,5 @@
 import {
+	BadRequestException,
 	Injectable,
 	NotFoundException,
 	UnauthorizedException,
@@ -206,8 +207,37 @@ export class HouseService {
 		});
 	}
 
-	/*
-  remove(id: number) {
-    return `This action removes a #${id} house`;
-  }  */
+	async remove({ houseId, userId }: { houseId: string; userId: string }) {
+		const house = await this.prisma.house.findFirst({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId, role: 'ADMIN' }, // only admins can delete a house!
+				},
+			},
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found!');
+		}
+
+		const userRelations = await this.prisma.houseToUser.findMany({
+			where: { houseId },
+		});
+
+		if (userRelations.length > 1) {
+			throw new BadRequestException(
+				'The house cannot be deleted because there are other users still there',
+			);
+		}
+
+		return await this.prisma.house.delete({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId, role: 'ADMIN' }, // only admins can delete a house!
+				},
+			},
+		});
+	}
 }

@@ -7,6 +7,7 @@ import {
 	Request,
 	UseGuards,
 	Put,
+	Delete,
 } from '@nestjs/common';
 import { HouseService } from './house.service';
 import { CreateHouseDto } from './dto/create-house.dto';
@@ -86,14 +87,16 @@ export class HouseController {
 		});
 	}
 
-	/* To-do: not implemented
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateHouseDto: UpdateHouseDto) {
-    return this.houseService.update(+id, updateHouseDto);
-  }
-
-  @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.houseService.remove(+id);
-  } */
+	@ApiOperation({
+		summary: 'Delete a house',
+	})
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@Delete(':id')
+	remove(@Param('id') id: string, @Request() req: UserRequest) {
+		return this.houseService.remove({
+			houseId: id,
+			userId: req.user.userId,
+		});
+	}
 }

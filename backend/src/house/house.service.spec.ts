@@ -28,12 +28,14 @@ describe('HouseService', () => {
 			findUnique: jest.fn(),
 			findFirst: jest.fn(),
 			update: jest.fn(),
+			delete: jest.fn(),
 		},
 		houseToUser: {
 			create: jest.fn(),
 			findFirst: jest.fn(),
 			delete: jest.fn(),
 			update: jest.fn(),
+			findMany: jest.fn(),
 		},
 		user: {
 			findMany: jest.fn(),
@@ -380,6 +382,71 @@ describe('HouseService', () => {
 			await expect(
 				service.update({ houseId: 'house1', dto, userId: 'user123' }),
 			).rejects.toThrow(NotFoundException);
+		});
+	});
+
+	describe('remove', () => {
+		const houseId = 'house1';
+		const userId = 'user123';
+
+		it('should throw NotFoundException if house does not exist or user is not admin', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue(null);
+
+			await expect(service.remove({ houseId, userId })).rejects.toThrow(
+				NotFoundException,
+			);
+
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: {
+					id: houseId,
+					users: {
+						some: { userId, role: 'ADMIN' },
+					},
+				},
+			});
+		});
+
+		it('should throw BadRequestException if there are multiple users in the house', async () => {
+			mockPrismaService.house.findFirst.mockResolvedValue({
+				id: houseId,
+				name: 'Test House',
+			});
+
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ id: 1 },
+				{ id: 2 },
+			]);
+
+			await expect(service.remove({ houseId, userId })).rejects.toThrow(
+				'The house cannot be deleted because there are other users still there',
+			);
+		});
+
+		it('should delete the house successfully when user is admin and only one relation exists', async () => {
+			const mockHouse = { id: houseId, name: 'Test House' };
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ id: 1 },
+			]);
+
+			mockPrismaService.house.delete = jest
+				.fn()
+				.mockResolvedValue(mockHouse);
+
+			const result = await service.remove({ houseId, userId });
+
+			expect(result).toEqual(mockHouse);
+
+			expect(mockPrismaService.house.delete).toHaveBeenCalledWith({
+				where: {
+					id: houseId,
+					users: {
+						some: { userId, role: 'ADMIN' },
+					},
+				},
+			});
 		});
 	});
 });
