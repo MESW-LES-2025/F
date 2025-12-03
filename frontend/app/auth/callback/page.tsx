@@ -9,14 +9,27 @@ export default function AuthCallbackPage() {
 
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
-    const accessToken = params.get('access_token');
-    const refreshToken = params.get('refresh_token');
+    const code = params.get('code');
+    const error = params.get('error');
 
-    if (accessToken && refreshToken) {
-      authService.setTokens(accessToken, refreshToken);
-      window.location.href = '/';
+    if (error) {
+      console.error('Google Auth Error:', error);
+      router.push('/login?error=GoogleAuthFailed');
+      return;
+    }
+
+    if (code) {
+      authService
+        .exchangeGoogleCode(code)
+        .then(() => {
+          window.location.href = '/';
+        })
+        .catch((err) => {
+          console.error('Token exchange failed:', err);
+          router.push('/login?error=TokenExchangeFailed');
+        });
     } else {
-      console.error('Google Auth Failed: Missing tokens', { accessToken, refreshToken });
+      console.error('Google Auth Failed: No code found');
       router.push('/login?error=GoogleAuthFailed');
     }
   }, [router]);

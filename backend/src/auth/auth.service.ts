@@ -29,6 +29,11 @@ export interface GoogleUser {
 	accessToken: string;
 }
 
+export interface GoogleTokens {
+	access_token: string;
+	refresh_token: string;
+}
+
 @Injectable()
 export class AuthService {
 	constructor(
@@ -36,6 +41,43 @@ export class AuthService {
 		private jwtService: JwtService,
 		private emailService: EmailService,
 	) {}
+
+	async storeGoogleTokens(tokens: GoogleTokens): Promise<string> {
+		const code = uuidv4();
+		// Store tokens with 60s expiration
+		await this.prisma.googleAuthCode.create({
+			data: {
+				code,
+				accessToken: tokens.access_token,
+				refreshToken: tokens.refresh_token,
+				expiresAt: new Date(Date.now() + 60000),
+			},
+		});
+		return code;
+	}
+
+	async exchangeGoogleTokens(code: string): Promise<GoogleTokens> {
+		const authCode = await this.prisma.googleAuthCode.findUnique({
+			where: { code },
+		});
+
+		if (!authCode) {
+			throw new UnauthorizedException('Invalid or expired code');
+		}
+
+		if (authCode.expiresAt < new Date()) {
+			await this.prisma.googleAuthCode.delete({ where: { code } });
+			throw new UnauthorizedException('Invalid or expired code');
+		}
+
+		// One-time use
+		await this.prisma.googleAuthCode.delete({ where: { code } });
+
+		return {
+			access_token: authCode.accessToken,
+			refresh_token: authCode.refreshToken,
+		};
+	}
 
 	async register(registerDto: RegisterDto) {
 		const { email, username, password, name } = registerDto;
@@ -343,7 +385,7 @@ export class AuthService {
 		});
 
 		// Generate token string
-		const payload = { sub: userId, type: 'refresh' };
+		const payload = { sub: userId, type: 'refresh', jti: uuidv4() };
 		const token = this.jwtService.sign(payload, { expiresIn: '30d' });
 
 		// Store in database

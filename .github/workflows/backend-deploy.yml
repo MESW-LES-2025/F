@@ -1,16 +1,16 @@
 name: CI/CD Pipeline - Backend Production
 
 on:
-  push:
-    branches:
-      - main
-    paths:
-      - "backend/**"   # Only trigger when files in /backend change
+  workflow_run:
+    workflows: ["Acceptance Tests"]
+    types:
+      - completed
 
 jobs:
   test-backend:
     name: Test Backend
     runs-on: ubuntu-latest
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
     steps:
       - name: Checkout code

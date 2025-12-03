@@ -128,7 +128,7 @@ export class AuthController {
 	@Get('google/callback')
 	@UseGuards(AuthGuard('google'))
 	@ApiOperation({ summary: 'Google login callback' })
-	googleAuthRedirect(
+	async googleAuthRedirect(
 		@Request()
 		req: ExpressRequest & {
 			user: { access_token: string; refresh_token: string };
@@ -137,14 +137,26 @@ export class AuthController {
 	) {
 		const { access_token, refresh_token } = req.user;
 
+		// Store tokens and get a temporary code
+		const code = await this.authService.storeGoogleTokens({
+			access_token,
+			refresh_token,
+		});
+
 		// Ensure CORS_ORIGIN doesn't have a trailing slash
 		const origin = process.env.CORS_ORIGIN
 			? process.env.CORS_ORIGIN.replace(/\/$/, '')
 			: 'http://localhost:8080';
 
-		// Redirect to frontend with tokens
-		res.redirect(
-			`${origin}/auth/callback?access_token=${access_token}&refresh_token=${refresh_token}`,
-		);
+		// Redirect to frontend with code
+		res.redirect(`${origin}/auth/callback?code=${code}`);
+	}
+
+	@Post('google/exchange')
+	@ApiOperation({ summary: 'Exchange google code for tokens' })
+	@ApiResponse({ status: 200, description: 'Tokens retrieved successfully' })
+	@ApiResponse({ status: 401, description: 'Invalid or expired code' })
+	async exchangeGoogleCode(@Body('code') code: string) {
+		return this.authService.exchangeGoogleTokens(code);
 	}
 }
