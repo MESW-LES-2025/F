@@ -30,6 +30,26 @@ export interface House {
   invitationCode: string;
 }
 
+export interface HouseDetails {
+  house: {
+    id: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+    invitationCode: string;
+  };
+  users: {
+    id: string;
+    name: string;
+    email: string;
+    username: string;
+    imagePublicId: string | null;
+    houses: {
+      role: string;
+    }[];
+  }[];
+}
+
 export interface Expense {
   id: string;
   title: string;
@@ -65,7 +85,12 @@ export interface User {
 }
 
 // Notifications
-export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "SCRUM" | "OTHER";
+export type NotificationCategory =
+  | "HOUSE"
+  | "PANTRY"
+  | "EXPENSES"
+  | "SCRUM"
+  | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
@@ -80,7 +105,7 @@ export interface NotificationPayload {
 }
 
 export interface UserNotification {
-  id?: string; 
+  id?: string;
   userId: string;
   isRead: boolean;
   readAt?: string | null;

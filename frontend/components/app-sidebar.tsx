@@ -26,7 +26,7 @@ const navigation = [
   { name: "Expenses", href: "/expenses", icon: Zap },
   { name: "Pantry", href: "/pantry", icon: Users },
   { name: "Activities", href: "/activities", icon: Calendar },
-  { name: "House", href: "/house", icon: HousePlus },
+  { name: "Houses", href: "/house", icon: HousePlus },
   { name: "Notifications", href: "/notifications", icon: Bell },
 ];
 
