@@ -14,7 +14,7 @@ export class HouseService {
 	constructor(
 		private prisma: PrismaService,
 		private pantryService: PantryService,
-	) {}
+	) { }
 
 	async create(createHouseDto: CreateHouseDto, createdByUserId: string) {
 		const { name } = createHouseDto;
@@ -62,12 +62,40 @@ export class HouseService {
 					some: { userId },
 				},
 			},
+			include: {
+				users: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								username: true,
+								imageUrl: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 
 	async findOne(id: string) {
 		return await this.prisma.house.findUnique({
 			where: { id },
+			include: {
+				users: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								username: true,
+								imageUrl: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 
@@ -84,10 +112,10 @@ export class HouseService {
 
 	/*
   update(id: number, updateHouseDto: UpdateHouseDto) {
-    return `This action updates a #${id} house`;
+	return `This action updates a #${id} house`;
   }
 
   remove(id: number) {
-    return `This action removes a #${id} house`;
+	return `This action removes a #${id} house`;
   } */
 }

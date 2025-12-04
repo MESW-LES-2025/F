@@ -4,8 +4,8 @@ import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState, Suspense } from "react";
 import { DashboardHeader } from "@/components/dashboard-header";
-import { MetricsCards } from "@/components/metrics-cards";
-import { ActivitiesBoard } from "@/components/activities-board";
+import { ProfileScroll } from "@/components/profile-scroll";
+import { HomeFeatureColumns } from "@/components/home-feature-columns";
 import { AppSidebar } from "@/components/app-sidebar";
 import { HouseProvider } from "@/lib/house-context";
 
@@ -42,9 +42,9 @@ function HomeContent() {
         <main className="flex-1 lg:ml-40 pt-16 lg:pt-0">
           <div className="flex-1">
             <DashboardHeader />
+            <ProfileScroll />
             <div className="p-4 md:p-6 space-y-6">
-              <MetricsCards />
-              <ActivitiesBoard />
+              <HomeFeatureColumns />
             </div>
           </div>
         </main>
