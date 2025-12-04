@@ -100,6 +100,23 @@ describe('ChatController', () => {
 		expect(res).toEqual(readResult);
 	});
 
+	it('read should pass cursor if provided', async () => {
+		const readResult = { messages: [], nextCursor: 'next-cursor' };
+		mockService.read.mockResolvedValue(readResult);
+		const req: UserRequest = { user: { userId: 'user1' } };
+		const query: ReadChatMessagesDto = {
+			cursor: 'curr-cursor',
+		} as ReadChatMessagesDto;
+		const res = await controller.read('house1', query, req);
+		expect(mockService.read).toHaveBeenCalledWith(
+			'house1',
+			'user1',
+			20, // default limit
+			'curr-cursor',
+		);
+		expect(res).toEqual(readResult);
+	});
+
 	it('sendMessage should return created message and support parentId', async () => {
 		const created: PrismaChatMessage = {
 			id: 'msg-1',

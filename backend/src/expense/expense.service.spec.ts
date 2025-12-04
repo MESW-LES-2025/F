@@ -229,6 +229,32 @@ describe('ExpenseService', () => {
 				'Payer or one or more users in splitWith are not members of this house',
 			);
 		});
+		it('should create an expense with default date if not provided', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(mockPayer);
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findMany.mockResolvedValue([
+				mockPayer,
+				{ id: 'user-456', deletedAt: null },
+			]);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123', houseId: 'house-1' },
+				{ userId: 'user-456', houseId: 'house-1' },
+			]);
+			mockPrismaService.expense.create.mockResolvedValue(mockExpense);
+
+			const dtoWithoutDate = { ...createExpenseDto };
+			delete dtoWithoutDate.date;
+
+			await service.create(dtoWithoutDate);
+
+			expect(mockPrismaService.expense.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						date: expect.any(Date) as unknown,
+					}) as unknown,
+				}),
+			);
+		});
 	});
 
 	describe('findAll', () => {
@@ -397,6 +423,72 @@ describe('ExpenseService', () => {
 			});
 		});
 
+		it('should handle partial updates without optional fields', async () => {
+			mockPrismaService.expense.findUnique.mockResolvedValue(mockExpense);
+			mockPrismaService.expense.update.mockResolvedValue(mockExpense);
+
+			const partialDto = { description: 'Just desc' };
+			await service.update('expense-123', partialDto);
+
+			expect(mockPrismaService.user.findUnique).not.toHaveBeenCalled();
+			expect(mockPrismaService.house.findUnique).not.toHaveBeenCalled();
+			expect(mockPrismaService.user.findMany).not.toHaveBeenCalled();
+		});
+
+		it('should update date if provided', async () => {
+			mockPrismaService.expense.findUnique.mockResolvedValue(mockExpense);
+			mockPrismaService.expense.update.mockResolvedValue(mockExpense);
+
+			const dateDto = { date: '2025-12-25T00:00:00.000Z' };
+			await service.update('expense-123', dateDto);
+
+			expect(mockPrismaService.expense.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						date: new Date(dateDto.date) as unknown,
+					}) as unknown,
+				}),
+			);
+		});
+
+		it('should throw NotFoundException when updating paidById with non-existent user', async () => {
+			mockPrismaService.expense.findUnique.mockResolvedValue(mockExpense);
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.update('expense-123', { paidById: 'nonexistent' }),
+			).rejects.toThrow(NotFoundException);
+			await expect(
+				service.update('expense-123', { paidById: 'nonexistent' }),
+			).rejects.toThrow('Payer user not found or is deleted');
+		});
+
+		it('should throw NotFoundException when updating houseId with non-existent house', async () => {
+			mockPrismaService.expense.findUnique.mockResolvedValue(mockExpense);
+			mockPrismaService.house.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.update('expense-123', { houseId: 'nonexistent' }),
+			).rejects.toThrow(NotFoundException);
+			await expect(
+				service.update('expense-123', { houseId: 'nonexistent' }),
+			).rejects.toThrow('House not found');
+		});
+
+		it('should throw BadRequestException when updating splitWith with non-existent users', async () => {
+			mockPrismaService.expense.findUnique.mockResolvedValue(mockExpense);
+			mockPrismaService.user.findMany.mockResolvedValue([]);
+
+			await expect(
+				service.update('expense-123', { splitWith: ['nonexistent'] }),
+			).rejects.toThrow(BadRequestException);
+			await expect(
+				service.update('expense-123', { splitWith: ['nonexistent'] }),
+			).rejects.toThrow(
+				'One or more users in splitWith do not exist or are deleted',
+			);
+		});
+
 		it('should throw NotFoundException when expense does not exist', async () => {
 			mockPrismaService.expense.findUnique.mockResolvedValue(null);
 
@@ -437,6 +529,165 @@ describe('ExpenseService', () => {
 			await expect(service.remove('nonexistent-id')).rejects.toThrow(
 				'Expense with ID nonexistent-id not found',
 			);
+		});
+	});
+
+	describe('getSummary', () => {
+		it('should return expense summary', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([mockExpense]);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123', user: mockPayer },
+				{ userId: 'user-456', user: { ...mockPayer, id: 'user-456' } },
+			]);
+
+			const result = await service.getSummary('house-1');
+
+			expect(result).toHaveProperty('totalSpending');
+			expect(result).toHaveProperty('perPersonTotals');
+			expect(result).toHaveProperty('expenseCount');
+			expect(result).toHaveProperty('categoryBreakdown');
+		});
+
+		it('should exclude settlements and handle zero spending', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([
+				{ ...mockExpense, category: 'SETTLEMENT' },
+			]);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
+
+			const result = await service.getSummary('house-1');
+
+			expect(result.totalSpending).toBe(0);
+			expect(result.expenseCount).toBe(0);
+			expect(result.categoryBreakdown).toEqual([]);
+		});
+
+		it('should throw NotFoundException if house not found', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(null);
+
+			await expect(service.getSummary('house-1')).rejects.toThrow(
+				NotFoundException,
+			);
+		});
+	});
+
+	describe('getBalances', () => {
+		it('should return balances', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([mockExpense]);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123', user: mockPayer },
+				{ userId: 'user-456', user: { ...mockPayer, id: 'user-456' } },
+			]);
+
+			const result = await service.getBalances('house-1');
+
+			expect(result).toHaveProperty('balances');
+			expect(result).toHaveProperty('settlements');
+		});
+
+		it('should handle settlements correctly', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([
+				{
+					...mockExpense,
+					category: 'SETTLEMENT',
+					amount: 50,
+					paidById: 'user-123',
+					splitWith: ['user-456'],
+				},
+			]);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'user-123', user: mockPayer },
+				{ userId: 'user-456', user: { ...mockPayer, id: 'user-456' } },
+			]);
+
+			const result = await service.getBalances('house-1');
+			const payer = result.balances.find((b) => b.userId === 'user-123');
+			const receiver = result.balances.find(
+				(b) => b.userId === 'user-456',
+			);
+
+			expect(payer?.balance).toBe(50);
+			expect(receiver?.balance).toBe(-50);
+		});
+
+		it('should throw NotFoundException if house not found', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(null);
+
+			await expect(service.getBalances('house-1')).rejects.toThrow(
+				NotFoundException,
+			);
+		});
+	});
+
+	describe('getSpendingOverTime', () => {
+		it('should return spending trends', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([mockExpense]);
+
+			const result = await service.getSpendingOverTime('house-1');
+
+			expect(result).toHaveProperty('data');
+			expect(result).toHaveProperty('period');
+			expect(result).toHaveProperty('totalDays');
+		});
+
+		it('should handle week and month periods', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([mockExpense]);
+
+			await service.getSpendingOverTime('house-1', 'week');
+			await service.getSpendingOverTime('house-1', 'month');
+		});
+
+		it('should throw NotFoundException if house not found', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.getSpendingOverTime('house-1'),
+			).rejects.toThrow(NotFoundException);
+		});
+	});
+
+	describe('getCategoryBreakdown', () => {
+		it('should return category breakdown', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([mockExpense]);
+
+			const result = await service.getCategoryBreakdown('house-1');
+
+			expect(result).toHaveProperty('categories');
+			expect(result).toHaveProperty('totalSpending');
+		});
+
+		it('should aggregate multiple expenses of same category', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([
+				mockExpense,
+				{ ...mockExpense, id: 'exp-2', amount: 50 },
+			]);
+
+			const result = await service.getCategoryBreakdown('house-1');
+			expect(result.categories[0].total).toBe(150.5);
+			expect(result.categories[0].count).toBe(2);
+		});
+
+		it('should handle zero spending', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.expense.findMany.mockResolvedValue([]);
+
+			const result = await service.getCategoryBreakdown('house-1');
+			expect(result.totalSpending).toBe(0);
+		});
+
+		it('should throw NotFoundException if house not found', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.getCategoryBreakdown('house-1'),
+			).rejects.toThrow(NotFoundException);
 		});
 	});
 });

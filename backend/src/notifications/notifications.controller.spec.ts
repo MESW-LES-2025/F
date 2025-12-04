@@ -16,6 +16,7 @@ describe('NotificationsController', () => {
 		findOneByUser: jest.fn().mockResolvedValue({ id: 'notif-id-1' }),
 		markOneAsReadByUser: jest.fn().mockResolvedValue({ success: true }),
 		markAllAsReadByUser: jest.fn().mockResolvedValue({ success: true }),
+		dismissOneByUser: jest.fn().mockResolvedValue({ success: true }),
 	};
 
 	beforeEach(async () => {
@@ -104,5 +105,32 @@ describe('NotificationsController', () => {
 		).toHaveBeenCalledWith(mockUserId);
 
 		expect(result).toEqual({ success: true });
+	});
+	it('dismissOneByUser should call service.dismissOneByUser', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		const id = 'notif-id-1';
+
+		const result = await controller.dismissOneByUser(id, req);
+
+		expect(mockNotificationsService.dismissOneByUser).toHaveBeenCalledWith(
+			mockUserId,
+			id,
+		);
+		expect(result).toEqual({ success: true });
+	});
+
+	it('should propagate errors from service', async () => {
+		const dto = {
+			title: 'Test',
+			body: 'Testing notification',
+			userIds: [mockUserId],
+			level: NotificationLevel.MEDIUM,
+			category: NotificationCategory.OTHER,
+		};
+		mockNotificationsService.create.mockRejectedValue(
+			new Error('Service Error'),
+		);
+
+		await expect(controller.create(dto)).rejects.toThrow('Service Error');
 	});
 });
