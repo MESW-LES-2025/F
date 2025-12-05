@@ -7,7 +7,6 @@ import { ExpensesList } from "@/components/expenses-list"
 import { BalancesWidget } from "@/components/balances-widget"
 import { SpendingTrendsChart } from "@/components/spending-trends-chart"
 import { CategoryBreakdownChart } from "@/components/category-breakdown-chart"
-import { ExpensesSummary } from "@/components/expenses-summary"
 import { useHouse } from "@/lib/house-context"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
@@ -15,14 +14,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 export default function ExpensesPage() {
   const { selectedHouse } = useHouse()
   const [refreshTrigger, setRefreshTrigger] = useState(0)
-
+  
   // Filter and sort state
   const [sortField, setSortField] = useState<"date" | "amount" | "payer">("date")
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc")
   const [filterCategory, setFilterCategory] = useState<string>("all")
   const [filterDateFrom, setFilterDateFrom] = useState<string>("")
   const [filterDateTo, setFilterDateTo] = useState<string>("")
-
+  
   // Get houseId from context
   const houseId = selectedHouse?.id
 
@@ -41,9 +40,9 @@ export default function ExpensesPage() {
 
   if (!selectedHouse) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
-        <ExpensesHeader
-          houseId={houseId}
+      <>
+        <ExpensesHeader 
+          houseId={houseId} 
           onExpenseCreated={handleExpenseCreated}
           filterCategory={filterCategory}
           onFilterCategoryChange={setFilterCategory}
@@ -56,20 +55,22 @@ export default function ExpensesPage() {
           sortOrder={sortOrder}
           onSortOrderChange={handleSortOrderChange}
         />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-gray-500 mb-2">No house selected</p>
-            <p className="text-sm text-gray-400">Please select a house to view expenses</p>
+        <div className="p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-gray-500 mb-2">No house selected</p>
+              <p className="text-sm text-gray-400">Please select a house to view expenses</p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
-      <ExpensesHeader
-        houseId={houseId}
+    <>
+      <ExpensesHeader 
+        houseId={houseId} 
         onExpenseCreated={handleExpenseCreated}
         filterCategory={filterCategory}
         onFilterCategoryChange={setFilterCategory}
@@ -82,18 +83,18 @@ export default function ExpensesPage() {
         sortOrder={sortOrder}
         onSortOrderChange={handleSortOrderChange}
       />
-
-      {/* Quick Stats Overview */}
-      <ExpenseQuickStats houseId={houseId} key={`stats-${refreshTrigger}`} />
+      
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        {/* Quick Stats Overview */}
+        <ExpenseQuickStats houseId={houseId} key={`stats-${refreshTrigger}`} />
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="overview" className="cursor-pointer">Overview</TabsTrigger>
           <TabsTrigger value="expenses" className="cursor-pointer">Expenses</TabsTrigger>
           <TabsTrigger value="balances" className="cursor-pointer">Balances</TabsTrigger>
           <TabsTrigger value="analytics" className="cursor-pointer">Analytics</TabsTrigger>
-          <TabsTrigger value="summary" className="cursor-pointer">Summary</TabsTrigger>
         </TabsList>
 
         {/* Overview Tab - Dashboard with key insights */}
@@ -106,8 +107,8 @@ export default function ExpensesPage() {
                 <CardDescription>Latest transactions in your household</CardDescription>
               </CardHeader>
               <CardContent>
-                <ExpensesList
-                  houseId={houseId}
+                <ExpensesList 
+                  houseId={houseId} 
                   refreshTrigger={refreshTrigger}
                   sortField="date"
                   sortOrder="desc"
@@ -125,8 +126,8 @@ export default function ExpensesPage() {
 
         {/* Expenses Tab - Full expense list */}
         <TabsContent value="expenses" className="space-y-6">
-          <ExpensesList
-            houseId={houseId}
+          <ExpensesList 
+            houseId={houseId} 
             refreshTrigger={refreshTrigger}
             sortField={sortField}
             sortOrder={sortOrder}
@@ -146,13 +147,9 @@ export default function ExpensesPage() {
           <SpendingTrendsChart houseId={houseId} key={`trends-analytics-${refreshTrigger}`} />
           <CategoryBreakdownChart houseId={houseId} key={`category-${refreshTrigger}`} />
         </TabsContent>
-
-        {/* Summary Tab - Total and individual expenses */}
-        <TabsContent value="summary" className="space-y-6">
-          <ExpensesSummary houseId={houseId} refreshTrigger={refreshTrigger} />
-        </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </>
   )
 }
 

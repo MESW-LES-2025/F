@@ -30,6 +30,14 @@ export interface House {
   createdAt: Date;
   updatedAt: Date;
   invitationCode: string;
+  users?: {
+    user: {
+      id: string;
+      name: string | null;
+      username: string | null;
+      imageUrl: string | null;
+    }
+  }[];
 }
 
 export interface HouseDetails {

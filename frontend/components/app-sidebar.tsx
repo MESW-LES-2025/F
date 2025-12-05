@@ -4,7 +4,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import {
-  Home,
+  LayoutDashboard,
   Zap,
   Users,
   Calendar,
@@ -23,7 +23,7 @@ import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth-context";
 
 const navigation = [
-  { name: "Home", href: "/", icon: Home },
+  { name: "Dashboard", href: "/", icon: LayoutDashboard },
   { name: "Expenses", href: "/expenses", icon: Zap },
   { name: "Pantry", href: "/pantry", icon: Users },
   { name: "Activities", href: "/activities", icon: Calendar },

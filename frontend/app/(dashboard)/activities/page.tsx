@@ -140,26 +140,30 @@ export default function ActivitiesPage() {
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <>
         <ActivitiesHeader onTaskCreated={handleTaskCreated} />
-        <div className="flex items-center justify-center h-64">
-          <p className="text-gray-500">Loading tasks...</p>
+        <div className="p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center h-64">
+            <p className="text-gray-500">Loading tasks...</p>
+          </div>
         </div>
-      </div>
+      </>
     )
   }
 
   if (!selectedHouse) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <>
         <ActivitiesHeader onTaskCreated={handleTaskCreated} />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-gray-500 mb-2">No house selected</p>
-            <p className="text-sm text-gray-400">Please select a house to view tasks</p>
+        <div className="p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-gray-500 mb-2">No house selected</p>
+              <p className="text-sm text-gray-400">Please select a house to view tasks</p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
@@ -182,7 +186,7 @@ export default function ActivitiesPage() {
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+    <>
       <ActivitiesHeader
         onTaskCreated={handleTaskCreated}
         timeframe={timeframe}
@@ -193,9 +197,11 @@ export default function ActivitiesPage() {
         onAssigneeChange={(v) => setAssigneeFilter(v)}
         onStatusChange={(v) => setStatusFilter(v)}
       />
-      <ActivitiesStats tasks={filteredTasks} />
+      
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <ActivitiesStats tasks={filteredTasks} />
 
-      <ActivitiesKanban 
+        <ActivitiesKanban 
         tasks={filteredTasks} 
         onEditTask={handleEditTask}
         onDeleteTask={handleDeleteTask}
@@ -220,6 +226,7 @@ export default function ActivitiesPage() {
         onOpenChange={(open) => !open && setDeletingTask(null)}
         onTaskDeleted={handleTaskDeleted}
       />
-    </div>
+      </div>
+    </>
   )
 }

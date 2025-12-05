@@ -3,28 +3,37 @@
 import { HouseList } from "@/components/house/house-list";
 import { JoinHouseForm } from "@/components/house/house-join-form";
 import { CreateHouseForm } from "@/components/house/house-create-form";
+import { NotificationsBell } from "@/components/notifications-bell";
 
 export default function SettingsPage() {
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
-      <div className="space-y-2">
-        <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-          House Management
-        </h1>
-        <p className="text-muted-foreground">
-          Manage your houses or join/create a new one
-        </p>
+    <>
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 md:px-6 py-4 flex items-center justify-between">
+          <h1 className="text-base md:text-lg font-semibold text-gray-900">
+            House Management
+          </h1>
+          <NotificationsBell />
+        </div>
       </div>
 
-      <div className="grid gap-6">
-        <div className="grid gap-6">
-          <HouseList from={"management"} />
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <div className="space-y-2">
+          <p className="text-muted-foreground">
+            Manage your houses or join/create a new one
+          </p>
         </div>
 
-        <JoinHouseForm />
+        <div className="grid gap-6">
+          <div className="grid gap-6">
+            <HouseList from={"management"} />
+          </div>
 
-        <CreateHouseForm />
+          <JoinHouseForm />
+
+          <CreateHouseForm />
+        </div>
       </div>
-    </div>
+    </>
   );
 }

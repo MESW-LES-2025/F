@@ -65,6 +65,20 @@ export class HouseService {
 					some: { userId },
 				},
 			},
+			include: {
+				users: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								username: true,
+								imageUrl: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 
@@ -109,6 +123,20 @@ export class HouseService {
 	async findOne(id: string) {
 		return await this.prisma.house.findUnique({
 			where: { id },
+			include: {
+				users: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								username: true,
+								imageUrl: true,
+							},
+						},
+					},
+				},
+			},
 		});
 	}
 
