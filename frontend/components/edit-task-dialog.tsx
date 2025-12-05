@@ -93,7 +93,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
     try {
       // Fetch users from the task's house
-      const response = await apiGet<User[]>(`/auth/users/house/${task.houseId}`, { requiresAuth: true })
+      const response = await apiGet<User[]>(`/house/${task.houseId}/users`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)

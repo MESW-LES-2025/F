@@ -45,6 +45,20 @@ export class HouseController {
 		return this.houseService.findAllUserHouses(req.user.userId);
 	}
 
+	@ApiOperation({
+		summary: 'Get all users in a specific house (for task assignment)',
+	})
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@Get(':houseId/users')
+	@Get(':houseId/users')
+	getUsersByHouse(
+		@Param('houseId') houseId: string,
+		@Request() req: UserRequest,
+	) {
+		return this.houseService.getUsersByHouse(houseId, req.user.userId);
+	}
+
 	@ApiOperation({ summary: 'Find a specific house' })
 	@Get(':id')
 	findOne(@Param('id') id: string) {
