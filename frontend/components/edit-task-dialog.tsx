@@ -14,12 +14,21 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import {
+  DropdownMenu,
+  DropdownMenuTrigger,
+  DropdownMenuContent,
+  DropdownMenuCheckboxItem,
+  DropdownMenuLabel,
+} from "@/components/ui/dropdown-menu"
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+// Removed unused Select import
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { updateTask } from "@/lib/tasks-service"
 import { apiGet } from "@/lib/api-client"
@@ -39,6 +48,8 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
   const [formData, setFormData] = useState({
     title: task.title,
     description: task.description || "",
+    assignedUserIds: task.assignedUsers ? task.assignedUsers.map(u => u.id) : [] as string[],
+    size: (task as any).size || '',
     assignee: "",
     deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
     status: task.status,
@@ -58,6 +69,8 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
       setFormData({
         title: task.title,
         description: task.description || "",
+        assignedUserIds: task.assignedUsers ? task.assignedUsers.map(u => u.id) : [],
+        size: (task as any).size || '',
         assignee: "",
         deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
         status: task.status,
@@ -80,7 +93,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
     try {
       // Fetch users from the task's house
-      const response = await apiGet<User[]>(`/auth/users/house/${task.houseId}`, { requiresAuth: true })
+      const response = await apiGet<User[]>(`/house/${task.houseId}/users`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)
@@ -100,7 +113,8 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
   }
 
   const handleAssigneeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, assignee: value }))
+    // keep single-assignee compatibility
+    setFormData((prev) => ({ ...prev, assignee: value, assignedUserIds: [value] }))
     if (formErrors.assignee) {
       setFormErrors((prev) => ({ ...prev, assignee: false }))
     }
@@ -108,6 +122,10 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
   const handleStatusChange = (value: string) => {
     setFormData((prev) => ({ ...prev, status: value as 'todo' | 'doing' | 'done' }))
+  }
+
+  const handleSizeChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, size: value as 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL' }))
   }
 
   const validateForm = () => {
@@ -136,13 +154,7 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
     try {
       // Build update payload - only include changed fields
-      const updatePayload: {
-        title: string
-        description?: string
-        assigneeId?: string
-        deadline: string
-        status: 'todo' | 'doing' | 'done'
-      } = {
+      const updatePayload: any = {
         title: formData.title.trim(),
         deadline: new Date(formData.deadline).toISOString(),
         status: formData.status,
@@ -152,8 +164,15 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
         updatePayload.description = formData.description.trim()
       }
 
-      if (formData.assignee) {
+      if ((formData as any).assignedUserIds && (formData as any).assignedUserIds.length > 0) {
+        updatePayload.assignedUserIds = (formData as any).assignedUserIds
+        updatePayload.assigneeId = (formData as any).assignedUserIds[0]
+      } else if (formData.assignee) {
         updatePayload.assigneeId = formData.assignee
+      }
+
+      if ((formData as any).size) {
+        updatePayload.size = (formData as any).size
       }
 
       // Update the task via API
@@ -221,12 +240,9 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select
-                value={formData.status}
-                onValueChange={handleStatusChange}
-              >
-                <SelectTrigger id="status">
-                  <SelectValue placeholder="Select status" />
+              <Select value={formData.status} onValueChange={(v) => handleStatusChange(v)}>
+                <SelectTrigger className="w-full" size="sm">
+                  <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="todo">To-do</SelectItem>
@@ -238,19 +254,56 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
             <div className="space-y-2">
               <Label htmlFor="assignee">Change Assignee (optional)</Label>
-              <Select
-                value={formData.assignee}
-                onValueChange={handleAssigneeChange}
-              >
-                <SelectTrigger id="assignee">
-                  <SelectValue placeholder="Keep current assignee" />
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button type="button" variant="outline" className="w-full justify-between font-normal">
+                    {((formData as any).assignedUserIds || []).length > 0 ? (
+                      <span className="text-xs text-gray-700 truncate">
+                        {users
+                          .filter(u => ((formData as any).assignedUserIds || []).includes(u.id))
+                          .map(u => u.name.split(' ')[0])
+                          .join(', ')}
+                      </span>
+                    ) : (
+                      'Select assignees'
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="w-64 max-h-72 overflow-y-auto">
+                  <DropdownMenuLabel>Select one or more users</DropdownMenuLabel>
+                  {users.map((user) => (
+                    <DropdownMenuCheckboxItem
+                      key={user.id}
+                      checked={(formData as any).assignedUserIds.includes(user.id)}
+                      onCheckedChange={(checked) => {
+                        setFormData((prev) => {
+                          const ids = new Set((prev as any).assignedUserIds)
+                          if (checked) ids.add(user.id)
+                          else ids.delete(user.id)
+                          return { ...prev, assignedUserIds: Array.from(ids) }
+                        })
+                      }}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">{user.name}</span>
+                      </div>
+                    </DropdownMenuCheckboxItem>
+                  ))}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="size">Effort Size</Label>
+              <Select value={(formData as any).size || ''} onValueChange={(v) => handleSizeChange(v)}>
+                <SelectTrigger className="w-full" size="sm">
+                  <SelectValue placeholder="Select size (optional)" />
                 </SelectTrigger>
                 <SelectContent>
-                  {users.map((user) => (
-                    <SelectItem key={user.id} value={user.id}>
-                      {user.name}
-                    </SelectItem>
-                  ))}
+                  <SelectItem value="SMALL">Small</SelectItem>
+                  <SelectItem value="MEDIUM">Medium</SelectItem>
+                  <SelectItem value="LARGE">Large</SelectItem>
+                  <SelectItem value="XL">XL</SelectItem>
                 </SelectContent>
               </Select>
             </div>

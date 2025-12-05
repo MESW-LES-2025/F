@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { notificationService } from "@/lib/notification-service";
 import { UserNotification, NotificationCategory } from "@/lib/types";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -11,6 +12,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { useHouse } from "@/lib/house-context";
+import { HouseSelector } from "@/components/house/house-selector";
 
 function iconForCategory(cat: string | null | undefined) {
   switch (cat) {
@@ -161,12 +163,21 @@ export default function NotificationsPage() {
   const pageItems = items.slice(startIndex, startIndex + pageSize);
 
   return (
-    <div className="space-y-6 p-4 md:p-6 lg:p-8">
-      <div className="flex flex-col gap-2">
-        <h1 className="text-2xl font-semibold">Notifications</h1>
-        <p className="text-sm text-muted-foreground">All your recent activity and system messages.</p>
+    <>
+      <div className="bg-white border-b border-gray-200">
+        <div className="px-4 md:px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-base md:text-lg font-semibold text-gray-900">
+              Notifications
+            </h1>
+            <HouseSelector />
+          </div>
+          <NotificationsBell />
+        </div>
       </div>
-  <Card className="p-4 flex flex-col gap-3">
+
+      <div className="space-y-6 p-4 md:p-6 lg:p-8">
+        <Card className="p-4 flex flex-col gap-3">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-3">
             <Bell className="h-5 w-5 text-primary" />
@@ -324,6 +335,7 @@ export default function NotificationsPage() {
           </>
         )}
       </Card>
-    </div>
+      </div>
+    </>
   );
 }

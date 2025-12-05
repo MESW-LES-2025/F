@@ -4,7 +4,8 @@ import type { Task } from './types'
 export interface CreateTaskPayload {
   title: string
   description?: string
-  assigneeId: string
+  assigneeId?: string
+  assignedUserIds?: string[]
   deadline: string
   houseId: string
 }
@@ -13,6 +14,8 @@ export interface UpdateTaskPayload {
   title?: string
   description?: string
   assigneeId?: string
+  assignedUserIds?: string[]
+  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL'
   deadline?: string
   status?: 'todo' | 'doing' | 'done'
 }
@@ -46,6 +49,8 @@ export interface TaskResponse {
   updatedAt: string
   archived: boolean
   archivedAt?: string | null
+  assignedUsers?: { id: string; name: string; imageUrl?: string | null }[]
+  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL'
 }
 
 /**
@@ -56,8 +61,9 @@ function transformTask(backendTask: TaskResponse): Task {
     id: backendTask.id,
     title: backendTask.title,
     description: backendTask.description,
-    assignee: backendTask.assignee.name || backendTask.assignee.username,
-    assigneeAvatar: '', // Avatar URL would come from user profile in real implementation
+    assignee: (backendTask.assignedUsers && backendTask.assignedUsers[0]?.name) || backendTask.assignee?.name || backendTask.assignee?.username,
+    assigneeAvatar: (backendTask.assignedUsers && backendTask.assignedUsers[0]?.imageUrl) || '',
+    assignedUsers: backendTask.assignedUsers?.map(u => ({ id: u.id, name: u.name, avatar: u.imageUrl || undefined })) || [],
     status: backendTask.status as 'todo' | 'doing' | 'done',
     deadline: new Date(backendTask.deadline),
     createdAt: new Date(backendTask.createdAt),
@@ -65,6 +71,7 @@ function transformTask(backendTask: TaskResponse): Task {
     houseName: backendTask.house.name,
     archived: backendTask.archived,
     archivedAt: backendTask.archivedAt ? new Date(backendTask.archivedAt) : null,
+    size: backendTask.size || 'MEDIUM',
   }
 }
 

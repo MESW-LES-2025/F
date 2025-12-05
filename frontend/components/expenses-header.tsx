@@ -9,6 +9,7 @@ import {
 } from "@/components/ui/select";
 import { CreateExpenseDialog } from "@/components/create-expense-dialog";
 import { HouseSelector } from "@/components/house/house-selector";
+import { NotificationsBell } from "@/components/notifications-bell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
@@ -52,10 +53,13 @@ export function ExpensesHeader({
             </h1>
             <HouseSelector />
           </div>
-          <CreateExpenseDialog
-            houseId={houseId}
-            onExpenseCreated={onExpenseCreated}
-          />
+          <div className="flex items-center gap-2">
+            <CreateExpenseDialog
+              houseId={houseId}
+              onExpenseCreated={onExpenseCreated}
+            />
+            <NotificationsBell />
+          </div>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">

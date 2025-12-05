@@ -152,6 +152,36 @@ describe('NotificationsService', () => {
 
 			expect(result).toEqual(mockNotifications);
 		});
+
+		it('handles string boolean filters', async () => {
+			mockPrismaService.notificationToUser.findMany.mockResolvedValue([]);
+
+			// Test "true" string
+			await service.findAllByUser('u1', {
+				isRead: 'true',
+			} as unknown as FindAllNotificationsByUserDto);
+			expect(
+				mockPrismaService.notificationToUser.findMany,
+			).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({ isRead: true }) as unknown,
+				}),
+			);
+
+			// Test "false" string
+			await service.findAllByUser('u1', {
+				isRead: 'false',
+			} as unknown as FindAllNotificationsByUserDto);
+			expect(
+				mockPrismaService.notificationToUser.findMany,
+			).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						isRead: false,
+					}) as unknown,
+				}),
+			);
+		});
 	});
 
 	describe('findOneByUser', () => {
@@ -185,6 +215,39 @@ describe('NotificationsService', () => {
 				},
 			});
 		});
+
+		it('falls back to lookup by notificationId if id not found', async () => {
+			mockPrismaService.notificationToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({ id: 'ntu1' });
+
+			await service.findOneByUser('u1', 'notif1');
+
+			expect(
+				mockPrismaService.notificationToUser.findFirst,
+			).toHaveBeenCalledTimes(2);
+			expect(
+				mockPrismaService.notificationToUser.findFirst,
+			).toHaveBeenLastCalledWith(
+				expect.objectContaining({
+					where: {
+						notificationId: 'notif1',
+						userId: 'u1',
+						deletedAt: null,
+					},
+				}),
+			);
+		});
+
+		it('throws NotFoundException if notification not found', async () => {
+			mockPrismaService.notificationToUser.findFirst.mockResolvedValue(
+				null,
+			);
+
+			await expect(service.findOneByUser('u1', 'notif1')).rejects.toThrow(
+				NotFoundException,
+			);
+		});
 	});
 
 	describe('markOneAsReadByUser', () => {
@@ -208,8 +271,7 @@ describe('NotificationsService', () => {
 				success: true,
 			} as { success: boolean });
 
-			const result: { success: boolean } =
-				await service.markOneAsReadByUser('u1', 'notif1');
+			const result = await service.markOneAsReadByUser('u1', 'notif1');
 
 			expect(
 				mockPrismaService.notificationToUser.update,
@@ -257,6 +319,36 @@ describe('NotificationsService', () => {
 			});
 
 			expect(result).toEqual({ count: 1 });
+		});
+	});
+
+	describe('dismissOneByUser', () => {
+		it('throws NotFoundException if notification not found', async () => {
+			mockPrismaService.notificationToUser.findFirst.mockResolvedValue(
+				null,
+			);
+
+			await expect(
+				service.dismissOneByUser('u1', 'notif1'),
+			).rejects.toThrow(NotFoundException);
+		});
+
+		it('soft deletes notification', async () => {
+			mockPrismaService.notificationToUser.findFirst.mockResolvedValue({
+				id: 'ntu1',
+			});
+			mockPrismaService.notificationToUser.update.mockResolvedValue({});
+
+			await service.dismissOneByUser('u1', 'notif1');
+
+			expect(
+				mockPrismaService.notificationToUser.update,
+			).toHaveBeenCalledWith({
+				where: { id: 'ntu1' },
+				data: {
+					deletedAt: asMatcher<Date>(expect.any(Date)),
+				},
+			});
 		});
 	});
 });

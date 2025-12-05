@@ -5,7 +5,15 @@ import {
 	IsUUID,
 	IsOptional,
 	IsDateString,
+	IsArray,
 } from 'class-validator';
+
+export enum TaskSize {
+	SMALL = 'SMALL',
+	MEDIUM = 'MEDIUM',
+	LARGE = 'LARGE',
+	XL = 'XL',
+}
 
 export enum TaskStatus {
 	TODO = 'todo',
@@ -37,6 +45,23 @@ export class CreateTaskDto {
 	@IsNotEmpty()
 	@IsUUID()
 	assigneeId: string;
+
+	@ApiPropertyOptional({
+		example: ['550e8400-e29b-41d4-a716-446655440000'],
+		description: 'List of UUIDs of users assigned to this task',
+	})
+	@IsOptional()
+	@IsArray()
+	@IsUUID('4', { each: true })
+	assignedUserIds?: string[];
+
+	@ApiPropertyOptional({
+		enum: TaskSize,
+		example: TaskSize.MEDIUM,
+		description: 'Estimated effort size for the task',
+	})
+	@IsOptional()
+	size?: TaskSize;
 
 	@ApiProperty({
 		example: '2025-12-31T23:59:59.000Z',

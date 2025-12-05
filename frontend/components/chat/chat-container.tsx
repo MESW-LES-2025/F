@@ -244,7 +244,7 @@ export function ChatContainer() {
 
   return (
     <div className="flex flex-col h-[calc(100vh-4rem)] lg:h-screen bg-gray-50">
-      <ChatHeader houseName={selectedHouse?.name} />
+      <ChatHeader />
 
       <div 
         ref={containerRef}
