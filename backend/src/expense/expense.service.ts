@@ -533,7 +533,7 @@ export class ExpenseService {
 				if (payerData) {
 					payerData.balance -= expense.amount;
 				}
-				
+
 				// The receiver's balance increases (they received money)
 				if (expense.splitWith.length > 0) {
 					const receiverData = balanceData.get(expense.splitWith[0]);
@@ -664,7 +664,8 @@ export class ExpenseService {
 					// Get start of week (Monday)
 					const weekStart = new Date(expenseDate);
 					const day = weekStart.getDay();
-					const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+					const diff =
+						weekStart.getDate() - day + (day === 0 ? -6 : 1);
 					weekStart.setDate(diff);
 					weekStart.setHours(0, 0, 0, 0);
 					key = weekStart.toISOString().split('T')[0];
@@ -699,7 +700,8 @@ export class ExpenseService {
 				case 'week': {
 					const weekStart = new Date(currentDate);
 					const day = weekStart.getDay();
-					const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+					const diff =
+						weekStart.getDate() - day + (day === 0 ? -6 : 1);
 					weekStart.setDate(diff);
 					weekStart.setHours(0, 0, 0, 0);
 					key = weekStart.toISOString().split('T')[0];
@@ -757,9 +759,9 @@ export class ExpenseService {
 
 		// Get all expenses for the house (excluding settlements)
 		const expenses = await this.prisma.expense.findMany({
-			where: { 
+			where: {
 				houseId,
-				category: { not: 'SETTLEMENT' }
+				category: { not: 'SETTLEMENT' },
 			},
 		});
 

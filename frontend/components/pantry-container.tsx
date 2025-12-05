@@ -55,7 +55,7 @@ export default function PantryContainer({ items, pantryHouseId, pantryId, onItem
   }, [list, category, status, addedBy, user])
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+    <>
       <PantryHeader
         category={category}
         setCategory={setCategory}
@@ -66,9 +66,11 @@ export default function PantryContainer({ items, pantryHouseId, pantryId, onItem
         onItemAdded={onItemAdded}
       />
 
-      <PantryStats items={filtered} />
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        <PantryStats items={filtered} />
 
-      <PantryGrid items={filtered} pantryHouseId={pantryHouseId} pantryId={pantryId} />
-    </div>
+        <PantryGrid items={filtered} pantryHouseId={pantryHouseId} pantryId={pantryId} />
+      </div>
+    </>
   )
 }

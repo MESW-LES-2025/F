@@ -2,6 +2,7 @@
 
 import PantryAddItem from "./pantry-add-item";
 import { HouseSelector } from "./house/house-selector";
+import { NotificationsBell } from "./notifications-bell";
 import {
   Select,
   SelectContent,
@@ -38,7 +39,10 @@ export function PantryHeader({
             <h1 className="text-lg font-semibold text-gray-900">Pantry</h1>
             <HouseSelector />
           </div>
-          <PantryAddItem onItemAdded={onItemAdded} />
+          <div className="flex items-center gap-2">
+            <PantryAddItem onItemAdded={onItemAdded} />
+            <NotificationsBell />
+          </div>
         </div>
 
         <div className="flex items-center gap-4">

@@ -14,7 +14,7 @@ export class HouseService {
 	constructor(
 		private prisma: PrismaService,
 		private pantryService: PantryService,
-	) { }
+	) {}
 
 	async create(createHouseDto: CreateHouseDto, createdByUserId: string) {
 		const { name } = createHouseDto;

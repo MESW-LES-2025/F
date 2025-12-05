@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/select";
 import { useHouse } from "@/lib/house-context";
 import { HouseSelector } from "./house/house-selector";
+import { NotificationsBell } from "./notifications-bell";
 
 export function DashboardHeader() {
   const { selectedHouse } = useHouse();
@@ -19,17 +20,20 @@ export function DashboardHeader() {
       <div className="px-4 md:px-6 py-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
         <div className="flex items-center gap-4">
           <h1 className="text-base md:text-lg font-semibold text-gray-900">
-            Home
+            Dashboard
           </h1>
           <HouseSelector />
         </div>
-        <Button
-          variant="outline"
-          size="sm"
-          className="text-sm bg-transparent w-full sm:w-auto"
-        >
-          + New Activity
-        </Button>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            className="text-sm bg-transparent"
+          >
+            + New Activity
+          </Button>
+          <NotificationsBell />
+        </div>
       </div>
 
       <div className="px-4 md:px-6 pb-4 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 sm:gap-4">

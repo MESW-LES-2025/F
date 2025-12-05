@@ -40,7 +40,7 @@ export default function ExpensesPage() {
 
   if (!selectedHouse) {
     return (
-      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+      <>
         <ExpensesHeader 
           houseId={houseId} 
           onExpenseCreated={handleExpenseCreated}
@@ -55,18 +55,20 @@ export default function ExpensesPage() {
           sortOrder={sortOrder}
           onSortOrderChange={handleSortOrderChange}
         />
-        <div className="flex items-center justify-center h-64">
-          <div className="text-center">
-            <p className="text-gray-500 mb-2">No house selected</p>
-            <p className="text-sm text-gray-400">Please select a house to view expenses</p>
+        <div className="p-4 md:p-6 lg:p-8">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <p className="text-gray-500 mb-2">No house selected</p>
+              <p className="text-sm text-gray-400">Please select a house to view expenses</p>
+            </div>
           </div>
         </div>
-      </div>
+      </>
     )
   }
 
   return (
-    <div className="p-4 md:p-6 lg:p-8 space-y-6">
+    <>
       <ExpensesHeader 
         houseId={houseId} 
         onExpenseCreated={handleExpenseCreated}
@@ -82,8 +84,9 @@ export default function ExpensesPage() {
         onSortOrderChange={handleSortOrderChange}
       />
       
-      {/* Quick Stats Overview */}
-      <ExpenseQuickStats houseId={houseId} key={`stats-${refreshTrigger}`} />
+      <div className="p-4 md:p-6 lg:p-8 space-y-6">
+        {/* Quick Stats Overview */}
+        <ExpenseQuickStats houseId={houseId} key={`stats-${refreshTrigger}`} />
 
       {/* Main Content with Tabs */}
       <Tabs defaultValue="overview" className="space-y-6">
@@ -145,7 +148,8 @@ export default function ExpensesPage() {
           <CategoryBreakdownChart houseId={houseId} key={`category-${refreshTrigger}`} />
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </>
   )
 }
 

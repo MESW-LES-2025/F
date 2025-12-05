@@ -2,6 +2,7 @@
 
 import { CreateTaskDialog } from "@/components/create-task-dialog";
 import { HouseSelector } from "@/components/house/house-selector";
+import { NotificationsBell } from "@/components/notifications-bell";
 import {
   Select,
   SelectContent,
@@ -57,6 +58,7 @@ export function ActivitiesHeader({
               </Button>
             </Link>
             <CreateTaskDialog onTaskCreated={onTaskCreated} />
+            <NotificationsBell />
           </div>
         </div>
 
