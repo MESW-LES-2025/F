@@ -49,6 +49,20 @@ export class HouseController {
 	}
 
 	@ApiOperation({
+		summary: 'Get all users in a specific house (for task assignment)',
+	})
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
+	@Get(':houseId/users')
+	@Get(':houseId/users')
+	getUsersByHouse(
+		@Param('houseId') houseId: string,
+		@Request() req: UserRequest,
+	) {
+		return this.houseService.getUsersByHouse(houseId, req.user.userId);
+	}
+
+	@ApiOperation({
 		summary: 'Find details of a house in the system related to the user',
 	})
 	@UseGuards(JwtAuthGuard)

@@ -15,6 +15,10 @@ describe('ExpenseController', () => {
 		findByUser: jest.fn(),
 		update: jest.fn(),
 		remove: jest.fn(),
+		getSummary: jest.fn(),
+		getBalances: jest.fn(),
+		getSpendingOverTime: jest.fn(),
+		getCategoryBreakdown: jest.fn(),
 	};
 
 	const mockExpense = {
@@ -228,6 +232,77 @@ describe('ExpenseController', () => {
 
 			await expect(controller.remove('nonexistent-id')).rejects.toThrow(
 				'Expense with ID nonexistent-id not found',
+			);
+		});
+	});
+
+	describe('getSummary', () => {
+		it('should return expense summary', async () => {
+			const summary = { total: 100 };
+			mockService.getSummary.mockResolvedValue(summary);
+
+			const result = await controller.getSummary('house-1');
+
+			expect(result).toEqual(summary);
+			expect(mockService.getSummary).toHaveBeenCalledWith('house-1');
+		});
+	});
+
+	describe('getBalances', () => {
+		it('should return balances', async () => {
+			const balances = { user1: 10 };
+			mockService.getBalances.mockResolvedValue(balances);
+
+			const result = await controller.getBalances('house-1');
+
+			expect(result).toEqual(balances);
+			expect(mockService.getBalances).toHaveBeenCalledWith('house-1');
+		});
+	});
+
+	describe('getSpendingOverTime', () => {
+		it('should return spending trends', async () => {
+			const trends = [{ date: '2023-01-01', amount: 100 }];
+			mockService.getSpendingOverTime.mockResolvedValue(trends);
+
+			const result = await controller.getSpendingOverTime(
+				'house-1',
+				'month',
+				'30',
+			);
+
+			expect(result).toEqual(trends);
+			expect(mockService.getSpendingOverTime).toHaveBeenCalledWith(
+				'house-1',
+				'month',
+				30,
+			);
+		});
+
+		it('should use default values', async () => {
+			const trends = [{ date: '2023-01-01', amount: 100 }];
+			mockService.getSpendingOverTime.mockResolvedValue(trends);
+
+			await controller.getSpendingOverTime('house-1');
+
+			expect(mockService.getSpendingOverTime).toHaveBeenCalledWith(
+				'house-1',
+				'day',
+				30,
+			);
+		});
+	});
+
+	describe('getCategoryBreakdown', () => {
+		it('should return category breakdown', async () => {
+			const breakdown = { GROCERIES: 100 };
+			mockService.getCategoryBreakdown.mockResolvedValue(breakdown);
+
+			const result = await controller.getCategoryBreakdown('house-1');
+
+			expect(result).toEqual(breakdown);
+			expect(mockService.getCategoryBreakdown).toHaveBeenCalledWith(
+				'house-1',
 			);
 		});
 	});

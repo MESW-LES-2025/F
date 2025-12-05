@@ -1,21 +1,13 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { HouseController } from './house.controller';
 import { HouseService } from './house.service';
-import { UserRequest } from 'src/shared/types/user_request';
+import { CreateHouseDto } from './dto/create-house.dto';
+import { UserRequest } from '../shared/types/user_request';
 
 describe('HouseController', () => {
 	let controller: HouseController;
 
-	const mockUser = {
-		id: 'user-id-1',
-		email: 'test@example.com',
-		username: 'tester',
-		name: 'Tester',
-		createdAt: new Date(),
-		updatedAt: new Date(),
-	};
-
-	const mockService = {
+	const mockHouseService = {
 		create: jest.fn(),
 		findAll: jest.fn(),
 		findAllUserHouses: jest.fn(),
@@ -23,12 +15,7 @@ describe('HouseController', () => {
 		findHouseDetails: jest.fn(),
 		update: jest.fn(),
 		remove: jest.fn(),
-	};
-
-	const mockReq = {
-		user: {
-			userId: 'user123',
-		},
+		getUsersByHouse: jest.fn(),
 	};
 
 	beforeEach(async () => {
@@ -37,14 +24,13 @@ describe('HouseController', () => {
 			providers: [
 				{
 					provide: HouseService,
-					useValue: mockService,
+					useValue: mockHouseService,
 				},
 			],
 		}).compile();
 
 		controller = module.get<HouseController>(HouseController);
-
-		jest.clearAllMocks();
+		controller = module.get<HouseController>(HouseController);
 	});
 
 	it('should be defined', () => {
@@ -53,57 +39,130 @@ describe('HouseController', () => {
 
 	describe('create', () => {
 		it('should create a house', async () => {
-			const req = {
-				user: { userId: mockUser.id },
-			} as unknown as UserRequest;
-			const dto = { name: 'My House' };
-			mockService.create.mockResolvedValue('created');
+			const createHouseDto: CreateHouseDto = { name: 'Test House' };
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			const result = { id: 'house-id', ...createHouseDto };
 
-			const result = await controller.create(dto, req);
+			mockHouseService.create.mockResolvedValue(result);
 
-			expect(result).toBe('created');
-			expect(mockService.create).toHaveBeenCalledWith(
-				dto,
+			expect(await controller.create(createHouseDto, req)).toBe(result);
+			expect(mockHouseService.create).toHaveBeenCalledWith(
+				createHouseDto,
 				req.user.userId,
 			);
 		});
 	});
 
 	describe('findAll', () => {
-		it('should return all houses', async () => {
-			const houses = [{ id: 'h1' }];
-			mockService.findAll.mockResolvedValue(houses);
+		it('should return an array of houses', async () => {
+			const result = [{ id: 'house-id', name: 'Test House' }];
+			mockHouseService.findAll.mockResolvedValue(result);
 
-			const result = await controller.findAll();
-
-			expect(result).toEqual(houses);
-			expect(mockService.findAll).toHaveBeenCalled();
+			expect(await controller.findAll()).toBe(result);
+			expect(mockHouseService.findAll).toHaveBeenCalled();
 		});
 	});
 
 	describe('findAllUserHouses', () => {
-		it('should return houses belonging to user', async () => {
-			const houses = [{ id: 'h1' }];
-			mockService.findAllUserHouses.mockResolvedValue(houses);
+		it('should return an array of houses for a user', async () => {
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			const result = [{ id: 'house-id', name: 'Test House' }];
+			mockHouseService.findAllUserHouses.mockResolvedValue(result);
 
-			const result = await controller.findAllUserHouses(mockReq);
-
-			expect(result).toEqual(houses);
-			expect(mockService.findAllUserHouses).toHaveBeenCalledWith(
-				'user123',
+			expect(await controller.findAllUserHouses(req)).toBe(result);
+			expect(mockHouseService.findAllUserHouses).toHaveBeenCalledWith(
+				req.user.userId,
 			);
 		});
 	});
 
 	describe('findOne', () => {
 		it('should return a single house', async () => {
-			const house = { id: 'h1' };
-			mockService.findOne.mockResolvedValue(house);
+			const id = 'house-id';
+			const result = { id, name: 'Test House' };
+			mockHouseService.findOne.mockResolvedValue(result);
 
-			const result = await controller.findOne('h1');
+			expect(await controller.findOne(id)).toBe(result);
+			expect(mockHouseService.findOne).toHaveBeenCalledWith(id);
+		});
+	});
 
-			expect(result).toEqual(house);
-			expect(mockService.findOne).toHaveBeenCalledWith('h1');
+	describe('getUsersByHouse', () => {
+		it('should return users in a house', async () => {
+			const houseId = 'house-id';
+			const result = [{ id: 'user-id', username: 'user' }];
+			mockHouseService.getUsersByHouse.mockResolvedValue(result);
+
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			expect(await controller.getUsersByHouse(houseId, req)).toBe(result);
+			expect(mockHouseService.getUsersByHouse).toHaveBeenCalledWith(
+				houseId,
+				req.user.userId,
+			);
+		});
+	});
+
+	describe('findHouseDetails', () => {
+		it('should return house details for the given id and user', async () => {
+			const houseDetails = { id: 'house1', name: 'Casa 1' };
+
+			mockService.findHouseDetails = jest
+				.fn()
+				.mockResolvedValue(houseDetails);
+
+			const result = await controller.findHouseDetails(
+				'house1',
+				mockReq as UserRequest,
+			);
+
+			expect(result).toEqual(houseDetails);
+			expect(mockService.findHouseDetails).toHaveBeenCalledWith(
+				'house1',
+				'user123',
+			);
+		});
+	});
+
+	describe('update', () => {
+		it('should update a house', async () => {
+			const houseId = 'house1';
+			const updateHouseDto = { name: 'Updated House' };
+			const mockResult = { id: houseId, name: 'Updated House' };
+
+			mockService.update = jest.fn().mockResolvedValue(mockResult);
+
+			const result = await controller.update(
+				houseId,
+				updateHouseDto,
+				mockReq as unknown as UserRequest,
+			);
+
+			expect(result).toEqual(mockResult);
+			expect(mockService.update).toHaveBeenCalledWith({
+				houseId,
+				dto: updateHouseDto,
+				userId: 'user123',
+			});
+		});
+	});
+
+	describe('remove', () => {
+		it('should delete a house', async () => {
+			const houseId = 'house1';
+			const mockResult = { success: true };
+
+			mockService.remove = jest.fn().mockResolvedValue(mockResult);
+
+			const result = await controller.remove(
+				houseId,
+				mockReq as unknown as UserRequest,
+			);
+
+			expect(result).toEqual(mockResult);
+			expect(mockService.remove).toHaveBeenCalledWith({
+				houseId,
+				userId: 'user123',
+			});
 		});
 	});
 

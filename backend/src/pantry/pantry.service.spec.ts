@@ -6,6 +6,7 @@ import { NotFoundException } from '@nestjs/common';
 
 describe('PantryService', () => {
 	let service: PantryService;
+	let module: TestingModule;
 
 	const mockPrisma = {
 		pantry: {
@@ -21,10 +22,16 @@ describe('PantryService', () => {
 			delete: jest.fn(),
 			createMany: jest.fn(),
 		},
+		houseToUser: {
+			findMany: jest.fn(),
+		},
+		pantryItem: {
+			findUnique: jest.fn(),
+		},
 	};
 
 	beforeEach(async () => {
-		const module: TestingModule = await Test.createTestingModule({
+		module = await Test.createTestingModule({
 			providers: [
 				PantryService,
 				{
@@ -130,12 +137,28 @@ describe('PantryService', () => {
 			},
 		};
 
-		it('should throw if pantry does not exist', async () => {
+		it('should throw if pantry does not exist and cannot be created', async () => {
 			mockPrisma.pantry.findFirst.mockResolvedValue(null);
+			mockPrisma.pantry.create.mockRejectedValue(new Error('fail'));
 
 			await expect(service.update(params)).rejects.toThrow(
 				NotFoundException,
 			);
+		});
+
+		it('should auto-create pantry if not found', async () => {
+			mockPrisma.pantry.findFirst
+				.mockResolvedValueOnce(null) // First check fails
+				.mockResolvedValueOnce({ id: 'p1', items: [] }); // Second check succeeds after create
+			mockPrisma.pantry.create.mockResolvedValue({ id: 'p1' });
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([]);
+			mockPrisma.pantryToItem.create.mockResolvedValue({});
+
+			await service.update(params);
+
+			expect(mockPrisma.pantry.create).toHaveBeenCalledWith({
+				data: { houseId: 'h1' },
+			});
 		});
 
 		it('should throw if updatePantryDto has no items', async () => {
@@ -179,6 +202,65 @@ describe('PantryService', () => {
 			expect(result).toEqual(mockReturn);
 		});
 
+		it('should delete items with quantity <= 0', async () => {
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([
+				{ itemId: 'i1', id: 'x1' },
+			]);
+			mockPrisma.pantryToItem.delete.mockResolvedValue({});
+
+			await service.update({
+				...params,
+				updatePantryDto: {
+					items: [{ itemId: 'i1', quantity: 0 }],
+				},
+			});
+
+			expect(mockPrisma.pantryToItem.delete).toHaveBeenCalledWith({
+				where: {
+					pantryId_itemId: {
+						pantryId: 'p1',
+						itemId: 'i1',
+					},
+				},
+			});
+		});
+
+		it('should send notification for low stock', async () => {
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([
+				{ itemId: 'i1', id: 'x1' },
+			]);
+			mockPrisma.pantryToItem.update.mockResolvedValue({});
+			mockPrisma.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'u1' },
+				{ userId: 'u2' },
+			]);
+			mockPrisma.pantryItem.findUnique.mockResolvedValue({
+				name: 'Milk',
+				measurementUnit: 'L',
+			});
+
+			// Access the NotificationsService mock correctly
+			const notificationsService = module.get(NotificationsService);
+
+			await service.update({
+				...params,
+				updatePantryDto: {
+					items: [{ itemId: 'i1', quantity: 1 }], // Low stock
+				},
+			});
+
+			// eslint-disable-next-line @typescript-eslint/unbound-method
+			expect(notificationsService.create as jest.Mock).toHaveBeenCalled();
+		});
+
 		it('should only update existing items when no new ones are provided', async () => {
 			mockPrisma.pantry.findFirst.mockResolvedValue({
 				id: 'pantry123',
@@ -220,6 +302,110 @@ describe('PantryService', () => {
 			});
 
 			expect(mockPrisma.pantryToItem.create).not.toHaveBeenCalled();
+		});
+
+		it('should handle expiry date updates', async () => {
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([
+				{ itemId: 'i1', id: 'x1' },
+			]);
+			mockPrisma.pantryToItem.update.mockResolvedValue({});
+
+			const expiryDate = new Date();
+			await service.update({
+				...params,
+				updatePantryDto: {
+					items: [
+						{
+							itemId: 'i1',
+							quantity: 5,
+							expiryDate: expiryDate.toISOString(),
+						},
+					],
+				},
+			});
+
+			expect(mockPrisma.pantryToItem.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						expiryDate: expiryDate,
+					}) as unknown,
+				}),
+			);
+		});
+
+		it('should filter out non-positive quantity for new items', async () => {
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([]);
+
+			await service.update({
+				...params,
+				updatePantryDto: {
+					items: [{ itemId: 'new1', quantity: 0 }],
+				},
+			});
+
+			expect(mockPrisma.pantryToItem.create).not.toHaveBeenCalled();
+		});
+
+		it('should handle errors during item deletion', async () => {
+			const consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([
+				{ itemId: 'i1', id: 'x1' },
+			]);
+			mockPrisma.pantryToItem.delete.mockRejectedValue(
+				new Error('delete fail'),
+			);
+
+			await expect(
+				service.update({
+					...params,
+					updatePantryDto: {
+						items: [{ itemId: 'i1', quantity: 0 }],
+					},
+				}),
+			).rejects.toThrow('delete fail');
+
+			expect(consoleSpy).toHaveBeenCalled();
+			consoleSpy.mockRestore();
+		});
+
+		it('should handle errors during item creation', async () => {
+			const consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+			mockPrisma.pantry.findFirst.mockResolvedValue({
+				id: 'p1',
+				items: [],
+			});
+			mockPrisma.pantryToItem.findMany.mockResolvedValue([]);
+			mockPrisma.pantryToItem.create.mockRejectedValue(
+				new Error('create fail'),
+			);
+
+			await expect(
+				service.update({
+					...params,
+					updatePantryDto: {
+						items: [{ itemId: 'new1', quantity: 1 }],
+					},
+				}),
+			).rejects.toThrow('create fail');
+
+			expect(consoleSpy).toHaveBeenCalled();
+			consoleSpy.mockRestore();
 		});
 	});
 });

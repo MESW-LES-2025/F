@@ -176,6 +176,71 @@ describe('HouseService', () => {
 		});
 	});
 
+	describe('getUsersByHouse', () => {
+		it('should return users in a house', async () => {
+			const houseId = 'house-1';
+			const userId = 'user-1';
+			const mockHouse = { id: houseId };
+			const mockUsers = [
+				{
+					id: 'user-1',
+					email: 'test@test.com',
+					username: 'test',
+					name: 'Test',
+				},
+			];
+
+			mockPrismaService.house.findFirst.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findMany.mockResolvedValue(mockUsers);
+
+			const result = await service.getUsersByHouse(houseId, userId);
+
+			expect(result).toEqual(mockUsers);
+			expect(mockPrismaService.house.findFirst).toHaveBeenCalledWith({
+				where: {
+					id: houseId,
+					users: {
+						some: {
+							userId: userId,
+						},
+					},
+				},
+			});
+			expect(mockPrismaService.user.findMany).toHaveBeenCalledWith({
+				where: {
+					houses: {
+						some: {
+							houseId: houseId,
+						},
+					},
+				},
+				select: {
+					id: true,
+					email: true,
+					username: true,
+					name: true,
+				},
+				orderBy: {
+					name: 'asc',
+				},
+			});
+		});
+
+		it('should throw UnauthorizedException if user is not a member of the house', async () => {
+			const houseId = 'house-1';
+			const userId = 'user-1';
+
+			mockPrismaService.house.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.getUsersByHouse(houseId, userId),
+			).rejects.toThrow(UnauthorizedException);
+			await expect(
+				service.getUsersByHouse(houseId, userId),
+			).rejects.toThrow('User is not a member of this house');
+		});
+	});
+
 	describe('findHouseDetails', () => {
 		const mockHouse = {
 			id: 'house1',
