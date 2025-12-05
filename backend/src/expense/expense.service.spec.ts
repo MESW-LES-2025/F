@@ -609,8 +609,8 @@ describe('ExpenseService', () => {
 				(b) => b.userId === 'user-456',
 			);
 
-			expect(payer?.balance).toBe(50);
-			expect(receiver?.balance).toBe(-50);
+			expect(payer?.balance).toBe(-50);
+			expect(receiver?.balance).toBe(50);
 		});
 
 		it('should throw NotFoundException if house not found', async () => {

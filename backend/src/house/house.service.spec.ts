@@ -141,6 +141,20 @@ describe('HouseService', () => {
 			expect(result).toEqual(houses);
 			expect(mockPrismaService.house.findMany).toHaveBeenCalledWith({
 				where: { users: { some: { userId: 'user123' } } },
+				include: {
+					users: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									username: true,
+									imageUrl: true,
+								},
+							},
+						},
+					},
+				},
 			});
 		});
 	});
@@ -155,6 +169,20 @@ describe('HouseService', () => {
 			expect(result).toEqual(house);
 			expect(mockPrismaService.house.findUnique).toHaveBeenCalledWith({
 				where: { id: 'h1' },
+				include: {
+					users: {
+						include: {
+							user: {
+								select: {
+									id: true,
+									name: true,
+									username: true,
+									imageUrl: true,
+								},
+							},
+						},
+					},
+				},
 			});
 		});
 	});
