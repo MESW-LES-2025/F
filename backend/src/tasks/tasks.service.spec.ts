@@ -260,8 +260,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						status: 'todo',
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
+					}) as unknown,
+				}) as unknown,
 			);
 		});
 
@@ -287,8 +287,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: new Date('2025-12-31T23:59:59.000Z'),
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
+					}) as unknown,
+				}) as unknown,
 			);
 		});
 	});
@@ -557,8 +557,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: new Date('2026-06-15T12:00:00.000Z'),
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
+					}) as unknown,
+				}) as unknown,
 			);
 		});
 
@@ -576,8 +576,8 @@ describe('TasksService', () => {
 				expect.objectContaining({
 					data: expect.objectContaining({
 						deadline: undefined,
-					}) as Record<string, unknown>,
-				}) as Record<string, unknown>,
+					}) as unknown,
+				}) as unknown,
 			);
 		});
 	});
@@ -781,6 +781,155 @@ describe('TasksService', () => {
 
 			expect(result).toEqual([]);
 			expect(mockPrismaService.task.findMany).toHaveBeenCalledTimes(1);
+		});
+	});
+	describe('findAllForUser', () => {
+		it('should return tasks for user houses', async () => {
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ houseId: 'house-1' },
+			]);
+			mockPrismaService.task.findMany.mockResolvedValue([mockTask]);
+
+			const result = await service.findAllForUser('user-123');
+
+			expect(result).toEqual([mockTask]);
+			expect(mockPrismaService.houseToUser.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { userId: 'user-123' },
+					select: { houseId: true },
+				}) as unknown,
+			);
+			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						houseId: { in: ['house-1'] },
+					}) as unknown,
+				}) as unknown,
+			);
+		});
+
+		it('should return empty array if user has no houses', async () => {
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
+
+			const result = await service.findAllForUser('user-123');
+
+			expect(result).toEqual([]);
+			expect(mockPrismaService.task.findMany).not.toHaveBeenCalled();
+		});
+
+		it('should apply filters', async () => {
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([
+				{ houseId: 'house-1' },
+			]);
+			mockPrismaService.task.findMany.mockResolvedValue([mockTask]);
+
+			await service.findAllForUser('user-123', {
+				status: 'todo',
+				assigneeId: 'user-456',
+				archived: 'true',
+			});
+
+			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						status: 'todo',
+						assigneeId: 'user-456',
+						archived: true,
+					}) as unknown,
+				}) as unknown,
+			);
+		});
+	});
+
+	describe('archive', () => {
+		it('should archive a completed task', async () => {
+			const completedTask = { ...mockTask, status: 'done' };
+			mockPrismaService.task.findUnique.mockResolvedValue(completedTask);
+			mockPrismaService.task.update.mockResolvedValue({
+				...completedTask,
+				archived: true,
+			});
+
+			const result = await service.archive('task-123', 'user-123');
+
+			expect(result.archived).toBe(true);
+			expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						archived: true,
+					}) as unknown,
+				}) as unknown,
+			);
+		});
+
+		it('should throw BadRequest if task is not done', async () => {
+			mockPrismaService.task.findUnique.mockResolvedValue(mockTask); // status: todo
+
+			await expect(
+				service.archive('task-123', 'user-123'),
+			).rejects.toThrow(BadRequestException);
+		});
+
+		it('should throw Forbidden if user not allowed', async () => {
+			mockPrismaService.task.findUnique.mockResolvedValue(mockTask);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.archive('task-123', 'other-user'),
+			).rejects.toThrow(ForbiddenException);
+		});
+	});
+
+	describe('unarchive', () => {
+		it('should unarchive a task', async () => {
+			const archivedTask = { ...mockTask, archived: true };
+			mockPrismaService.task.findUnique.mockResolvedValue(archivedTask);
+			mockPrismaService.task.update.mockResolvedValue({
+				...archivedTask,
+				archived: false,
+			});
+
+			const result = await service.unarchive('task-123', 'user-123');
+
+			expect(result.archived).toBe(false);
+			expect(mockPrismaService.task.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						archived: false,
+					}) as unknown,
+				}) as unknown,
+			);
+		});
+	});
+
+	describe('findByHouse', () => {
+		it('should return tasks for a house', async () => {
+			mockPrismaService.task.findMany.mockResolvedValue([mockTask]);
+
+			const result = await service.findByHouse('house-1');
+
+			expect(result).toEqual([mockTask]);
+			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						houseId: 'house-1',
+					}) as unknown,
+				}) as unknown,
+			);
+		});
+
+		it('should filter by archived status', async () => {
+			mockPrismaService.task.findMany.mockResolvedValue([]);
+
+			await service.findByHouse('house-1', 'true');
+
+			expect(mockPrismaService.task.findMany).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: expect.objectContaining({
+						archived: true,
+					}) as unknown,
+				}) as unknown,
+			);
 		});
 	});
 });

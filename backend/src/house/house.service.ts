@@ -65,6 +65,44 @@ export class HouseService {
 		});
 	}
 
+	async getUsersByHouse(houseId: string, userId: string) {
+		const house = await this.prisma.house.findFirst({
+			where: {
+				id: houseId,
+				users: {
+					some: {
+						userId: userId,
+					},
+				},
+			},
+		});
+
+		if (!house) {
+			throw new UnauthorizedException(
+				'User is not a member of this house',
+			);
+		}
+
+		return await this.prisma.user.findMany({
+			where: {
+				houses: {
+					some: {
+						houseId: houseId,
+					},
+				},
+			},
+			select: {
+				id: true,
+				email: true,
+				username: true,
+				name: true,
+			},
+			orderBy: {
+				name: 'asc',
+			},
+		});
+	}
+
 	async findOne(id: string) {
 		return await this.prisma.house.findUnique({
 			where: { id },

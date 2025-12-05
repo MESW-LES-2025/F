@@ -98,7 +98,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
 
     try {
       // Fetch users from the selected house
-      const response = await apiGet<User[]>(`/auth/users/house/${selectedHouse.id}`, { requiresAuth: true })
+      const response = await apiGet<User[]>(`/house/${selectedHouse.id}/users`, { requiresAuth: true })
       setUsers(response)
     } catch (err) {
       console.error('Failed to load users:', err)

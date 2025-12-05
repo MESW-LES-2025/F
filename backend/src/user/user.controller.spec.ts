@@ -27,6 +27,7 @@ describe('UserController', () => {
 			.mockResolvedValue({ houseId: 'house-id-1' }),
 		inviteToHouse: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 		leaveHouse: jest.fn().mockResolvedValue({ houseId: 'house-id-1' }),
+		uploadImage: jest.fn().mockResolvedValue({ imageUrl: 'url' }),
 	};
 
 	const mockHouseService = {
@@ -144,5 +145,26 @@ describe('UserController', () => {
 			dto.houseId,
 		);
 		expect(result).toEqual(mockLeaveResult);
+	});
+
+	it('uploadImage should call userService.uploadImage', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		const file = { buffer: Buffer.from('test') } as Express.Multer.File;
+		const result = await controller.uploadImage(req, file);
+
+		expect(mockUserService.uploadImage).toHaveBeenCalledWith(
+			mockUser.id,
+			file,
+		);
+		expect(result).toEqual({ imageUrl: 'url' });
+	});
+
+	it('should propagate errors from service', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		mockUserService.findOne.mockRejectedValue(new Error('Service Error'));
+
+		await expect(controller.getCurrent(req)).rejects.toThrow(
+			'Service Error',
+		);
 	});
 });
