@@ -75,6 +75,9 @@ jobs:
       - name: Deploy to Render Prod
         env:
           RENDER_API_KEY: ${{ secrets.RENDER_API_KEY }}
+          GOOGLE_CLIENT_ID: ${{ secrets.GOOGLE_CLIENT_ID }}
+          GOOGLE_CLIENT_SECRET: ${{ secrets.GOOGLE_CLIENT_SECRET }}
+          GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
           CI: true
         run: |
           render deploys create ${{ secrets.RENDER_PROD_SERVICE_ID }} --output json --confirm
