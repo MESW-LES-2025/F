@@ -72,10 +72,25 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, o
             onDragStart={(e) => {
               e.dataTransfer.setData('text/plain', task.id)
             }}
-            className={`bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group border-l-4 ${
+            className={`bg-white rounded-lg p-3 shadow-sm border border-gray-200 hover:shadow-md transition-shadow group border-l-4 relative overflow-visible ${
               status === 'todo' ? 'border-l-rose-400' : status === 'doing' ? 'border-l-amber-400' : 'border-l-green-400'
             }`}
           >
+            
+            {task.size && (
+              <span
+                className={
+                  `absolute top-2 right-2 z-40 text-xs px-2 py-0.5 rounded-full font-semibold ` +
+                  (task.size === 'SMALL'
+                    ? 'bg-green-100 text-green-800 border border-green-200'
+                    : task.size === 'LARGE'
+                    ? 'bg-rose-100 text-rose-800 border border-rose-200'
+                    : 'bg-amber-100 text-amber-800 border border-amber-200')
+                }
+              >
+                {task.size}
+              </span>
+            )}
             <div className="flex items-start gap-2">
               <GripVertical className="w-4 h-4 text-gray-400 shrink-0 mt-0.5 opacity-0 group-hover:opacity-100 transition-opacity" />
               <div className="flex-1 min-w-0">
@@ -94,61 +109,71 @@ function TaskColumn({ title, tasks, bgColor, onEditTask, onDeleteTask, status, o
                 )}
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <Avatar className="w-6 h-6">
-                      <AvatarImage src={task.assigneeAvatar || "/placeholder.svg"} />
-                      <AvatarFallback className="text-xs">
-                        {task.assignee
-                          .split(" ")
-                          .map((n: string) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
-                    <span className="text-xs text-gray-500 truncate">{task.assignee}</span>
+                    <div className="flex -space-x-1">
+                      {(task.assignedUsers && task.assignedUsers.length > 0 ? task.assignedUsers : [{ id: 'fallback', name: task.assignee || 'Unknown', avatar: task.assigneeAvatar }]).slice(0,3).map(u => (
+                        <Avatar key={u.id} className="w-6 h-6">
+                          <AvatarImage src={u.avatar || "/placeholder.svg"} />
+                          <AvatarFallback className="text-xs">{u.name.split(' ').map(n => n[0]).join('')}</AvatarFallback>
+                        </Avatar>
+                      ))}
+                      {task.assignedUsers && task.assignedUsers.length > 3 && (
+                        <div className="w-6 h-6 bg-gray-200 text-[10px] flex items-center justify-center rounded">+{task.assignedUsers.length - 3}</div>
+                      )}
+                    </div>
+                    <span className="text-xs text-gray-600 truncate">
+                      {(
+                        (task.assignedUsers && task.assignedUsers.length > 0)
+                          ? task.assignedUsers.map(u => u.name.split(' ')[0])
+                          : [ (task.assignee || 'Unknown').split(' ')[0] ]
+                      ).join(', ')}
+                    </span>
                   </div>
-                  <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      className="h-7 w-7 p-0 cursor-pointer"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        onEditTask?.(task)
-                      }}
-                    >
-                      <Pencil className="w-3.5 h-3.5 text-blue-600" />
-                    </Button>
+                  {task.size && (
+                    <span className="sr-only">Size: {task.size}</span>
+                  )}
+                </div>
+                <div className="absolute bottom-2 right-2 flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity z-30">
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onEditTask?.(task)
+                    }}
+                  >
+                    <Pencil className="w-3.5 h-3.5 text-blue-600" />
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="flex items-center gap-1 h-7 px-2 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      onDeleteTask?.(task)
+                    }}
+                  >
+                    <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                  </Button>
+                  {status === 'done' && !task.archived && (
                     <Button
                       size="sm"
                       variant="ghost"
                       className="flex items-center gap-1 h-7 px-2 cursor-pointer"
-                      onClick={(e) => {
+                      onClick={async (e) => {
                         e.stopPropagation()
-                        onDeleteTask?.(task)
+                        try {
+                          const archived = await archiveTask(task.id)
+                          onTaskArchived?.(archived.id)
+                          toast({ title: 'Task archived', description: 'Moved to history.' })
+                        } catch (err) {
+                          toast({ title: 'Archive failed', description: String((err as any)?.message || 'Could not archive') })
+                        }
                       }}
                     >
-                      <Trash2 className="w-3.5 h-3.5 text-red-600" />
+                      <ArchiveRestore className="w-3.5 h-3.5 text-gray-600" />
                     </Button>
-                    {status === 'done' && !task.archived && (
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        className="flex items-center gap-1 h-7 px-2 cursor-pointer"
-                        onClick={async (e) => {
-                          e.stopPropagation()
-                          try {
-                            const archived = await archiveTask(task.id)
-                            // remove from UI immediately
-                            onTaskArchived?.(archived.id)
-                            toast({ title: 'Task archived', description: 'Moved to history.' })
-                          } catch (err) {
-                            toast({ title: 'Archive failed', description: String((err as any)?.message || 'Could not archive') })
-                          }
-                        }}
-                      >
-                        <ArchiveRestore className="w-3.5 h-3.5 text-gray-600" />
-                      </Button>
-                    )}
-                  </div>
+                  )}
                 </div>
               </div>
             </div>

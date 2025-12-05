@@ -24,6 +24,7 @@ model User {
   pantryItems      PantryItem[]
   refreshTokens    RefreshToken[]
   assignedTasks    Task[]         @relation("AssignedTasks")
+  assignedTaskLinks TaskToUser[]
   createdTasks     Task[]         @relation("CreatedTasks")
   paidExpenses     Expense[]      @relation("PaidExpenses")
   notifications    NotificationToUser[]
@@ -147,13 +148,29 @@ model Task {
   deadline    DateTime
   archived    Boolean  @default(false)
   archivedAt  DateTime?
+  size        TaskSize @default(MEDIUM)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  assigneeLinks TaskToUser[]
 
   @@index([assigneeId])
   @@index([createdById])
   @@index([houseId])
   @@index([status])
+}
+
+model TaskToUser {
+  id         String   @id @default(uuid()) @db.Uuid
+  taskId     String   @db.Uuid
+  userId     String   @db.Uuid
+  assignedAt DateTime @default(now())
+
+  task Task @relation(fields: [taskId], references: [id], onDelete: Cascade)
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([taskId, userId])
+  @@index([taskId])
+  @@index([userId])
 }
 
 model Expense {
@@ -278,4 +295,11 @@ enum NotificationLevel {
   MEDIUM
   HIGH
   URGENT
+}
+
+enum TaskSize {
+  SMALL
+  MEDIUM
+  LARGE
+  XL
 }

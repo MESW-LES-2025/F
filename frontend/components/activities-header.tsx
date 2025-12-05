@@ -19,10 +19,12 @@ interface ActivitiesHeaderProps {
   timeframe?: string;
   assignee?: string;
   status?: string;
+  size?: "all" | "SMALL" | "MEDIUM" | "LARGE" | "XL";
   assignees?: string[];
   onTimeframeChange?: (value: string) => void;
   onAssigneeChange?: (value: string) => void;
   onStatusChange?: (value: string) => void;
+  onSizeChange?: (value: "all" | "SMALL" | "MEDIUM" | "LARGE" | "XL") => void;
 }
 
 export function ActivitiesHeader({
@@ -30,10 +32,12 @@ export function ActivitiesHeader({
   timeframe = "all",
   assignee = "all",
   status = "all",
+  size = "all",
   assignees = [],
   onTimeframeChange,
   onAssigneeChange,
   onStatusChange,
+  onSizeChange,
 }: ActivitiesHeaderProps) {
   return (
     <div className="bg-white border-b border-gray-200/80">
@@ -110,6 +114,22 @@ export function ActivitiesHeader({
                 <SelectItem value="todo">To-do</SelectItem>
                 <SelectItem value="doing">Doing</SelectItem>
                 <SelectItem value="done">Done</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">Size:</span>
+            <Select value={size} onValueChange={(v) => onSizeChange?.(v as any)}>
+              <SelectTrigger className="w-[140px] h-9">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All</SelectItem>
+                <SelectItem value="SMALL">Small</SelectItem>
+                <SelectItem value="MEDIUM">Medium</SelectItem>
+                <SelectItem value="LARGE">Large</SelectItem>
+                <SelectItem value="XL">XL</SelectItem>
               </SelectContent>
             </Select>
           </div>
