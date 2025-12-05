@@ -1,4 +1,5 @@
 import {
+	BadRequestException,
 	Injectable,
 	NotFoundException,
 	UnauthorizedException,
@@ -8,6 +9,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { randomBytes } from 'crypto';
 import { PantryService } from '../pantry/pantry.service';
 import { verifyIsString } from '../shared/function-verify-string';
+import { UpdateHouseDto } from './dto/update-house.dto';
 
 @Injectable()
 export class HouseService {
@@ -45,6 +47,7 @@ export class HouseService {
 			data: {
 				userId: createdByUserId,
 				houseId: house.id,
+				role: 'ADMIN',
 			},
 		});
 
@@ -120,12 +123,159 @@ export class HouseService {
 		return code;
 	}
 
-	/*
-  update(id: number, updateHouseDto: UpdateHouseDto) {
-    return `This action updates a #${id} house`;
-  }
+	async findHouseDetails(houseId: string, userId: string) {
+		const house = await this.prisma.house.findFirst({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId }, // make sure user only sees his houses
+				},
+			},
+		});
 
-  remove(id: number) {
-    return `This action removes a #${id} house`;
-  } */
+		if (!house) {
+			throw new NotFoundException('House not found!');
+		}
+
+		const users = await this.prisma.user.findMany({
+			where: {
+				houses: {
+					some: {
+						houseId: house.id,
+					},
+				},
+			},
+			select: {
+				id: true,
+				email: true,
+				username: true,
+				name: true,
+				imagePublicId: true,
+				houses: {
+					where: {
+						houseId: house.id,
+					},
+					select: {
+						role: true,
+					},
+				},
+			},
+		});
+
+		return {
+			house,
+			users,
+		};
+	}
+
+	async update({
+		houseId,
+		dto,
+		userId,
+	}: {
+		houseId: string;
+		dto: UpdateHouseDto;
+		userId: string;
+	}) {
+		const house = await this.prisma.house.findFirst({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId, role: 'ADMIN' }, // only admins can edit a house!
+				},
+			},
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found!');
+		}
+
+		if (dto.userToRemoveId) {
+			const houseToUser = await this.prisma.houseToUser.findFirst({
+				where: {
+					houseId: houseId,
+					userId: dto.userToRemoveId,
+				},
+			});
+
+			if (!houseToUser) {
+				throw new NotFoundException('User is not in house!');
+			}
+
+			await this.prisma.houseToUser.delete({
+				where: {
+					id: houseToUser.id,
+					houseId: houseId,
+					userId: dto.userToRemoveId,
+				},
+			});
+		}
+
+		if (dto.userToUpgradeId) {
+			const houseToUser = await this.prisma.houseToUser.findFirst({
+				where: {
+					houseId: houseId,
+					userId: dto.userToUpgradeId,
+				},
+			});
+
+			if (!houseToUser) {
+				throw new NotFoundException('User is not in house!');
+			}
+
+			await this.prisma.houseToUser.update({
+				where: {
+					id: houseToUser.id,
+					houseId: houseId,
+					userId: dto.userToUpgradeId,
+				},
+				data: {
+					role: 'ADMIN',
+				},
+			});
+		}
+
+		return await this.prisma.house.update({
+			where: {
+				id: houseId,
+			},
+			data: {
+				name: dto.name,
+			},
+		});
+	}
+
+	async remove({ houseId, userId }: { houseId: string; userId: string }) {
+		const house = await this.prisma.house.findFirst({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId, role: 'ADMIN' }, // only admins can delete a house!
+				},
+			},
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found!');
+		}
+
+		const userRelations = await this.prisma.houseToUser.findMany({
+			where: { houseId },
+		});
+
+		if (userRelations.length > 1) {
+			throw new BadRequestException(
+				'The house cannot be deleted because there are other users still there',
+			);
+		}
+
+		return await this.prisma.house.delete({
+			where: {
+				id: houseId,
+				users: {
+					some: { userId, role: 'ADMIN' }, // only admins can delete a house!
+				},
+			},
+		});
+	}
 }
