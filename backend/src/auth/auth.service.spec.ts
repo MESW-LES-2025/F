@@ -50,6 +50,11 @@ describe('AuthService', () => {
 				(...args: any[]) => Promise<{ count: number }>
 			>;
 		};
+		googleAuthCode: {
+			create: jest.MockedFunction<(...args: any[]) => Promise<any>>;
+			findUnique: jest.MockedFunction<(...args: any[]) => Promise<any>>;
+			delete: jest.MockedFunction<(...args: any[]) => Promise<any>>;
+		};
 	};
 
 	const mockPrismaService: MockPrisma = {
@@ -86,6 +91,11 @@ describe('AuthService', () => {
 				(...args: any[]) => Promise<{ count: number }>
 			>,
 		},
+		googleAuthCode: {
+			create: jest.fn(),
+			findUnique: jest.fn(),
+			delete: jest.fn(),
+		},
 	};
 
 	const mockJwtService = {
@@ -106,7 +116,9 @@ describe('AuthService', () => {
 		createdAt: new Date(),
 		updatedAt: new Date(),
 		isEmailVerified: true,
-		verificationToken: null,
+		verificationToken: null as string | null,
+		googleId: null as string | null,
+		houses: [] as any[],
 	};
 
 	const mockRefreshToken = {
@@ -172,6 +184,38 @@ describe('AuthService', () => {
 			expect(mockPrismaService.refreshToken.create).toHaveBeenCalled();
 		});
 
+		it('should reactivate a deleted user', async () => {
+			const deletedUser = { ...mockUser, deletedAt: new Date() };
+			mockPrismaService.user.findUnique
+				.mockResolvedValueOnce(deletedUser) // findByEmail
+				.mockResolvedValueOnce(null); // findByUsername
+
+			mockPrismaService.user.update.mockResolvedValue({
+				...mockUser,
+				deletedAt: null,
+			});
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			const result = await service.register({
+				email: 'test@example.com',
+				username: 'newusername',
+				password: 'password123',
+				name: 'New Name',
+			});
+
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { id: deletedUser.id },
+					data: expect.objectContaining({
+						deletedAt: null,
+					}) as unknown,
+				}),
+			);
+			expect(result).toHaveProperty('access_token');
+		});
+
 		it('should throw ConflictException if user already exists', async () => {
 			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
 
@@ -198,15 +242,43 @@ describe('AuthService', () => {
 				mockRefreshToken,
 			);
 
-			const result = await service.login({
+			const result = (await service.login({
 				email: 'test@example.com',
 				password: 'password123',
-			});
+			})) as {
+				access_token: string;
+				refresh_token: string;
+				expires_in: number;
+				user: any;
+			};
 
 			expect(result).toHaveProperty('access_token');
 			expect(result).toHaveProperty('refresh_token');
 			expect(result).toHaveProperty('expires_in', 900);
 			expect(mockPrismaService.refreshToken.create).toHaveBeenCalled();
+		});
+
+		it('should throw UnauthorizedException if email not verified', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue({
+				...mockUser,
+				isEmailVerified: false,
+				verificationToken: null,
+			});
+			mockPrismaService.user.update.mockResolvedValue({
+				...mockUser,
+				isEmailVerified: false,
+				verificationToken: 'new-token',
+			});
+
+			await expect(
+				service.login({
+					email: 'test@example.com',
+					password: 'password123',
+				}),
+			).rejects.toThrow('Please verify your email before logging in');
+
+			expect(mockEmailService.sendEmail).toHaveBeenCalled();
+			expect(mockPrismaService.user.update).toHaveBeenCalled();
 		});
 
 		it('should throw UnauthorizedException if user not found', async () => {
@@ -491,6 +563,274 @@ describe('AuthService', () => {
 					currentPassword: 'any',
 					newPassword: 'any',
 				}),
+			).rejects.toThrow(UnauthorizedException);
+		});
+	});
+
+	describe('storeGoogleTokens', () => {
+		it('should store google tokens and return code', async () => {
+			const tokens = {
+				access_token: 'access',
+				refresh_token: 'refresh',
+			};
+			mockPrismaService.googleAuthCode.create.mockResolvedValue({});
+
+			const code = await service.storeGoogleTokens(tokens);
+
+			expect(code).toBeDefined();
+			expect(mockPrismaService.googleAuthCode.create).toHaveBeenCalled();
+		});
+	});
+
+	describe('exchangeGoogleTokens', () => {
+		it('should exchange code for tokens', async () => {
+			const code = 'valid-code';
+			const authCode = {
+				code,
+				accessToken: 'access',
+				refreshToken: 'refresh',
+				expiresAt: new Date(Date.now() + 60000),
+			};
+			mockPrismaService.googleAuthCode.findUnique.mockResolvedValue(
+				authCode,
+			);
+			mockPrismaService.googleAuthCode.delete.mockResolvedValue({});
+
+			const result = await service.exchangeGoogleTokens(code);
+
+			expect(result).toEqual({
+				access_token: 'access',
+				refresh_token: 'refresh',
+			});
+		});
+
+		it('should throw UnauthorizedException if code is expired', async () => {
+			const code = 'expired-code';
+			const authCode = {
+				code,
+				accessToken: 'access',
+				refreshToken: 'refresh',
+				expiresAt: new Date(Date.now() - 1000), // Expired
+			};
+			mockPrismaService.googleAuthCode.findUnique.mockResolvedValue(
+				authCode,
+			);
+			mockPrismaService.googleAuthCode.delete.mockResolvedValue({});
+
+			await expect(service.exchangeGoogleTokens(code)).rejects.toThrow(
+				UnauthorizedException,
+			);
+			expect(
+				mockPrismaService.googleAuthCode.delete,
+			).toHaveBeenCalledWith({
+				where: { code },
+			});
+		});
+
+		it('should throw UnauthorizedException if code invalid', async () => {
+			mockPrismaService.googleAuthCode.findUnique.mockResolvedValue(null);
+
+			await expect(
+				service.exchangeGoogleTokens('invalid'),
+			).rejects.toThrow(UnauthorizedException);
+		});
+	});
+
+	describe('verifyEmail', () => {
+		it('should verify email', async () => {
+			const token = 'valid-token';
+			const user = { ...mockUser, verificationToken: token };
+			mockPrismaService.user.findFirst.mockResolvedValue(user);
+			mockPrismaService.user.update.mockResolvedValue(user);
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			const result = (await service.verifyEmail(token)) as {
+				access_token: string;
+				refresh_token: string;
+				expires_in: number;
+				user: any;
+			};
+
+			expect(result).toHaveProperty('access_token');
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith({
+				where: { id: user.id },
+				data: { isEmailVerified: true, verificationToken: null },
+			});
+		});
+
+		it('should throw UnauthorizedException if token invalid', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+			await expect(service.verifyEmail('invalid')).rejects.toThrow(
+				UnauthorizedException,
+			);
+		});
+	});
+
+	describe('validateGoogleUser', () => {
+		const googleUser = {
+			email: 'test@example.com',
+			firstName: 'Test',
+			lastName: 'User',
+			picture: 'pic',
+			googleId: 'google-id',
+			accessToken: 'access',
+		};
+
+		it('should return existing user by googleId', async () => {
+			const user = { ...mockUser, googleId: 'google-id' };
+			mockPrismaService.user.findUnique.mockResolvedValue(user);
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			const result = await service.validateGoogleUser(googleUser);
+
+			expect(result.user.id).toBe(user.id);
+		});
+
+		it('should link existing email user to google', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null); // Not found by googleId
+			mockPrismaService.user.findFirst.mockResolvedValue({
+				...mockUser,
+				googleId: null,
+			}); // Found by email
+			mockPrismaService.user.update.mockResolvedValue({
+				...mockUser,
+				googleId: 'google-id',
+			});
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			const result = await service.validateGoogleUser(googleUser);
+
+			expect(result.user.googleId).toBe('google-id');
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { id: mockUser.id },
+					data: expect.objectContaining({
+						googleId: 'google-id',
+					}) as unknown,
+				}),
+			);
+		});
+
+		it('should restore deleted user found by googleId', async () => {
+			const deletedUser = {
+				...mockUser,
+				googleId: 'google-id',
+				deletedAt: new Date(),
+			};
+			mockPrismaService.user.findUnique.mockResolvedValue(deletedUser);
+			mockPrismaService.user.update.mockResolvedValue({
+				...deletedUser,
+				deletedAt: null,
+			});
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			await service.validateGoogleUser(googleUser);
+
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: { id: deletedUser.id },
+					data: { deletedAt: null },
+				}),
+			);
+		});
+
+		it('should create new user if not found', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+			mockPrismaService.user.findFirst.mockResolvedValue(null);
+			mockPrismaService.user.create.mockResolvedValue({
+				...mockUser,
+				googleId: 'google-id',
+			});
+			mockPrismaService.refreshToken.create.mockResolvedValue(
+				mockRefreshToken,
+			);
+
+			const result = await service.validateGoogleUser(googleUser);
+
+			expect(result.user.googleId).toBe('google-id');
+			expect(mockPrismaService.user.create).toHaveBeenCalled();
+		});
+	});
+
+	describe('forgotPassword', () => {
+		it('should send reset email if user exists', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+			mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+			const result = await service.forgotPassword({
+				email: 'test@example.com',
+			});
+
+			expect(result.message).toContain(
+				'password reset link has been sent',
+			);
+			expect(mockEmailService.sendEmail).toHaveBeenCalled();
+		});
+
+		it('should not send email if user is google account', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue({
+				...mockUser,
+				googleId: 'google-id',
+			});
+
+			const result = await service.forgotPassword({
+				email: 'test@example.com',
+			});
+
+			expect(result.message).toContain(
+				'password reset link has been sent',
+			);
+			expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
+		});
+
+		it('should return message even if user does not exist', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+
+			const result = await service.forgotPassword({
+				email: 'nonexistent@example.com',
+			});
+
+			expect(result.message).toContain(
+				'password reset link has been sent',
+			);
+			expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
+		});
+	});
+
+	describe('resetPassword', () => {
+		it('should reset password', async () => {
+			const token = 'valid-token';
+			const user = {
+				...mockUser,
+				resetToken: token,
+				resetTokenExpiry: new Date(Date.now() + 10000),
+			};
+			mockPrismaService.user.findFirst.mockResolvedValue(user);
+			mockPrismaService.user.update.mockResolvedValue(user);
+
+			const result = await service.resetPassword({
+				token,
+				password: 'newPassword',
+			});
+
+			expect(result.message).toBe('Password successfully reset');
+			expect(mockPrismaService.user.update).toHaveBeenCalled();
+		});
+
+		it('should throw UnauthorizedException if token invalid', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(null);
+
+			await expect(
+				service.resetPassword({ token: 'invalid', password: 'new' }),
 			).rejects.toThrow(UnauthorizedException);
 		});
 	});

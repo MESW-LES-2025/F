@@ -154,7 +154,7 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
           </div>
           <div>
             <p className="text-xs text-gray-600">Top Contributor</p>
-            <p className="text-lg font-bold text-gray-900 truncate">{topContributorEntry ? `${topContributorEntry[0]} (${topContributorEntry[1]})` : "-"}</p>
+            <p className="text-lg font-bold text-gray-900 truncate">{topContributorEntry ? `${(topContributorEntry[0] || '').split(' ')[0]} (${topContributorEntry[1]})` : "-"}</p>
             <p className="text-xs text-gray-500">people: {Object.keys(tasksByPerson).length}</p>
           </div>
         </div>

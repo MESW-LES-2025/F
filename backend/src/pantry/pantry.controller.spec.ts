@@ -119,5 +119,20 @@ describe('PantryController', () => {
 
 			expect(result).toEqual({ id: 'pantry123' });
 		});
+
+		it('should propagate errors from service', async () => {
+			mockPantryService.update.mockRejectedValue(
+				new Error('Update failed'),
+			);
+
+			await expect(
+				controller.update(
+					'pantry123',
+					'house456',
+					updateDto,
+					mockRequest,
+				),
+			).rejects.toThrow('Update failed');
+		});
 	});
 });

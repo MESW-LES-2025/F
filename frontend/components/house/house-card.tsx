@@ -8,6 +8,7 @@ import { CriticalActionModal } from "../shared/modal/critical-action-modal";
 import { SuccessActionModal } from "../shared/modal/success-modal";
 import { useHouse } from "@/lib/house-context";
 import { useRouter } from "next/navigation";
+import { HouseDetailsModal } from "./house-details-modal";
 
 interface HouseCardProps {
   house: House;
@@ -18,6 +19,7 @@ export function HouseCard({ house, from }: HouseCardProps) {
   const [hover, setHover] = useState(false);
   const [openCriticalModal, setOpenCriticalModal] = useState(false);
   const [openSuccessModal, setOpenSuccessModal] = useState(false);
+  const [openHouseModal, setOpenHouseModal] = useState(false);
   const [housesLenBefore, setHousesLenBefore] = useState(0);
   const { setSelectedHouse, houses } = useHouse();
   const router = useRouter();
@@ -25,10 +27,19 @@ export function HouseCard({ house, from }: HouseCardProps) {
   return (
     <Card className="p-4 bg-white border border-gray-200 transition-transform duration-300 hover:scale-105 hover:shadow-lg">
       <div className="flex items-center gap-3">
-        <Link
-          onClick={() => setSelectedHouse(house)}
-          href={`/`}
-          className="flex-1 flex items-center gap-3"
+        <div
+          onClick={(e) => {
+            if (from === "management") {
+              e.preventDefault();
+              e.stopPropagation();
+              setOpenHouseModal(true);
+              return;
+            }
+
+            setSelectedHouse(house);
+            router.push("/");
+          }}
+          className="flex-1 flex items-center gap-3 cursor-pointer"
         >
           <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center">
             <HouseIcon className="w-5 h-5 text-blue-600" />
@@ -40,7 +51,7 @@ export function HouseCard({ house, from }: HouseCardProps) {
               Invite friends with the code: {house.invitationCode}
             </p>
           </div>
-        </Link>
+        </div>
 
         {from == "management" && (
           <div
@@ -83,6 +94,7 @@ export function HouseCard({ house, from }: HouseCardProps) {
           }
         }}
       />
+      
       <SuccessActionModal
         open={openSuccessModal}
         onOpenChange={(open) => {
@@ -96,6 +108,11 @@ export function HouseCard({ house, from }: HouseCardProps) {
           }
         }}
         text={`You have successfully left house ${house.name}`}
+      />
+      <HouseDetailsModal
+        open={openHouseModal}
+        onOpenChange={setOpenHouseModal}
+        houseId={house.id}
       />
     </Card>
   );

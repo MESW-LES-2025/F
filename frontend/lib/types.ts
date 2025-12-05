@@ -11,8 +11,9 @@ export interface Task {
   id: string;
   title: string;
   description?: string;
-  assignee: string;
-  assigneeAvatar: string;
+  assignee?: string; // primary assignee display name
+  assigneeAvatar?: string;
+  assignedUsers?: { id: string; name: string; avatar?: string }[];
   status: "todo" | "doing" | "done";
   deadline?: Date;
   createdAt: Date;
@@ -20,6 +21,7 @@ export interface Task {
   houseName: string;
   archived: boolean;
   archivedAt?: Date | null;
+  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL';
 }
 
 export interface House {
@@ -35,6 +37,26 @@ export interface House {
       username: string | null;
       imageUrl: string | null;
     }
+  }[];
+}
+
+export interface HouseDetails {
+  house: {
+    id: string;
+    name: string;
+    createdAt: Date;
+    updatedAt: Date;
+    invitationCode: string;
+  };
+  users: {
+    id: string;
+    name: string;
+    email: string;
+    username: string;
+    imagePublicId: string | null;
+    houses: {
+      role: string;
+    }[];
   }[];
 }
 
@@ -99,7 +121,12 @@ export interface ChatMessage {
 }
 
 // Notifications
-export type NotificationCategory = "HOUSE" | "PANTRY" | "EXPENSES" | "SCRUM" | "OTHER";
+export type NotificationCategory =
+  | "HOUSE"
+  | "PANTRY"
+  | "EXPENSES"
+  | "SCRUM"
+  | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
 
@@ -114,7 +141,7 @@ export interface NotificationPayload {
 }
 
 export interface UserNotification {
-  id?: string; 
+  id?: string;
   userId: string;
   isRead: boolean;
   readAt?: string | null;
