@@ -33,6 +33,9 @@ describe('ChatService', () => {
 		user: {
 			findUnique: jest.fn(),
 		},
+		notification: {
+			create: jest.fn(),
+		},
 	};
 
 	const mockWebsocketService = {
@@ -174,6 +177,46 @@ describe('ChatService', () => {
 				}),
 			);
 			expect(result.parentId).toBe('parent');
+		});
+
+		it('should create a notification when replying to another user', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockMembership,
+			);
+			mockPrismaService.chatMessage.findUnique.mockResolvedValue({
+				id: 'parent',
+				houseId: 'house1',
+				userId: 'otherUser',
+			});
+			mockPrismaService.chatMessage.create.mockResolvedValue({
+				...mockMessage,
+				parentId: 'parent',
+				parent: {
+					userId: 'otherUser',
+				},
+			});
+
+			const dto: CreateChatMessageDto = {
+				content: 'Reply',
+				parentId: 'parent',
+			} as CreateChatMessageDto;
+			await service.create(dto, 'user1', 'house1');
+
+			expect(mockPrismaService.notification.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						category: 'CHAT',
+						level: 'MEDIUM',
+						houseId: 'house1',
+						deliveredTo: {
+							create: {
+								userId: 'otherUser',
+							},
+						},
+					}) as object,
+				}),
+			);
 		});
 		it('should throw BadRequestException if content is missing or not string', async () => {
 			const dtoMissing = {} as CreateChatMessageDto;

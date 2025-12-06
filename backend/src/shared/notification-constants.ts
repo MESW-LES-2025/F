@@ -3,6 +3,7 @@ export const NOTIFICATION_CATEGORIES = [
 	'PANTRY',
 	'EXPENSES',
 	'SCRUM',
+	'CHAT',
 	'OTHER',
 ] as const;
 
