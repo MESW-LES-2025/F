@@ -48,6 +48,21 @@ class AuthService {
     document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
   }
 
+  async verifyEmail(token: string): Promise<AuthResponse> {
+    try {
+      const data = await apiPost<AuthResponse>('/auth/verify-email', {
+        token,
+      });
+      this.setTokens(data.access_token, data.refresh_token);
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
   async register(email: string, username: string, password: string, name: string): Promise<AuthResponse> {
     try {
       const data = await apiPost<AuthResponse>('/auth/register', {
