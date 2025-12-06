@@ -126,6 +126,7 @@ export type NotificationCategory =
   | "PANTRY"
   | "EXPENSES"
   | "SCRUM"
+  | "CHAT"
   | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";
