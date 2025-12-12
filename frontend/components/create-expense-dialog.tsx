@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,35 +10,38 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Plus } from "lucide-react"
-import { createExpense } from "@/lib/expense-service"
-import type { Expense, User } from "@/lib/types"
-import { apiGet } from "@/lib/api-client"
-import { Checkbox } from "@/components/ui/checkbox"
-import { useHouse } from "@/lib/house-context"
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus } from "lucide-react";
+import { createExpense } from "@/lib/expense-service";
+import type { Expense, User } from "@/lib/types";
+import { apiGet } from "@/lib/api-client";
+import { Checkbox } from "@/components/ui/checkbox";
+import { useHouse } from "@/lib/house-context";
 
 interface CreateExpenseDialogProps {
-  onExpenseCreated?: (expense: Expense) => void
-  houseId?: string
+  onExpenseCreated?: (expense: Expense) => void;
+  houseId?: string;
 }
 
-export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpenseDialogProps) {
-  const { selectedHouse } = useHouse()
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [users, setUsers] = useState<User[]>([])
+export function CreateExpenseDialog({
+  onExpenseCreated,
+  houseId,
+}: CreateExpenseDialogProps) {
+  const { selectedHouse } = useHouse();
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     amount: "",
     description: "",
@@ -47,7 +50,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
     paidBy: "",
     splitWith: [] as string[],
     date: new Date().toISOString().split("T")[0],
-  })
+  });
 
   const [formErrors, setFormErrors] = useState({
     amount: false,
@@ -56,7 +59,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
     paidBy: false,
     splitWith: false,
     houseId: false,
-  })
+  });
 
   const categories = [
     { value: "GROCERIES", label: "Groceries" },
@@ -66,52 +69,52 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
     { value: "ENTERTAINMENT", label: "Entertainment" },
     { value: "TRANSPORTATION", label: "Transportation" },
     { value: "OTHER", label: "Other" },
-  ]
+  ];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error for this field when user starts typing
     if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors((prev) => ({ ...prev, [name]: false }))
+      setFormErrors((prev) => ({ ...prev, [name]: false }));
     }
-  }
+  };
 
   const handleCategoryChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, category: value }))
+    setFormData((prev) => ({ ...prev, category: value }));
     if (formErrors.category) {
-      setFormErrors((prev) => ({ ...prev, category: false }))
+      setFormErrors((prev) => ({ ...prev, category: false }));
     }
-  }
+  };
 
   const handlePaidByChange = (value: string) => {
     setFormData((prev) => {
       // Auto-add payer to splitWith if not already included
       const splitWith = prev.splitWith.includes(value)
         ? prev.splitWith
-        : [...prev.splitWith, value]
-      return { ...prev, paidBy: value, splitWith }
-    })
+        : [...prev.splitWith, value];
+      return { ...prev, paidBy: value, splitWith };
+    });
     if (formErrors.paidBy) {
-      setFormErrors((prev) => ({ ...prev, paidBy: false }))
+      setFormErrors((prev) => ({ ...prev, paidBy: false }));
     }
-  }
+  };
 
   const handleSplitWithToggle = (userId: string) => {
     // Prevent unchecking the payer
     if (userId === formData.paidBy) {
-      return
+      return;
     }
     setFormData((prev) => {
       const splitWith = prev.splitWith.includes(userId)
         ? prev.splitWith.filter((id) => id !== userId)
-        : [...prev.splitWith, userId]
-      return { ...prev, splitWith }
-    })
+        : [...prev.splitWith, userId];
+      return { ...prev, splitWith };
+    });
     if (formErrors.splitWith) {
-      setFormErrors((prev) => ({ ...prev, splitWith: false }))
+      setFormErrors((prev) => ({ ...prev, splitWith: false }));
     }
-  }
+  };
 
   const validateForm = () => {
     const errors = {
@@ -121,69 +124,72 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
       paidBy: !formData.paidBy,
       splitWith: formData.splitWith.length === 0,
       houseId: false,
-    }
+    };
 
-    setFormErrors(errors)
+    setFormErrors(errors);
 
-    return !Object.values(errors).some((error) => error)
-  }
+    return !Object.values(errors).some((error) => error);
+  };
 
   // Load users from selected house when dialog opens
   useEffect(() => {
     if (open && selectedHouse) {
-      loadHouseUsers()
+      loadHouseUsers();
     }
-  }, [open, selectedHouse])
+  }, [open, selectedHouse]);
 
   const loadHouseUsers = async () => {
     if (!selectedHouse) {
-      setError('Please select a house first.')
-      setUsers([])
-      return
+      setError("Please select a house first.");
+      setUsers([]);
+      return;
     }
 
     try {
-      const response = await apiGet<User[]>(`/house/${selectedHouse.id}/users`, { requiresAuth: true })
-      setUsers(response)
+      const response = await apiGet<User[]>(
+        `/house/${selectedHouse.id}/users`,
+        { requiresAuth: true },
+      );
+      setUsers(response);
     } catch (err) {
-      console.error('Failed to load users:', err)
-      setError('Failed to load users from this house.')
+      console.error("Failed to load users:", err);
+      setError("Failed to load users from this house.");
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     // Validate required fields
     if (!validateForm()) {
-      setError("Please fill in all required fields correctly.")
-      return
+      setError("Please fill in all required fields correctly.");
+      return;
     }
 
     if (!selectedHouse) {
-      setError("Please select a house first.")
-      return
+      setError("Please select a house first.");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       // Create the expense via API
       // For today's date, use current time; for past dates, use noon to avoid timezone issues
-      const selectedDate = new Date(formData.date)
-      const today = new Date()
-      today.setHours(0, 0, 0, 0)
-      selectedDate.setHours(0, 0, 0, 0)
+      const selectedDate = new Date(formData.date);
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      selectedDate.setHours(0, 0, 0, 0);
 
-      let expenseDate: Date
+      let expenseDate: Date;
       if (selectedDate.getTime() === today.getTime()) {
         // Use current timestamp for today
-        expenseDate = new Date()
+        expenseDate = new Date();
       } else {
         // Use noon for past dates to avoid timezone edge cases
-        expenseDate = new Date(formData.date)
-        expenseDate.setHours(12, 0, 0, 0)
+        expenseDate = new Date(formData.date);
+        expenseDate.setHours(12, 0, 0, 0);
       }
 
       const newExpense = await createExpense({
@@ -194,10 +200,10 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         houseId: selectedHouse.id,
         splitWith: formData.splitWith,
         date: expenseDate.toISOString(),
-      })
+      });
 
       // Call the callback with the new expense
-      onExpenseCreated?.(newExpense)
+      onExpenseCreated?.(newExpense);
 
       // Reset form and close dialog
       setFormData({
@@ -208,7 +214,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         paidBy: "",
         splitWith: [],
         date: new Date().toISOString().split("T")[0],
-      })
+      });
       setFormErrors({
         amount: false,
         description: false,
@@ -216,14 +222,18 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         paidBy: false,
         splitWith: false,
         houseId: false,
-      })
-      setOpen(false)
+      });
+      setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create expense. Please try again.")
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create expense. Please try again.",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -236,7 +246,7 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         paidBy: "",
         splitWith: [],
         date: new Date().toISOString().split("T")[0],
-      })
+      });
       setFormErrors({
         amount: false,
         description: false,
@@ -244,16 +254,19 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         paidBy: false,
         splitWith: false,
         houseId: false,
-      })
-      setError(null)
+      });
+      setError(null);
     }
-    setOpen(newOpen)
-  }
+    setOpen(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-green-600 hover:bg-green-700 w-full sm:w-auto cursor-pointer">
+        <Button
+          size="sm"
+          className="bg-green-600 hover:bg-green-700 w-full sm:w-auto cursor-pointer"
+        >
           <Plus className="w-4 h-4 mr-1" />
           Add Expense
         </Button>
@@ -263,7 +276,8 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
           <DialogHeader>
             <DialogTitle>Record New Expense</DialogTitle>
             <DialogDescription>
-              Add a new expense to track household spending. All fields marked with * are required.
+              Add a new expense to track household spending. All fields marked
+              with * are required.
             </DialogDescription>
           </DialogHeader>
 
@@ -291,7 +305,9 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
                 className={formErrors.amount ? "border-destructive" : ""}
               />
               {formErrors.amount && (
-                <p className="text-sm text-destructive">Amount must be greater than 0</p>
+                <p className="text-sm text-destructive">
+                  Amount must be greater than 0
+                </p>
               )}
             </div>
 
@@ -310,7 +326,9 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
                 maxLength={255}
               />
               {formErrors.description && (
-                <p className="text-sm text-destructive">Description is required</p>
+                <p className="text-sm text-destructive">
+                  Description is required
+                </p>
               )}
             </div>
 
@@ -320,12 +338,14 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
               </Label>
               <Input
                 id="house"
-                value={selectedHouse?.name || 'No house selected'}
+                value={selectedHouse?.name || "No house selected"}
                 disabled
                 className="bg-muted"
               />
               {!selectedHouse && (
-                <p className="text-sm text-muted-foreground">Please select a house from the header to create expenses</p>
+                <p className="text-sm text-muted-foreground">
+                  Please select a house from the header to create expenses
+                </p>
               )}
             </div>
 
@@ -407,7 +427,9 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
                 ))}
               </div>
               {formErrors.splitWith && (
-                <p className="text-sm text-destructive">Select at least one person to split with</p>
+                <p className="text-sm text-destructive">
+                  Select at least one person to split with
+                </p>
               )}
             </div>
 
@@ -445,5 +467,5 @@ export function CreateExpenseDialog({ onExpenseCreated, houseId }: CreateExpense
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

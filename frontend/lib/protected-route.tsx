@@ -1,8 +1,8 @@
-'use client';
+"use client";
 
-import { useRouter } from 'next/navigation';
-import { useAuth } from './auth-context';
-import { useEffect, ReactNode } from 'react';
+import { useRouter } from "next/navigation";
+import { useAuth } from "./auth-context";
+import { useEffect, ReactNode } from "react";
 
 export function ProtectedRoute({ children }: { children: ReactNode }) {
   const router = useRouter();
@@ -10,7 +10,7 @@ export function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     if (!isLoading && !isAuthenticated) {
-      router.push('/login');
+      router.push("/login");
     }
   }, [isAuthenticated, isLoading, router]);
 

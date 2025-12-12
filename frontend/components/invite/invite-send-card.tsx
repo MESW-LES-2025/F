@@ -43,7 +43,10 @@ export function InviteSendCard({
   >([]);
 
   const selectedHouse = houses.find((h) => h.id === selectedHouseId) || null;
-  const canSend = !!selectedHouseId && (email.trim().length > 0 || username.trim().length > 0) && !isSending;
+  const canSend =
+    !!selectedHouseId &&
+    (email.trim().length > 0 || username.trim().length > 0) &&
+    !isSending;
 
   const handleInvite = async () => {
     if (!selectedHouseId) {
@@ -119,11 +122,20 @@ export function InviteSendCard({
             "We couldn’t find that user. Check the email/username.";
           setInlineNote(notFoundMsg);
         } else {
-          toast({ title: "Invite failed", description: error.message, variant: "destructive" });
+          toast({
+            title: "Invite failed",
+            description: error.message,
+            variant: "destructive",
+          });
         }
       } else {
-        const message = error instanceof Error ? error.message : "Failed to send the invite.";
-        toast({ title: "Invite failed", description: message, variant: "destructive" });
+        const message =
+          error instanceof Error ? error.message : "Failed to send the invite.";
+        toast({
+          title: "Invite failed",
+          description: message,
+          variant: "destructive",
+        });
       }
     } finally {
       setIsSending(false);
@@ -145,20 +157,31 @@ export function InviteSendCard({
       </div>
 
       {lastSuccess && (
-        <div className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900" role="status" aria-live="polite">
-          Invite sent to <span className="font-medium">{lastSuccess.target}</span>
+        <div
+          className="rounded-md border border-green-200 bg-green-50 p-3 text-sm text-green-900"
+          role="status"
+          aria-live="polite"
+        >
+          Invite sent to{" "}
+          <span className="font-medium">{lastSuccess.target}</span>
           {lastSuccess.houseName ? (
             <>
-              {' '}for house <span className="font-medium">{lastSuccess.houseName}</span>.
+              {" "}
+              for house{" "}
+              <span className="font-medium">{lastSuccess.houseName}</span>.
             </>
           ) : (
-            '.'
+            "."
           )}
         </div>
       )}
 
       {inlineNote && (
-        <div className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900" role="status" aria-live="polite">
+        <div
+          className="rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900"
+          role="status"
+          aria-live="polite"
+        >
           {inlineNote}
         </div>
       )}
@@ -188,7 +211,10 @@ export function InviteSendCard({
             id="invite-email"
             type="email"
             value={email}
-            onChange={(event) => { setEmail(event.target.value); setInlineNote(null); }}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setInlineNote(null);
+            }}
             placeholder="friend@example.com"
           />
         </div>
@@ -197,7 +223,10 @@ export function InviteSendCard({
           <Input
             id="invite-username"
             value={username}
-            onChange={(event) => { setUsername(event.target.value); setInlineNote(null); }}
+            onChange={(event) => {
+              setUsername(event.target.value);
+              setInlineNote(null);
+            }}
             placeholder="housemate"
           />
         </div>
@@ -210,7 +239,8 @@ export function InviteSendCard({
 
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
         <p className="text-sm text-muted-foreground">
-          The recipient must have an account and not already belong to the house.
+          The recipient must have an account and not already belong to the
+          house.
         </p>
         <div className="flex items-center gap-2">
           {selectedHouse?.invitationCode && (
@@ -220,7 +250,7 @@ export function InviteSendCard({
               onClick={async () => {
                 try {
                   await navigator.clipboard.writeText(
-                    selectedHouse.invitationCode
+                    selectedHouse.invitationCode,
                   );
                   toast({
                     title: "Invite code copied",
@@ -237,7 +267,11 @@ export function InviteSendCard({
               Copy invite code
             </Button>
           )}
-          <Button onClick={handleInvite} disabled={!canSend} aria-disabled={!canSend}>
+          <Button
+            onClick={handleInvite}
+            disabled={!canSend}
+            aria-disabled={!canSend}
+          >
             {isSending ? "Sending..." : "Send Invite"}
           </Button>
         </div>
@@ -248,21 +282,27 @@ export function InviteSendCard({
           <div className="mb-2 text-sm font-medium">Recently sent invites</div>
           <ul className="space-y-1 text-sm">
             {outgoingInvites.map((o, idx) => (
-              <li key={`${o.at}-${idx}`} className="flex items-center justify-between">
+              <li
+                key={`${o.at}-${idx}`}
+                className="flex items-center justify-between"
+              >
                 <span>
                   To <span className="font-medium">{o.target}</span>
                   {o.houseName ? (
                     <>
-                      {" "}for <span className="font-medium">{o.houseName}</span>
+                      {" "}
+                      for <span className="font-medium">{o.houseName}</span>
                     </>
-                  ) : null}
-                  {" "}at {new Date(o.at).toLocaleTimeString()}
+                  ) : null}{" "}
+                  at {new Date(o.at).toLocaleTimeString()}
                 </span>
                 <button
                   type="button"
                   className="text-xs text-muted-foreground hover:underline"
                   onClick={() =>
-                    setOutgoingInvites((prev) => prev.filter((x) => x.at !== o.at))
+                    setOutgoingInvites((prev) =>
+                      prev.filter((x) => x.at !== o.at),
+                    )
                   }
                 >
                   Dismiss
