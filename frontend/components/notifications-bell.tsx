@@ -9,7 +9,7 @@ import {
   ChefHat,
   Wallet,
   Info,
-  ArrowLeft, 
+  ArrowLeft,
   MessageCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -180,7 +180,15 @@ export function NotificationsBell({ className }: { className?: string }) {
     }
   };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "CHAT", "OTHER"];
+  const categories = [
+    "ALL",
+    "HOUSE",
+    "PANTRY",
+    "EXPENSES",
+    "SCRUM",
+    "CHAT",
+    "OTHER",
+  ];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>

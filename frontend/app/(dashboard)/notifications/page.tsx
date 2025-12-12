@@ -187,7 +187,15 @@ export default function NotificationsPage() {
     }
   };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "CHAT", "OTHER"];
+  const categories = [
+    "ALL",
+    "HOUSE",
+    "PANTRY",
+    "EXPENSES",
+    "SCRUM",
+    "CHAT",
+    "OTHER",
+  ];
 
   const handleOpen = async (n: UserNotification) => {
     const id = n.id || n.notification.id;
