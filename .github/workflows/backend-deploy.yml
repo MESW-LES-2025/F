@@ -45,7 +45,7 @@ jobs:
           GOOGLE_CALLBACK_URL: ${{ secrets.GOOGLE_CALLBACK_URL }}
         run: |
           cd backend
-          npm test
+          npm run test:cov
 
   build-backend:
     name: Build Backend Docker Image

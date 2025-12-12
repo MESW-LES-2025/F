@@ -30,14 +30,18 @@ export default function InvitePage() {
   return (
     <div className="space-y-6 p-4 md:p-6 lg:p-8">
       <div className="space-y-2">
-        <h1 className="text-2xl font-semibold text-foreground">Invite people</h1>
+        <h1 className="text-2xl font-semibold text-foreground">
+          Invite people
+        </h1>
         <p className="text-sm text-muted-foreground">
           Choose a house and invite a registered user.
         </p>
       </div>
 
       {loading ? (
-        <Card className="p-6 text-sm text-muted-foreground">Loading your houses...</Card>
+        <Card className="p-6 text-sm text-muted-foreground">
+          Loading your houses...
+        </Card>
       ) : houses.length === 0 ? (
         <Card className="p-6">
           <div className="space-y-1">

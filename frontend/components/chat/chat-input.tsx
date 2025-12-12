@@ -13,11 +13,11 @@ interface ChatInputProps {
   onCancelReply?: () => void;
 }
 
-export function ChatInput({ 
-  onSendMessage, 
-  isLoading, 
-  replyingTo, 
-  onCancelReply 
+export function ChatInput({
+  onSendMessage,
+  isLoading,
+  replyingTo,
+  onCancelReply,
 }: ChatInputProps) {
   const [message, setMessage] = useState("");
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -30,7 +30,7 @@ export function ChatInput({
 
   const handleSubmit = async () => {
     if (!message.trim() || isLoading) return;
-    
+
     try {
       await onSendMessage(message, replyingTo?.id);
       setMessage("");

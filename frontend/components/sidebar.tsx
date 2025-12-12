@@ -1,5 +1,13 @@
-import { Home, Zap, Users, Calendar, Lightbulb, Settings, UserPlus } from "lucide-react"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+import {
+  Home,
+  Zap,
+  Users,
+  Calendar,
+  Lightbulb,
+  Settings,
+  UserPlus,
+} from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
 export function Sidebar() {
   return (
@@ -7,7 +15,11 @@ export function Sidebar() {
       {/* Logo */}
       <div className="p-4 flex flex-col items-center border-b border-gray-200">
         <div className="w-12 h-12 mb-2">
-          <img src="/concordia-logo.png" alt="Concordia" className="w-full h-full" />
+          <img
+            src="/concordia-logo.png"
+            alt="Concordia"
+            className="w-full h-full"
+          />
         </div>
         <span className="text-xs text-gray-600 font-medium">Concordia</span>
       </div>
@@ -57,11 +69,13 @@ export function Sidebar() {
             <AvatarFallback>SW</AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-gray-900 truncate">Sam Wheeler</p>
+            <p className="text-xs font-medium text-gray-900 truncate">
+              Sam Wheeler
+            </p>
             <p className="text-xs text-gray-500 truncate">sam@example.com</p>
           </div>
         </div>
       </div>
     </aside>
-  )
+  );
 }

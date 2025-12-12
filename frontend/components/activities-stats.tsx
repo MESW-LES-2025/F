@@ -1,110 +1,118 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { Card } from "@/components/ui/card"
-import { getTasks } from "@/lib/tasks-service"
-import { CheckCircle2, Clock, ListTodo, Users } from "lucide-react"
-import type { Task } from "@/lib/types"
+import { useEffect, useState } from "react";
+import { Card } from "@/components/ui/card";
+import { getTasks } from "@/lib/tasks-service";
+import { CheckCircle2, Clock, ListTodo, Users } from "lucide-react";
+import type { Task } from "@/lib/types";
 
 export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
-  const [tasks, setTasks] = useState<Task[] | null>(tasksProp ?? null)
-  const [isLoading, setIsLoading] = useState(!tasksProp)
-  const [error, setError] = useState<string | null>(null)
+  const [tasks, setTasks] = useState<Task[] | null>(tasksProp ?? null);
+  const [isLoading, setIsLoading] = useState(!tasksProp);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (tasksProp) {
-      setTasks(tasksProp)
-      setIsLoading(false)
-      return
+      setTasks(tasksProp);
+      setIsLoading(false);
+      return;
     }
 
-    let mounted = true
+    let mounted = true;
     const load = async (background = false) => {
       try {
-        if (!background) setIsLoading(true)
+        if (!background) setIsLoading(true);
         // only non-archived tasks
-        const fetched = await getTasks({ archived: 'false' })
-        if (mounted) setTasks(fetched)
+        const fetched = await getTasks({ archived: "false" });
+        if (mounted) setTasks(fetched);
       } catch (err) {
-        console.error("Failed to load tasks for stats", err)
-        if (mounted && !background) setError("Unable to load statistics")
+        console.error("Failed to load tasks for stats", err);
+        if (mounted && !background) setError("Unable to load statistics");
       } finally {
-        if (mounted && !background) setIsLoading(false)
+        if (mounted && !background) setIsLoading(false);
       }
-    }
-    load()
+    };
+    load();
     const id = setInterval(() => {
-      load(true)
-    }, 5000)
+      load(true);
+    }, 5000);
 
     return () => {
-      mounted = false
-      clearInterval(id)
-    }
-  }, [tasksProp])
+      mounted = false;
+      clearInterval(id);
+    };
+  }, [tasksProp]);
 
   if (isLoading || !tasks) {
     // lightweight placeholder while loading
     return (
       <div className="grid grid-cols-4 gap-4">
         {[0, 1, 2, 3].map((i) => (
-          <Card key={i} className="p-4 bg-white border border-gray-200 animate-pulse h-20" />
+          <Card
+            key={i}
+            className="p-4 bg-white border border-gray-200 animate-pulse h-20"
+          />
         ))}
       </div>
-    )
+    );
   }
 
   if (error) {
-    return (
-      <div className="text-sm text-red-600">{error}</div>
-    )
+    return <div className="text-sm text-red-600">{error}</div>;
   }
 
   // Exclude archived tasks from stats
-  const activeTasks = tasks.filter((t) => !t.archived)
-  const total = activeTasks.length
-  const todoCount = activeTasks.filter((t) => t.status === "todo").length
-  const doingCount = activeTasks.filter((t) => t.status === "doing").length
-  const doneCount = activeTasks.filter((t) => t.status === "done").length
+  const activeTasks = tasks.filter((t) => !t.archived);
+  const total = activeTasks.length;
+  const todoCount = activeTasks.filter((t) => t.status === "todo").length;
+  const doingCount = activeTasks.filter((t) => t.status === "doing").length;
+  const doneCount = activeTasks.filter((t) => t.status === "done").length;
 
-  const now = new Date()
+  const now = new Date();
   // exclude completed tasks from overdue/due-soon counts
   // Use date-only comparisons (start/end of day) so a deadline set to "today" is not considered overdue
   const startOfDay = (d: Date) => {
-    const x = new Date(d)
-    x.setHours(0, 0, 0, 0)
-    return x
-  }
+    const x = new Date(d);
+    x.setHours(0, 0, 0, 0);
+    return x;
+  };
   const endOfDay = (d: Date) => {
-    const x = new Date(d)
-    x.setHours(23, 59, 59, 999)
-    return x
-  }
+    const x = new Date(d);
+    x.setHours(23, 59, 59, 999);
+    return x;
+  };
 
-  const startToday = startOfDay(now)
-  const endInSevenDays = endOfDay(new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000))
+  const startToday = startOfDay(now);
+  const endInSevenDays = endOfDay(
+    new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000),
+  );
 
   const overdueCount = activeTasks.filter((t) => {
-    if (t.status === 'done' || !t.deadline) return false
-    const dl = new Date(t.deadline)
+    if (t.status === "done" || !t.deadline) return false;
+    const dl = new Date(t.deadline);
     // overdue
-    return dl < startToday
-  }).length
+    return dl < startToday;
+  }).length;
 
   // due soon if deadline is in 1 week
   const dueSoonCount = activeTasks.filter((t) => {
-    if (t.status !== 'doing' || !t.deadline) return false
-    const dl = new Date(t.deadline)
-    return dl >= startToday && dl <= endInSevenDays
-  }).length
+    if (t.status !== "doing" || !t.deadline) return false;
+    const dl = new Date(t.deadline);
+    return dl >= startToday && dl <= endInSevenDays;
+  }).length;
 
-  const tasksByPerson = activeTasks.reduce((acc, task) => {
-    const name = task.assignee || "Unassigned"
-    acc[name] = (acc[name] || 0) + 1
-    return acc
-  }, {} as Record<string, number>)
+  const tasksByPerson = activeTasks.reduce(
+    (acc, task) => {
+      const name = task.assignee || "Unassigned";
+      acc[name] = (acc[name] || 0) + 1;
+      return acc;
+    },
+    {} as Record<string, number>,
+  );
 
-  const topContributorEntry = Object.entries(tasksByPerson).sort((a, b) => b[1] - a[1])[0]
+  const topContributorEntry = Object.entries(tasksByPerson).sort(
+    (a, b) => b[1] - a[1],
+  )[0];
 
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
@@ -154,11 +162,17 @@ export function ActivitiesStats({ tasks: tasksProp }: { tasks?: Task[] }) {
           </div>
           <div>
             <p className="text-xs text-gray-600">Top Contributor</p>
-            <p className="text-lg font-bold text-gray-900 truncate">{topContributorEntry ? `${(topContributorEntry[0] || '').split(' ')[0]} (${topContributorEntry[1]})` : "-"}</p>
-            <p className="text-xs text-gray-500">people: {Object.keys(tasksByPerson).length}</p>
+            <p className="text-lg font-bold text-gray-900 truncate">
+              {topContributorEntry
+                ? `${(topContributorEntry[0] || "").split(" ")[0]} (${topContributorEntry[1]})`
+                : "-"}
+            </p>
+            <p className="text-xs text-gray-500">
+              people: {Object.keys(tasksByPerson).length}
+            </p>
           </div>
         </div>
       </Card>
     </div>
-  )
+  );
 }

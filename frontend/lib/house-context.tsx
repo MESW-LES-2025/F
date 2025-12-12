@@ -1,8 +1,14 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react';
-import { houseService } from './house-service';
-import type { House } from './types';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+} from "react";
+import { houseService } from "./house-service";
+import type { House } from "./types";
 
 interface HouseContextType {
   selectedHouse: House | null;
@@ -14,7 +20,7 @@ interface HouseContextType {
 
 const HouseContext = createContext<HouseContextType | undefined>(undefined);
 
-const SELECTED_HOUSE_KEY = 'selectedHouseId';
+const SELECTED_HOUSE_KEY = "selectedHouseId";
 
 export function HouseProvider({ children }: { children: ReactNode }) {
   const [selectedHouse, setSelectedHouseState] = useState<House | null>(null);
@@ -30,15 +36,15 @@ export function HouseProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (houses.length > 0 && !selectedHouse) {
       const savedHouseId = localStorage.getItem(SELECTED_HOUSE_KEY);
-      
+
       if (savedHouseId) {
-        const savedHouse = houses.find(h => h.id === savedHouseId);
+        const savedHouse = houses.find((h) => h.id === savedHouseId);
         if (savedHouse) {
           setSelectedHouseState(savedHouse);
           return;
         }
       }
-      
+
       // If no saved house or saved house not found, default to first house
       setSelectedHouseState(houses[0]);
     }
@@ -50,7 +56,7 @@ export function HouseProvider({ children }: { children: ReactNode }) {
       const fetchedHouses = await houseService.findAllUserHouses();
       setHouses(fetchedHouses);
     } catch (error) {
-      console.error('Failed to load houses:', error);
+      console.error("Failed to load houses:", error);
       setHouses([]);
     } finally {
       setIsLoading(false);
@@ -59,7 +65,7 @@ export function HouseProvider({ children }: { children: ReactNode }) {
 
   const setSelectedHouse = (house: House | null) => {
     setSelectedHouseState(house);
-    
+
     // Persist to localStorage
     if (house) {
       localStorage.setItem(SELECTED_HOUSE_KEY, house.id);
@@ -90,7 +96,7 @@ export function HouseProvider({ children }: { children: ReactNode }) {
 export function useHouse() {
   const context = useContext(HouseContext);
   if (context === undefined) {
-    throw new Error('useHouse must be used within a HouseProvider');
+    throw new Error("useHouse must be used within a HouseProvider");
   }
   return context;
 }

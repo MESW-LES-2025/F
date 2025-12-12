@@ -29,7 +29,7 @@ class UserService {
       houseData,
       {
         requiresAuth: true,
-      }
+      },
     );
 
     return userToHouse;
@@ -43,7 +43,7 @@ class UserService {
       `/user/leave-house?houseId=${houseData.houseId}`,
       {
         requiresAuth: true,
-      }
+      },
     );
 
     return deletedHouse;
