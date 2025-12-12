@@ -101,6 +101,25 @@ export class ChatService {
 			message,
 		);
 
+		// Create notification for reply
+		if (message.parent && message.parent.userId !== userId) {
+			await this.prisma.notification.create({
+				data: {
+					category: 'CHAT',
+					level: 'MEDIUM',
+					title: `${message.user.name} replied to your message`,
+					body: message.content,
+					actionUrl: `/chat?houseId=${houseId}&messageId=${message.id}`,
+					houseId,
+					deliveredTo: {
+						create: {
+							userId: message.parent.userId,
+						},
+					},
+				},
+			});
+		}
+
 		return message;
 	}
 

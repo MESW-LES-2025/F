@@ -15,6 +15,7 @@ import {
   ChefHat,
   Wallet,
   Info,
+  MessageCircle,
 } from "lucide-react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useToast } from "@/hooks/use-toast";
@@ -32,6 +33,8 @@ function iconForCategory(cat: string | null | undefined) {
       return <Wallet className="h-4 w-4 text-amber-600" />;
     case "SCRUM":
       return <CheckCheck className="h-4 w-4 text-purple-600" />;
+    case "CHAT":
+      return <MessageCircle className="h-4 w-4 text-indigo-600" />;
     default:
       return <Info className="h-4 w-4 text-gray-500" />;
   }
@@ -184,7 +187,15 @@ export default function NotificationsPage() {
     }
   };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "OTHER"];
+  const categories = [
+    "ALL",
+    "HOUSE",
+    "PANTRY",
+    "EXPENSES",
+    "SCRUM",
+    "CHAT",
+    "OTHER",
+  ];
 
   const handleOpen = async (n: UserNotification) => {
     const id = n.id || n.notification.id;

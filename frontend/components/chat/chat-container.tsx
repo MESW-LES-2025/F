@@ -104,14 +104,20 @@ export function ChatContainer() {
     }
   };
 
+  const searchParams = useSearchParams();
+  const messageIdParam = searchParams.get("messageId");
+
   // Initial load and subscription
   useEffect(() => {
     if (!houseId) return;
 
     setIsLoading(true);
     fetchMessages(true).then(() => {
-      // Scroll to bottom on initial load
-      setTimeout(scrollToBottom, 100);
+      if (messageIdParam) {
+        setTimeout(() => scrollToMessage(messageIdParam), 500);
+      } else {
+        setTimeout(scrollToBottom, 100);
+      }
     });
 
     // Pusher subscription
