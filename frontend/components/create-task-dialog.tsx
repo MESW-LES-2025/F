@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -10,126 +10,135 @@ import {
   DialogHeader,
   DialogTitle,
   DialogTrigger,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Plus } from "lucide-react"
-import { createTask } from "@/lib/tasks-service"
-import type { Task, User } from "@/lib/types"
-import { useEffect } from "react"
-import { apiGet } from "@/lib/api-client"
-import { useHouse } from "@/lib/house-context"
+} from "@/components/ui/select";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Plus } from "lucide-react";
+import { createTask } from "@/lib/tasks-service";
+import type { Task, User } from "@/lib/types";
+import { useEffect } from "react";
+import { apiGet } from "@/lib/api-client";
+import { useHouse } from "@/lib/house-context";
 
 interface CreateTaskDialogProps {
-  onTaskCreated?: (task: Task) => void
+  onTaskCreated?: (task: Task) => void;
 }
 
 export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
-  const { selectedHouse } = useHouse()
-  const [open, setOpen] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [users, setUsers] = useState<User[]>([])
+  const { selectedHouse } = useHouse();
+  const [open, setOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     assignedUserIds: [] as string[],
     size: "",
     deadline: "",
-  })
+  });
 
   const [formErrors, setFormErrors] = useState({
     title: false,
     assignee: false,
     deadline: false,
-  })
+  });
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+    e: React.ChangeEvent<
+      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
+    >,
   ) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error for this field when user starts typing
     if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors((prev) => ({ ...prev, [name]: false }))
+      setFormErrors((prev) => ({ ...prev, [name]: false }));
     }
-  }
+  };
 
   const handleAssigneeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, assignedUserIds: [value] }))
+    setFormData((prev) => ({ ...prev, assignedUserIds: [value] }));
     if (formErrors.assignee) {
-      setFormErrors((prev) => ({ ...prev, assignee: false }))
+      setFormErrors((prev) => ({ ...prev, assignee: false }));
     }
-  }
+  };
 
   const validateForm = () => {
     const errors = {
       title: !formData.title.trim(),
-      assignee: !(formData as any).assignedUserIds || (formData as any).assignedUserIds.length === 0,
+      assignee:
+        !(formData as any).assignedUserIds ||
+        (formData as any).assignedUserIds.length === 0,
       deadline: !formData.deadline,
-    }
+    };
 
-    setFormErrors(errors)
+    setFormErrors(errors);
 
-    return !Object.values(errors).some((error) => error)
-  }
+    return !Object.values(errors).some((error) => error);
+  };
 
   // Load users from selected house when dialog opens
   useEffect(() => {
     if (open && selectedHouse) {
-      loadHouseUsers()
+      loadHouseUsers();
     }
-  }, [open, selectedHouse])
+  }, [open, selectedHouse]);
 
   const loadHouseUsers = async () => {
     if (!selectedHouse) {
-      setError('Please select a house first.')
-      setUsers([])
-      return
+      setError("Please select a house first.");
+      setUsers([]);
+      return;
     }
 
     try {
       // Fetch users from the selected house
-      const response = await apiGet<User[]>(`/house/${selectedHouse.id}/users`, { requiresAuth: true })
-      setUsers(response)
+      const response = await apiGet<User[]>(
+        `/house/${selectedHouse.id}/users`,
+        { requiresAuth: true },
+      );
+      setUsers(response);
     } catch (err) {
-      console.error('Failed to load users:', err)
-      setError('Failed to load users from this house.')
+      console.error("Failed to load users:", err);
+      setError("Failed to load users from this house.");
     }
-  }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     // Validate required fields
     if (!validateForm()) {
-      setError("Please fill in all required fields (Title, Assignee, and Deadline).")
-      return
+      setError(
+        "Please fill in all required fields (Title, Assignee, and Deadline).",
+      );
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       if (!selectedHouse) {
-        setError('Please select a house first.');
+        setError("Please select a house first.");
         return;
       }
 
@@ -141,10 +150,10 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         size: (formData as any).size || undefined,
         deadline: new Date(formData.deadline).toISOString(),
         houseId: selectedHouse.id,
-      })
+      });
 
       // Call the callback with the new task
-      onTaskCreated?.(newTask)
+      onTaskCreated?.(newTask);
 
       // Reset form and close dialog
       setFormData({
@@ -153,19 +162,23 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         assignedUserIds: [],
         size: "",
         deadline: "",
-      })
+      });
       setFormErrors({
         title: false,
         assignee: false,
         deadline: false,
-      })
-      setOpen(false)
+      });
+      setOpen(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to create task. Please try again.")
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to create task. Please try again.",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   const handleOpenChange = (newOpen: boolean) => {
     if (!newOpen) {
@@ -176,21 +189,24 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         assignedUserIds: [],
         size: "",
         deadline: "",
-      })
+      });
       setFormErrors({
         title: false,
         assignee: false,
         deadline: false,
-      })
-      setError(null)
+      });
+      setError(null);
     }
-    setOpen(newOpen)
-  }
+    setOpen(newOpen);
+  };
 
   return (
     <Dialog open={open} onOpenChange={handleOpenChange}>
       <DialogTrigger asChild>
-        <Button size="sm" className="bg-green-600 hover:bg-green-700 cursor-pointer">
+        <Button
+          size="sm"
+          className="bg-green-600 hover:bg-green-700 cursor-pointer"
+        >
           <Plus className="w-4 h-4 mr-1" />
           New Task
         </Button>
@@ -200,7 +216,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
             <DialogDescription>
-              Add a new task to the board. All fields marked with * are required.
+              Add a new task to the board. All fields marked with * are
+              required.
             </DialogDescription>
           </DialogHeader>
 
@@ -246,34 +263,49 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                 Assignees <span className="text-destructive">*</span>
               </Label>
               <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button type="button" variant="outline" className="w-full justify-between font-normal">
-                      {(formData.assignedUserIds && formData.assignedUserIds.length > 0) ? (
-                        <span className="text-xs text-gray-700 truncate">
-                          {users
-                            .filter(u => (formData.assignedUserIds || []).includes(u.id))
-                            .map(u => u.name.split(' ')[0])
-                            .join(', ')}
-                        </span>
-                      ) : (
-                        'Select assignees'
-                      )}
-                    </Button>
-                  </DropdownMenuTrigger>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
+                    {formData.assignedUserIds &&
+                    formData.assignedUserIds.length > 0 ? (
+                      <span className="text-xs text-gray-700 truncate">
+                        {users
+                          .filter((u) =>
+                            (formData.assignedUserIds || []).includes(u.id),
+                          )
+                          .map((u) => u.name.split(" ")[0])
+                          .join(", ")}
+                      </span>
+                    ) : (
+                      "Select assignees"
+                    )}
+                  </Button>
+                </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64 max-h-72 overflow-y-auto">
-                  <DropdownMenuLabel>Select one or more users</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    Select one or more users
+                  </DropdownMenuLabel>
                   {users.map((user) => (
                     <DropdownMenuCheckboxItem
                       key={user.id}
-                      checked={(formData.assignedUserIds || []).includes(user.id)}
+                      checked={(formData.assignedUserIds || []).includes(
+                        user.id,
+                      )}
                       onCheckedChange={(checked) => {
                         setFormData((prev) => {
-                          const ids = new Set(prev.assignedUserIds)
-                          if (checked) ids.add(user.id)
-                          else ids.delete(user.id)
-                          return { ...prev, assignedUserIds: Array.from(ids) }
-                        })
-                        if (formErrors.assignee) setFormErrors((prev) => ({ ...prev, assignee: false }))
+                          const ids = new Set(prev.assignedUserIds);
+                          if (checked) ids.add(user.id);
+                          else ids.delete(user.id);
+                          return { ...prev, assignedUserIds: Array.from(ids) };
+                        });
+                        if (formErrors.assignee)
+                          setFormErrors((prev) => ({
+                            ...prev,
+                            assignee: false,
+                          }));
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -284,13 +316,20 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                 </DropdownMenuContent>
               </DropdownMenu>
               {formErrors.assignee && (
-                <p className="text-sm text-destructive">At least one assignee is required</p>
+                <p className="text-sm text-destructive">
+                  At least one assignee is required
+                </p>
               )}
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="size">Estimate</Label>
-              <Select value={(formData as any).size || ""} onValueChange={(v) => setFormData(prev => ({ ...prev, size: v }))}>
+              <Select
+                value={(formData as any).size || ""}
+                onValueChange={(v) =>
+                  setFormData((prev) => ({ ...prev, size: v }))
+                }
+              >
                 <SelectTrigger className="w-full" size="sm">
                   <SelectValue placeholder="Select size (optional)" />
                 </SelectTrigger>
@@ -344,5 +383,5 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

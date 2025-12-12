@@ -94,7 +94,7 @@ export default function AccountSettings() {
               }
             } catch (err) {
               setError(
-                err instanceof Error ? err.message : "Failed to update profile"
+                err instanceof Error ? err.message : "Failed to update profile",
               );
             } finally {
               setIsSaving(false);

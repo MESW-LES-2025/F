@@ -1,49 +1,75 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
-import { getSpendingTrends, type SpendingTrend } from '@/lib/expense-service'
-import { Loader2 } from 'lucide-react'
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  LineChart,
+  Line,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { getSpendingTrends, type SpendingTrend } from "@/lib/expense-service";
+import { Loader2 } from "lucide-react";
 
 interface SpendingTrendsChartProps {
-  houseId: string
+  houseId: string;
 }
 
 export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
-  const [data, setData] = useState<SpendingTrend[]>([])
-  const [loading, setLoading] = useState(true)
-  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('day')
-  const [days, setDays] = useState<number>(30)
+  const [data, setData] = useState<SpendingTrend[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [period, setPeriod] = useState<"day" | "week" | "month">("day");
+  const [days, setDays] = useState<number>(30);
 
   useEffect(() => {
     const fetchTrends = async () => {
       try {
-        setLoading(true)
-        const response = await getSpendingTrends(houseId, period, days)
-        setData(response.data)
+        setLoading(true);
+        const response = await getSpendingTrends(houseId, period, days);
+        setData(response.data);
       } catch (error) {
-        console.error('Failed to fetch spending trends:', error)
+        console.error("Failed to fetch spending trends:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     if (houseId) {
-      fetchTrends()
+      fetchTrends();
     }
-  }, [houseId, period, days])
+  }, [houseId, period, days]);
 
   const formatDate = (dateString: string) => {
-    const date = new Date(dateString)
-    if (period === 'month') {
-      return date.toLocaleDateString('en-US', { month: 'short', year: 'numeric' })
-    } else if (period === 'week') {
-      return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    const date = new Date(dateString);
+    if (period === "month") {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        year: "numeric",
+      });
+    } else if (period === "week") {
+      return date.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      });
     }
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
+    return date.toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  };
 
   return (
     <Card>
@@ -54,7 +80,10 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
             <CardDescription>Track your spending over time</CardDescription>
           </div>
           <div className="flex gap-2">
-            <Select value={period} onValueChange={(v) => setPeriod(v as 'day' | 'week' | 'month')}>
+            <Select
+              value={period}
+              onValueChange={(v) => setPeriod(v as "day" | "week" | "month")}
+            >
               <SelectTrigger className="w-[110px]">
                 <SelectValue />
               </SelectTrigger>
@@ -64,7 +93,10 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
                 <SelectItem value="month">Monthly</SelectItem>
               </SelectContent>
             </Select>
-            <Select value={days.toString()} onValueChange={(v) => setDays(parseInt(v))}>
+            <Select
+              value={days.toString()}
+              onValueChange={(v) => setDays(parseInt(v))}
+            >
               <SelectTrigger className="w-[110px]">
                 <SelectValue />
               </SelectTrigger>
@@ -97,7 +129,7 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
               />
               <YAxis tickFormatter={(value) => `$${value}`} />
               <Tooltip
-                formatter={(value: number) => [`$${value.toFixed(2)}`, 'Total']}
+                formatter={(value: number) => [`$${value.toFixed(2)}`, "Total"]}
                 labelFormatter={formatDate}
               />
               <Line
@@ -105,7 +137,7 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
                 dataKey="total"
                 stroke="var(--primary)"
                 strokeWidth={2}
-                dot={{ fill: 'var(--primary)' }}
+                dot={{ fill: "var(--primary)" }}
               />
             </LineChart>
           </ResponsiveContainer>
@@ -116,5 +148,5 @@ export function SpendingTrendsChart({ houseId }: SpendingTrendsChartProps) {
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

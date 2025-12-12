@@ -1,11 +1,31 @@
-import type { Task, Expense, PantryItem, User } from "./types"
+import type { Task, Expense, PantryItem, User } from "./types";
 
 export const users: User[] = [
-  { id: "1", name: "Sam Wheeler", email: "sam@example.com", avatar: "/sam-wheeler.jpg" },
-  { id: "2", name: "João Félix", email: "joao@example.com", avatar: "/joao-felix.jpg" },
-  { id: "3", name: "Marcos Salgado", email: "marcos@example.com", avatar: "/marcos-salgado.jpg" },
-  { id: "4", name: "Joana Maria", email: "joana@example.com", avatar: "/joana-maria.jpg" },
-]
+  {
+    id: "1",
+    name: "Sam Wheeler",
+    email: "sam@example.com",
+    avatar: "/sam-wheeler.jpg",
+  },
+  {
+    id: "2",
+    name: "João Félix",
+    email: "joao@example.com",
+    avatar: "/joao-felix.jpg",
+  },
+  {
+    id: "3",
+    name: "Marcos Salgado",
+    email: "marcos@example.com",
+    avatar: "/marcos-salgado.jpg",
+  },
+  {
+    id: "4",
+    name: "Joana Maria",
+    email: "joana@example.com",
+    avatar: "/joana-maria.jpg",
+  },
+];
 
 export const tasks: Task[] = [
   {
@@ -56,7 +76,7 @@ export const tasks: Task[] = [
     status: "done",
     createdAt: new Date("2025-01-11"),
   },
-]
+];
 
 export const expenses: Expense[] = [
   {
@@ -119,7 +139,7 @@ export const expenses: Expense[] = [
     date: new Date("2025-01-10"),
     splitWith: ["1", "2", "3", "4"],
   },
-]
+];
 
 export const pantryItems: PantryItem[] = [
   {
@@ -205,4 +225,4 @@ export const pantryItems: PantryItem[] = [
     addedByAvatar: "/sam-wheeler.jpg",
     lowStock: true,
   },
-]
+];

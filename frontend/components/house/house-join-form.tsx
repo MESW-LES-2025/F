@@ -18,7 +18,7 @@ export function JoinHouseForm({ isRegister = false }: JoinHouseFormProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [errorJoin, setErrorJoin] = useState<string | null>(null);
   const [successMessageJoin, setSuccessMessageJoin] = useState<string | null>(
-    null
+    null,
   );
 
   const handleJoinHouse = async () => {
@@ -69,7 +69,11 @@ export function JoinHouseForm({ isRegister = false }: JoinHouseFormProps) {
           />
         </div>
 
-        <Button id="join-house-btn" onClick={handleJoinHouse} disabled={isSaving}>
+        <Button
+          id="join-house-btn"
+          onClick={handleJoinHouse}
+          disabled={isSaving}
+        >
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
 

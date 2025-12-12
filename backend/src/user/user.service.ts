@@ -83,6 +83,19 @@ export class UserService {
 			throw new NotFoundException('User not found');
 		}
 
+		// Remove user from all houses
+		const houseMemberships = await this.prisma.houseToUser.findMany({
+			where: { userId: id },
+		});
+
+		for (const membership of houseMemberships) {
+			try {
+				await this.leaveHouse(id, membership.houseId);
+			} catch {
+				// Continue deletion even if leaving a house fails (e.g. house already deleted)
+			}
+		}
+
 		// Soft delete: set deletedAt and revoke refresh tokens
 		await this.prisma.user.update({
 			where: { id },

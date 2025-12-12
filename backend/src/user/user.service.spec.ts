@@ -69,6 +69,9 @@ describe('UserService', () => {
 			findUnique: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
+			findMany: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser[]>
+			>;
 			create: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
@@ -114,6 +117,9 @@ describe('UserService', () => {
 			>,
 			findUnique: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			findMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser[]>
 			>,
 			create: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
@@ -209,6 +215,7 @@ describe('UserService', () => {
 	describe('remove', () => {
 		it('soft-deletes user and revokes refresh tokens', async () => {
 			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
 			mockPrismaService.user.update.mockResolvedValue({
 				...mockUser,
 				deletedAt: new Date(),

@@ -21,7 +21,7 @@ export interface Task {
   houseName: string;
   archived: boolean;
   archivedAt?: Date | null;
-  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL';
+  size?: "SMALL" | "MEDIUM" | "LARGE" | "XL";
 }
 
 export interface House {
@@ -36,7 +36,7 @@ export interface House {
       name: string | null;
       username: string | null;
       imageUrl: string | null;
-    }
+    };
   }[];
 }
 

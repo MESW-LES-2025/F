@@ -47,42 +47,45 @@ export function ChatContainer() {
     }
   };
 
-  const fetchMessages = useCallback(async (reset = false) => {
-    if (!houseId || !user) return;
+  const fetchMessages = useCallback(
+    async (reset = false) => {
+      if (!houseId || !user) return;
 
-    try {
-      const currentCursor = reset ? undefined : cursor;
-      const res = await chatService.readMessages(houseId, 20, currentCursor);
-      
-      if (reset) {
-        setMessages(res.messages.reverse());
-      } else {
-        setMessages((prev) => [...res.messages.reverse(), ...prev]);
+      try {
+        const currentCursor = reset ? undefined : cursor;
+        const res = await chatService.readMessages(houseId, 20, currentCursor);
+
+        if (reset) {
+          setMessages(res.messages.reverse());
+        } else {
+          setMessages((prev) => [...res.messages.reverse(), ...prev]);
+        }
+
+        // Mark unread messages as read
+        const unreadMessageIds = res.messages
+          .filter(
+            (msg) =>
+              msg.userId !== user.id &&
+              !msg.readLogs?.some((log) => log.userId === user.id),
+          )
+          .map((msg) => msg.id);
+
+        if (unreadMessageIds.length > 0) {
+          chatService.markMessagesAsRead(unreadMessageIds);
+        }
+
+        setCursor(res.nextCursor || undefined);
+        setHasMore(!!res.nextCursor);
+      } catch (err) {
+        console.error("Failed to fetch messages:", err);
+        setError("Failed to load messages");
+      } finally {
+        setIsLoading(false);
+        setIsFetchingMore(false);
       }
-      
-      // Mark unread messages as read
-      const unreadMessageIds = res.messages
-        .filter(
-          (msg) =>
-            msg.userId !== user.id &&
-            !msg.readLogs?.some((log) => log.userId === user.id)
-        )
-        .map((msg) => msg.id);
-
-      if (unreadMessageIds.length > 0) {
-        chatService.markMessagesAsRead(unreadMessageIds);
-      }
-
-      setCursor(res.nextCursor || undefined);
-      setHasMore(!!res.nextCursor);
-    } catch (err) {
-      console.error("Failed to fetch messages:", err);
-      setError("Failed to load messages");
-    } finally {
-      setIsLoading(false);
-      setIsFetchingMore(false);
-    }
-  }, [houseId, cursor, user]);
+    },
+    [houseId, cursor, user],
+  );
 
   const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop } = e.currentTarget;
@@ -90,11 +93,12 @@ export function ChatContainer() {
       setIsFetchingMore(true);
       // Save scroll position
       const scrollHeight = e.currentTarget.scrollHeight;
-      
+
       fetchMessages().then(() => {
         // Restore scroll position
         if (containerRef.current) {
-          containerRef.current.scrollTop = containerRef.current.scrollHeight - scrollHeight;
+          containerRef.current.scrollTop =
+            containerRef.current.scrollHeight - scrollHeight;
         }
       });
     }
@@ -128,7 +132,7 @@ export function ChatContainer() {
         if (prev.find((m) => m.id === data.id)) return prev;
         return [...prev, data];
       });
-      
+
       // Mark as read if not own message
       if (data.userId !== user?.id) {
         chatService.markMessagesAsRead([data.id]);
@@ -139,7 +143,7 @@ export function ChatContainer() {
 
     channel.bind("message-updated", (data: ChatMessageType) => {
       setMessages((prev) =>
-        prev.map((msg) => (msg.id === data.id ? data : msg))
+        prev.map((msg) => (msg.id === data.id ? data : msg)),
       );
     });
 
@@ -147,23 +151,34 @@ export function ChatContainer() {
       setMessages((prev) => prev.filter((msg) => msg.id !== data.id));
     });
 
-    channel.bind("message-read", (data: { messageId: string; userId: string; readAt: string; user: { id: string; name: string } }) => {
-      setMessages((prev) =>
-        prev.map((msg) => {
-          if (msg.id === data.messageId) {
-            const existingLogs = msg.readLogs || [];
-            if (existingLogs.some((r) => r.userId === data.userId)) {
-              return msg;
+    channel.bind(
+      "message-read",
+      (data: {
+        messageId: string;
+        userId: string;
+        readAt: string;
+        user: { id: string; name: string };
+      }) => {
+        setMessages((prev) =>
+          prev.map((msg) => {
+            if (msg.id === data.messageId) {
+              const existingLogs = msg.readLogs || [];
+              if (existingLogs.some((r) => r.userId === data.userId)) {
+                return msg;
+              }
+              return {
+                ...msg,
+                readLogs: [
+                  ...existingLogs,
+                  { userId: data.userId, readAt: data.readAt, user: data.user },
+                ],
+              };
             }
-            return {
-              ...msg,
-              readLogs: [...existingLogs, { userId: data.userId, readAt: data.readAt, user: data.user }],
-            };
-          }
-          return msg;
-        })
-      );
-    });
+            return msg;
+          }),
+        );
+      },
+    );
 
     return () => {
       channel.unbind_all();
@@ -198,7 +213,10 @@ export function ChatContainer() {
     scrollToBottom();
 
     try {
-      const newMessage = await chatService.createMessage(houseId, { content, parentId });
+      const newMessage = await chatService.createMessage(houseId, {
+        content,
+        parentId,
+      });
       setMessages((prev) => {
         // Check if message already exists (from Pusher event)
         if (prev.some((msg) => msg.id === newMessage.id)) {
@@ -206,7 +224,9 @@ export function ChatContainer() {
           return prev.filter((msg: ChatMessageType) => msg.id !== tempId);
         }
         // Otherwise replace optimistic message with real one
-        return prev.map((msg: ChatMessageType) => (msg.id === tempId ? newMessage : msg));
+        return prev.map((msg: ChatMessageType) =>
+          msg.id === tempId ? newMessage : msg,
+        );
       });
     } catch (err) {
       console.error("Failed to send message:", err);
@@ -218,8 +238,8 @@ export function ChatContainer() {
     try {
       setMessages((prev) =>
         prev.map((msg) =>
-          msg.id === id ? { ...msg, content: newContent } : msg
-        )
+          msg.id === id ? { ...msg, content: newContent } : msg,
+        ),
       );
       await chatService.updateMessage(id, newContent);
     } catch (err) {
@@ -252,7 +272,7 @@ export function ChatContainer() {
     <div className="flex flex-col h-[calc(100vh-4rem)] lg:h-screen bg-gray-50">
       <ChatHeader />
 
-      <div 
+      <div
         ref={containerRef}
         onScroll={handleScroll}
         className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50"
@@ -295,8 +315,8 @@ export function ChatContainer() {
         )}
       </div>
 
-      <ChatInput 
-        onSendMessage={handleSendMessage} 
+      <ChatInput
+        onSendMessage={handleSendMessage}
         replyingTo={replyingTo}
         onCancelReply={() => setReplyingTo(null)}
       />

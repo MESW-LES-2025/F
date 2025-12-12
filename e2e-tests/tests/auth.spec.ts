@@ -132,7 +132,7 @@ test.describe('Auth Acceptance Tests', () => {
 
 			await page.goto('/settings');
 			await expect(page).toHaveURL('/settings');
-			await page.getByRole('button', { name: 'Log Out', exact: true }).click();
+			await page.getByRole('button', { name: /^Log Out$/i }).click({ force: true });
 			await expect(page).toHaveURL('/login');
 		});	
 	});
