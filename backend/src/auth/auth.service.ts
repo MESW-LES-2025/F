@@ -37,9 +37,9 @@ export interface GoogleTokens {
 @Injectable()
 export class AuthService {
 	constructor(
-		private prisma: PrismaService,
-		private jwtService: JwtService,
-		private emailService: EmailService,
+		private readonly prisma: PrismaService,
+		private readonly jwtService: JwtService,
+		private readonly emailService: EmailService,
 	) {}
 
 	async storeGoogleTokens(tokens: GoogleTokens): Promise<string> {
@@ -120,7 +120,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
+					isEmailVerified: isDev,
 					deletedAt: null,
 				},
 			});
@@ -133,7 +133,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
+					isEmailVerified: isDev,
 				},
 			});
 		}

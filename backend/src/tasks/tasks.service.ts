@@ -13,8 +13,8 @@ import { UpdateTaskDto } from './dto/update-task.dto';
 @Injectable()
 export class TasksService {
 	constructor(
-		private prisma: PrismaService,
-		private notificationsService: NotificationsService,
+		private readonly prisma: PrismaService,
+		private readonly notificationsService: NotificationsService,
 	) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {

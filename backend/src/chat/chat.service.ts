@@ -14,8 +14,8 @@ import { WebsocketService } from '../shared/websockets/websocket.service';
 @Injectable()
 export class ChatService {
 	constructor(
-		private prisma: PrismaService,
-		private websocketService: WebsocketService,
+		private readonly prisma: PrismaService,
+		private readonly websocketService: WebsocketService,
 	) {}
 
 	async create(
@@ -283,7 +283,7 @@ export class ChatService {
 		let nextCursor: string | null = null;
 		if (messages.length > take) {
 			messages.pop();
-			nextCursor = messages[messages.length - 1].id;
+			nextCursor = messages.at(-1)!.id;
 		}
 
 		return {

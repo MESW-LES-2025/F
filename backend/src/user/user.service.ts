@@ -15,9 +15,9 @@ import { NotificationCategory, NotificationLevel } from '@prisma/client';
 @Injectable()
 export class UserService {
 	constructor(
-		private prisma: PrismaService,
-		private imageService: ImageService,
-		private notificationService: NotificationsService,
+		private readonly prisma: PrismaService,
+		private readonly imageService: ImageService,
+		private readonly notificationService: NotificationsService,
 	) {}
 
 	async findOne(id: string) {
@@ -57,7 +57,7 @@ export class UserService {
 			where: { id },
 			data: {
 				...(username ? { username } : {}),
-				...(name !== undefined ? { name } : {}),
+				...(name === undefined ? {} : { name }),
 			},
 			select: {
 				id: true,

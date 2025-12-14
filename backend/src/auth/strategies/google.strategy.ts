@@ -5,7 +5,7 @@ import { AuthService, GoogleUser } from '../auth.service';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-	constructor(private authService: AuthService) {
+	constructor(private readonly authService: AuthService) {
 		super({
 			clientID: process.env.GOOGLE_CLIENT_ID || '',
 			clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
@@ -23,10 +23,10 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
 		const { name, emails, photos, id } = profile;
 
 		const user: GoogleUser = {
-			email: emails && emails[0] ? emails[0].value : '',
+			email: emails?.[0]?.value ?? '',
 			firstName: name ? name.givenName : '',
 			lastName: name ? name.familyName : '',
-			picture: photos && photos[0] ? photos[0].value : '',
+			picture: photos?.[0]?.value ?? '',
 			googleId: id,
 			accessToken,
 		};
