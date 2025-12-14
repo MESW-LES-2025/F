@@ -20,7 +20,6 @@ import {
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
 } from "@/components/ui/dropdown-menu";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Select,
   SelectContent,
@@ -324,10 +323,15 @@ export function EditTaskDialog({
                       )}
                       onCheckedChange={(checked) => {
                         setFormData((prev) => {
-                          const ids = new Set((prev as any).assignedUserIds);
+                          const ids = new Set(
+                            (prev as any).assignedUserIds as string[],
+                          );
                           if (checked) ids.add(user.id);
                           else ids.delete(user.id);
-                          return { ...prev, assignedUserIds: Array.from(ids) };
+                          return {
+                            ...prev,
+                            assignedUserIds: Array.from(ids) as string[],
+                          };
                         });
                       }}
                     >

@@ -1,10 +1,8 @@
 "use client";
 
-import SettingsNotifications from "@/components/settings/settings-notifications";
-import AccountSettings from "@/components/settings/settings-account";
-import SettingsPreferences from "@/components/settings/settings-preferences";
 import SettingsSecurity from "@/components/settings/settings-security";
 import SettingsDangerArea from "@/components/settings/settings-danger-area";
+import AccountSettings from "@/components/settings/settings-account";
 import { useRouter } from "next/navigation";
 import { DoorOpen } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -38,12 +36,6 @@ export default function SettingsWithoutHousePage() {
       <div className="grid gap-6">
         {/* Account Settings */}
         <AccountSettings />
-
-        {/* Notifications */}
-        <SettingsNotifications />
-
-        {/* Preferences */}
-        <SettingsPreferences />
 
         {/* Security */}
         <SettingsSecurity />

@@ -559,6 +559,7 @@ export class TasksService {
 						name: true,
 						email: true,
 						username: true,
+						imageUrl: true,
 					},
 				},
 				createdBy: {
@@ -573,6 +574,18 @@ export class TasksService {
 					select: {
 						id: true,
 						name: true,
+					},
+				},
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
 					},
 				},
 			},

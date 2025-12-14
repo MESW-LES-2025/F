@@ -57,6 +57,28 @@ class ProfileService {
       requiresAuth: true,
     });
   }
+
+  /**
+   * Get user dashboard stats and activity
+   */
+  async getDashboard(): Promise<UserDashboard> {
+    return apiGet<UserDashboard>("/user/dashboard", { requiresAuth: true });
+  }
+}
+
+export interface UserDashboard {
+  stats: {
+    tasksCompleted: number;
+    totalExpenses: number;
+    itemsAdded: number;
+    contribution: number;
+  };
+  recentActivity: {
+    type: "task" | "expense" | "pantry";
+    action: string;
+    detail: string;
+    date: string;
+  }[];
 }
 
 export const profileService = new ProfileService();

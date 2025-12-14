@@ -165,9 +165,7 @@ export function ExpensesList({
             >
               <div className="flex items-center gap-3 flex-1 min-w-0">
                 <Avatar className="w-8 h-8">
-                  <AvatarImage
-                    src={expense.paidByAvatar || "/placeholder.svg"}
-                  />
+                  <AvatarImage src={expense.paidByAvatar} />
                   <AvatarFallback>
                     {expense.paidBy
                       .split(" ")
@@ -230,9 +228,7 @@ export function ExpensesList({
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3 flex-1">
                   <Avatar className="w-10 h-10">
-                    <AvatarImage
-                      src={expense.paidByAvatar || "/placeholder.svg"}
-                    />
+                    <AvatarImage src={expense.paidByAvatar} />
                     <AvatarFallback>
                       {expense.paidBy
                         .split(" ")

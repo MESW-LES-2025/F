@@ -2,7 +2,6 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { tasks as defaultTasks } from "@/lib/data";
 import { GripVertical, Pencil, Trash2, ArchiveRestore } from "lucide-react";
 import { archiveTask } from "@/lib/tasks-service";
 import { toast } from "@/hooks/use-toast";
@@ -17,7 +16,7 @@ interface ActivitiesKanbanProps {
 }
 
 export function ActivitiesKanban({
-  tasks = defaultTasks,
+  tasks = [],
   onEditTask,
   onDeleteTask,
   onChangeStatus,
@@ -179,7 +178,7 @@ function TaskColumn({
                         .slice(0, 3)
                         .map((u) => (
                           <Avatar key={u.id} className="w-6 h-6">
-                            <AvatarImage src={u.avatar || "/placeholder.svg"} />
+                            <AvatarImage src={u.avatar} />
                             <AvatarFallback className="text-xs">
                               {u.name
                                 .split(" ")

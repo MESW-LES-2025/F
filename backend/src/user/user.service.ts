@@ -344,4 +344,132 @@ export class UserService {
 
 		return deletedRelation;
 	}
+	async getUserDashboard(userId: string) {
+		const [
+			completedTasksCount,
+			totalAssignedTasksCount,
+			expenses,
+			pantryItemsCount,
+			recentTasks,
+			recentExpenses,
+			recentPantryActivity,
+		] = await Promise.all([
+			// Stats: Completed Tasks
+			this.prisma.task.count({
+				where: {
+					assigneeId: userId,
+					status: 'done',
+				},
+			}),
+			// Stats: Total Assigned Tasks (for Contribution %)
+			this.prisma.task.count({
+				where: {
+					assigneeId: userId,
+				},
+			}),
+			// Stats: Expenses for total amount
+			this.prisma.expense.findMany({
+				where: {
+					paidById: userId,
+				},
+				select: {
+					amount: true,
+				},
+			}),
+			// Stats: Items Added
+			this.prisma.pantryItem.count({
+				where: {
+					createdByUser: userId,
+				},
+			}),
+			// Activity: Recent Tasks
+			this.prisma.task.findMany({
+				where: {
+					OR: [{ assigneeId: userId }, { createdById: userId }],
+				},
+				orderBy: { updatedAt: 'desc' },
+				take: 5,
+				select: {
+					id: true,
+					title: true,
+					status: true, // status needs to be selected to determine action
+					updatedAt: true,
+					houseId: true,
+				},
+			}),
+			// Activity: Recent Expenses
+			this.prisma.expense.findMany({
+				where: {
+					paidById: userId,
+				},
+				orderBy: { createdAt: 'desc' },
+				take: 5,
+				select: {
+					id: true,
+					description: true,
+					amount: true,
+					createdAt: true,
+				},
+			}),
+			// Activity: Recent Pantry Activity
+			this.prisma.pantryToItem.findMany({
+				where: {
+					modifiedByUser: userId,
+				},
+				orderBy: { updatedAt: 'desc' },
+				take: 5,
+				include: {
+					item: {
+						select: {
+							name: true,
+						},
+					},
+				},
+			}),
+		]);
+
+		const totalExpenses = expenses.reduce(
+			(acc, curr) => acc + curr.amount,
+			0,
+		);
+		const contribution =
+			totalAssignedTasksCount > 0
+				? Math.round(
+						(completedTasksCount / totalAssignedTasksCount) * 100,
+					)
+				: 0;
+
+		const activities = [
+			...recentTasks.map((t) => ({
+				type: 'task',
+				action: t.status === 'done' ? 'Completed task' : 'Updated task',
+				detail: t.title,
+				date: t.updatedAt,
+			})),
+			...recentExpenses.map((e) => ({
+				type: 'expense',
+				action: 'Added expense',
+				detail: `${e.description} - €${e.amount.toFixed(2)}`,
+				date: e.createdAt,
+			})),
+			...recentPantryActivity.map((p) => ({
+				type: 'pantry',
+				action: 'Updated pantry',
+				detail: `Updated ${p.item.name}`,
+				date: p.updatedAt,
+			})),
+		]
+			.sort((a, b) => b.date.getTime() - a.date.getTime())
+			.slice(0, 5);
+
+		return {
+			stats: {
+				tasksCompleted: completedTasksCount,
+				totalExpenses,
+				itemsAdded: pantryItemsCount,
+				contribution,
+			},
+			recentActivity: activities,
+		};
+	}
 }

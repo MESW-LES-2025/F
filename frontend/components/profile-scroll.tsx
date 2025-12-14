@@ -28,7 +28,7 @@ export function ProfileScroll() {
                 >
                   <div className="flex flex-col items-center">
                     <Avatar className="w-12 h-12 border-2 border-white shadow-sm ring-1 ring-gray-100 group-hover:ring-primary transition-all">
-                      <AvatarImage src={user.imageUrl || "/placeholder.svg"} />
+                      <AvatarImage src={user.imageUrl || undefined} />
                       <AvatarFallback className="bg-primary/10 text-primary text-xs font-medium">
                         {user.name
                           ? user.name

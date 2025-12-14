@@ -118,9 +118,7 @@ function ActivitiesColumn() {
                       </div>
                     </div>
                     <Avatar className="w-6 h-6">
-                      <AvatarImage
-                        src={task.assigneeAvatar || "/placeholder.svg"}
-                      />
+                      <AvatarImage src={task.assigneeAvatar || undefined} />
                       <AvatarFallback className="text-[10px]">
                         {task.assignee?.charAt(0).toUpperCase()}
                       </AvatarFallback>
