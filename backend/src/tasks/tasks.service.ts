@@ -6,7 +6,13 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCategory, NotificationLevel } from '@prisma/client';
+import { NotificationCategory, NotificationLevel, Task } from '@prisma/client';
+
+interface TaskWithRelations extends Task {
+	house: { name: string };
+	assignee?: { name: string | null } | null;
+	createdBy: { name: string | null };
+}
 import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
@@ -49,29 +55,11 @@ export class TasksService {
 			throw new ForbiddenException('You do not belong to this house');
 		}
 
-		const assignees =
-			assignedUserIds && assignedUserIds.length
-				? assignedUserIds
-				: [assigneeId];
+		const assignees = assignedUserIds?.length
+			? assignedUserIds
+			: [assigneeId];
 
-		// Validate each assignee exists and is in the house
-		for (const aid of assignees) {
-			const user = await this.prisma.user.findUnique({
-				where: { id: aid },
-			});
-			if (!user) {
-				throw new NotFoundException('Assignee user not found');
-			}
-
-			const inHouse = await this.prisma.houseToUser.findFirst({
-				where: { userId: aid, houseId },
-			});
-			if (!inHouse) {
-				throw new BadRequestException(
-					'Cannot assign task to user not in this house',
-				);
-			}
-		}
+		await this.validateAssignees(assignees, houseId);
 
 		const primaryAssignee = assignees[0];
 
@@ -112,7 +100,7 @@ export class TasksService {
 			},
 		});
 
-		if (assignees && assignees.length) {
+		if (assignees?.length) {
 			try {
 				await this.prisma.taskToUser.createMany({
 					data: assignees.map((u) => ({
@@ -287,17 +275,16 @@ export class TasksService {
 			return [];
 		}
 
+		let archived: boolean | undefined;
+		if (filters?.archived === 'true') archived = true;
+		else if (filters?.archived === 'false') archived = false;
+
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId: { in: houseIds },
 				assigneeId: filters?.assigneeId || undefined,
 				status: filters?.status ?? undefined,
-				archived:
-					filters?.archived === 'true'
-						? true
-						: filters?.archived === 'false'
-							? false
-							: undefined,
+				archived,
 			},
 			include: {
 				assignee: {
@@ -442,91 +429,19 @@ export class TasksService {
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
 		const task = await this.findOne(id);
 
-		// Verify user has permission (creator, assignee), or shares a house with creator/assignee
-		if (task.createdById !== userId && task.assigneeId !== userId) {
-			// get house memberships for acting user
-			const userHouses = await this.prisma.houseToUser.findMany({
-				where: { userId },
-				select: { houseId: true },
-			});
-			const userHouseIds = new Set(userHouses.map((h) => h.houseId));
-
-			const creatorHouses = await this.prisma.houseToUser.findMany({
-				where: { userId: task.createdById },
-				select: { houseId: true },
-			});
-			const sharesWithCreator = creatorHouses.some((ch) =>
-				userHouseIds.has(ch.houseId),
-			);
-
-			let sharesWithAssignee = false;
-			if (task.assigneeId && task.assigneeId !== task.createdById) {
-				const assigneeHouses = await this.prisma.houseToUser.findMany({
-					where: { userId: task.assigneeId },
-					select: { houseId: true },
-				});
-				sharesWithAssignee = assigneeHouses.some((ah) =>
-					userHouseIds.has(ah.houseId),
-				);
-			}
-
-			if (!sharesWithCreator && !sharesWithAssignee) {
-				throw new ForbiddenException(
-					'You do not have permission to update this task',
-				);
-			}
-		}
+		await this.checkUpdatePermissions(task, userId);
 
 		const assignedUserIds = updateTaskDto.assignedUserIds;
 
-		if (assignedUserIds && assignedUserIds.length) {
-			for (const aid of assignedUserIds) {
-				const assignee = await this.prisma.user.findUnique({
-					where: { id: aid },
-				});
-				if (!assignee) {
-					throw new NotFoundException('Assignee user not found');
-				}
-
-				const assigneeInHouse = await this.prisma.houseToUser.findFirst(
-					{
-						where: {
-							userId: aid,
-							houseId: task.houseId,
-						},
-					},
-				);
-
-				if (!assigneeInHouse) {
-					throw new BadRequestException(
-						'Cannot assign task to user not in this house',
-					);
-				}
-			}
+		if (assignedUserIds?.length) {
+			await this.validateAssignees(assignedUserIds, task.houseId);
 		}
 
 		if (!assignedUserIds && updateTaskDto.assigneeId) {
-			const assignee = await this.prisma.user.findUnique({
-				where: { id: updateTaskDto.assigneeId },
-			});
-
-			if (!assignee) {
-				throw new NotFoundException('Assignee user not found');
-			}
-
-			// Verify the new assignee belongs to the task's house
-			const assigneeInHouse = await this.prisma.houseToUser.findFirst({
-				where: {
-					userId: updateTaskDto.assigneeId,
-					houseId: task.houseId,
-				},
-			});
-
-			if (!assigneeInHouse) {
-				throw new BadRequestException(
-					'Cannot assign task to user not in this house',
-				);
-			}
+			await this.validateAssignees(
+				[updateTaskDto.assigneeId],
+				task.houseId,
+			);
 		}
 
 		type UpdateData = Omit<UpdateTaskDto, 'deadline'> & { deadline?: Date };
@@ -541,7 +456,7 @@ export class TasksService {
 			delete dataToUpdate.deadline;
 		}
 
-		if (assignedUserIds && assignedUserIds.length) {
+		if (assignedUserIds?.length) {
 			dataToUpdate.assigneeId = assignedUserIds[0];
 		}
 
@@ -591,93 +506,11 @@ export class TasksService {
 			},
 		});
 
-		if (assignedUserIds && assignedUserIds.length) {
-			// Determine newly added assignees compared to current links
-			let previousAssigneeIds: string[] = [];
-			try {
-				const existingLinks = await this.prisma.taskToUser.findMany({
-					where: { taskId: id },
-					select: { userId: true },
-				});
-				previousAssigneeIds = existingLinks.map((l) => l.userId);
-			} catch {
-				previousAssigneeIds = [];
-			}
-
-			const prevSet = new Set(previousAssigneeIds);
-			const addedAssigneeIds = assignedUserIds.filter(
-				(uid) => !prevSet.has(uid),
-			);
-
-			try {
-				await this.prisma.taskToUser.deleteMany({
-					where: { taskId: id },
-				});
-				await this.prisma.taskToUser.createMany({
-					data: assignedUserIds.map((u) => ({
-						taskId: id,
-						userId: u,
-					})),
-					skipDuplicates: true,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to update task assignees',
-					err,
-				);
-			}
-
-			// Notify only newly added assignees
-			if (addedAssigneeIds.length) {
-				try {
-					await this.notificationsService.create({
-						category: NotificationCategory.SCRUM,
-						level: NotificationLevel.LOW,
-						title: `Task updated: ${updatedTask.title}`,
-						body: `You were assigned to '${updatedTask.title}' in house ${updatedTask.house.name}.`,
-						userIds: addedAssigneeIds,
-						actionUrl: '/activities',
-						houseId: updatedTask.houseId,
-					});
-				} catch (err) {
-					console.error(
-						'[TasksService] Failed to create update assignment notification',
-						err,
-					);
-				}
-			}
+		if (assignedUserIds?.length) {
+			await this.updateTaskAssignees(id, assignedUserIds, updatedTask);
 		}
 
-		if (task.status !== 'done' && updatedTask.status === 'done') {
-			try {
-				const memberships = await this.prisma.houseToUser.findMany({
-					where: { houseId: updatedTask.houseId },
-					select: { userId: true },
-				});
-				const userIds = memberships.map((m) => m.userId);
-				const actorUser =
-					updatedTask.createdById === userId
-						? updatedTask.createdBy
-						: updatedTask.assigneeId === userId
-							? updatedTask.assignee
-							: null;
-				const actorName = actorUser?.name || 'A member';
-				await this.notificationsService.create({
-					category: NotificationCategory.SCRUM,
-					level: NotificationLevel.MEDIUM,
-					title: `Task completed: ${updatedTask.title}`,
-					body: `${actorName} marked '${updatedTask.title}' as done in house ${updatedTask.house.name}.`,
-					userIds,
-					actionUrl: '/activities',
-					houseId: updatedTask.houseId,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to create completion notification',
-					err,
-				);
-			}
-		}
+		await this.notifyCompletion(task, updatedTask, userId);
 
 		return updatedTask;
 	}
@@ -756,14 +589,16 @@ export class TasksService {
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
+		let archivedFilter: boolean | undefined;
+		if (archived === 'true') archivedFilter = true;
+		else if (archived === 'false') archivedFilter = false;
+
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId,
-				...(archived === 'true'
-					? { archived: true }
-					: archived === 'false'
-						? { archived: false }
-						: {}),
+				...(archivedFilter !== undefined && {
+					archived: archivedFilter,
+				}),
 			},
 			include: {
 				assignee: {
@@ -870,5 +705,164 @@ export class TasksService {
 					(l) => l.user,
 				) ?? [],
 		}));
+	}
+
+	private async validateAssignees(
+		assignees: string[],
+		houseId: string,
+	): Promise<void> {
+		for (const aid of assignees) {
+			const user = await this.prisma.user.findUnique({
+				where: { id: aid },
+			});
+			if (!user) {
+				throw new NotFoundException('Assignee user not found');
+			}
+
+			const inHouse = await this.prisma.houseToUser.findFirst({
+				where: { userId: aid, houseId },
+			});
+			if (!inHouse) {
+				throw new BadRequestException(
+					'Cannot assign task to user not in this house',
+				);
+			}
+		}
+	}
+
+	private async checkUpdatePermissions(
+		task: { createdById: string; assigneeId: string | null },
+		userId: string,
+	) {
+		if (task.createdById !== userId && task.assigneeId !== userId) {
+			const userHouses = await this.prisma.houseToUser.findMany({
+				where: { userId },
+				select: { houseId: true },
+			});
+			const userHouseIds = new Set(userHouses.map((h) => h.houseId));
+
+			const creatorHouses = await this.prisma.houseToUser.findMany({
+				where: { userId: task.createdById },
+				select: { houseId: true },
+			});
+			const sharesWithCreator = creatorHouses.some((ch) =>
+				userHouseIds.has(ch.houseId),
+			);
+
+			let sharesWithAssignee = false;
+			if (task.assigneeId && task.assigneeId !== task.createdById) {
+				const assigneeHouses = await this.prisma.houseToUser.findMany({
+					where: { userId: task.assigneeId },
+					select: { houseId: true },
+				});
+				sharesWithAssignee = assigneeHouses.some((ah) =>
+					userHouseIds.has(ah.houseId),
+				);
+			}
+
+			if (!sharesWithCreator && !sharesWithAssignee) {
+				throw new ForbiddenException(
+					'You do not have permission to update this task',
+				);
+			}
+		}
+	}
+
+	private async updateTaskAssignees(
+		id: string,
+		assignedUserIds: string[],
+		updatedTask: TaskWithRelations,
+	) {
+		let previousAssigneeIds: string[] = [];
+		try {
+			const existingLinks = await this.prisma.taskToUser.findMany({
+				where: { taskId: id },
+				select: { userId: true },
+			});
+			previousAssigneeIds = existingLinks.map((l) => l.userId);
+		} catch {
+			previousAssigneeIds = [];
+		}
+
+		const prevSet = new Set(previousAssigneeIds);
+		const addedAssigneeIds = assignedUserIds.filter(
+			(uid) => !prevSet.has(uid),
+		);
+
+		try {
+			await this.prisma.taskToUser.deleteMany({
+				where: { taskId: id },
+			});
+			await this.prisma.taskToUser.createMany({
+				data: assignedUserIds.map((u) => ({
+					taskId: id,
+					userId: u,
+				})),
+				skipDuplicates: true,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to update task assignees',
+				err,
+			);
+		}
+
+		if (addedAssigneeIds.length) {
+			try {
+				await this.notificationsService.create({
+					category: NotificationCategory.SCRUM,
+					level: NotificationLevel.LOW,
+					title: `Task updated: ${updatedTask.title}`,
+					body: `You were assigned to '${updatedTask.title}' in house ${updatedTask.house.name}.`,
+					userIds: addedAssigneeIds,
+					actionUrl: '/activities',
+					houseId: updatedTask.houseId,
+				});
+			} catch (err) {
+				console.error(
+					'[TasksService] Failed to create update assignment notification',
+					err,
+				);
+			}
+		}
+	}
+
+	private async notifyCompletion(
+		task: { status: string },
+		updatedTask: TaskWithRelations,
+		userId: string,
+	) {
+		if (task.status !== 'done' && updatedTask.status === 'done') {
+			try {
+				const memberships = await this.prisma.houseToUser.findMany({
+					where: { houseId: updatedTask.houseId },
+					select: { userId: true },
+				});
+				const userIds = memberships.map((m) => m.userId);
+				let actorUser;
+				if (updatedTask.createdById === userId) {
+					actorUser = updatedTask.createdBy;
+				} else if (updatedTask.assigneeId === userId) {
+					actorUser = updatedTask.assignee;
+				} else {
+					actorUser = null;
+				}
+				const actorName = actorUser?.name || 'A member';
+				await this.notificationsService.create({
+					category: NotificationCategory.SCRUM,
+					level: NotificationLevel.MEDIUM,
+					title: `Task completed: ${updatedTask.title}`,
+					body: `${actorName} marked '${updatedTask.title}' as done in house ${updatedTask.house.name}.`,
+					userIds,
+					houseId: updatedTask.houseId,
+					actionUrl: '/activities',
+				});
+			} catch (err) {
+				console.error(
+					'[TasksService] Failed to create completion notification',
+					err,
+				);
+			}
+		}
 	}
 }
