@@ -113,6 +113,7 @@ export class HouseService {
 				email: true,
 				username: true,
 				name: true,
+				imageUrl: true,
 			},
 			orderBy: {
 				name: 'asc',
@@ -178,6 +179,7 @@ export class HouseService {
 				email: true,
 				username: true,
 				name: true,
+				imageUrl: true,
 				imagePublicId: true,
 				houses: {
 					where: {

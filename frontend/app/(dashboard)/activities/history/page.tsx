@@ -185,9 +185,7 @@ function CardGrid({
               )}
               <div className="flex items-center gap-2 text-xs text-gray-600">
                 <Avatar className="w-6 h-6">
-                  <AvatarImage
-                    src={task.assigneeAvatar || "/placeholder.svg"}
-                  />
+                  <AvatarImage src={task.assigneeAvatar} />
                   <AvatarFallback className="text-[10px]">
                     {(task.assignee || "?")
                       .split(" ")

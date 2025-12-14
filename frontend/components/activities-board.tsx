@@ -122,11 +122,9 @@ function TaskColumn({
                   <p className="text-xs text-gray-500">{task.assignee}</p>
                 </div>
                 <Avatar className="w-8 h-8 flex-shrink-0">
-                  <AvatarImage
-                    src={task.assigneeAvatar || "/placeholder.svg"}
-                  />
+                  <AvatarImage src={task.assigneeAvatar} />
                   <AvatarFallback>
-                    {task.assignee
+                    {(task.assignee || "Unassigned")
                       .split(" ")
                       .map((n) => n[0])
                       .join("")}

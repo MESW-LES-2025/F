@@ -23,7 +23,6 @@ export function HouseDetailsModal({
   const [currentUserAdmin, setCurrentUserAdmin] = useState(false);
   const [editing, setEditing] = useState(false);
   const [newHouseName, setNewHouseName] = useState<string>("");
-  const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
   const [selectedUserToDelete, setSelectedUserToDelete] =
     useState<UserType | null>(null);
   const [selectedUserToUpgrade, setSelectedUserToUpgrade] =
@@ -85,9 +84,9 @@ export function HouseDetailsModal({
               >
                 <div className="flex items-center gap-3">
                   {/* If user don't have image, use the first letter of name + random background color */}
-                  {user.imagePublicId ? (
+                  {user.imageUrl ? (
                     <img
-                      src={`https://res.cloudinary.com/${cloudName}/image/upload/c_fill,g_face,h_100,w_100/${user.imagePublicId}.jpg`}
+                      src={user.imageUrl}
                       alt={user.name}
                       className="rounded-full w-10 h-10 object-cover"
                     />

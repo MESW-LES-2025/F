@@ -8,8 +8,11 @@ import {
   UserPlus,
 } from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { useAuth } from "@/lib/auth-context";
 
 export function Sidebar() {
+  const { user } = useAuth();
+
   return (
     <aside className="fixed left-0 top-0 h-screen w-40 bg-white border-r border-gray-200 flex flex-col">
       {/* Logo */}
@@ -21,7 +24,6 @@ export function Sidebar() {
             className="w-full h-full"
           />
         </div>
-        <span className="text-xs text-gray-600 font-medium">Concordia</span>
       </div>
 
       {/* Navigation */}
@@ -65,14 +67,20 @@ export function Sidebar() {
       <div className="p-4 border-t border-gray-200">
         <div className="flex items-center gap-2">
           <Avatar className="w-8 h-8">
-            <AvatarImage src="/sam-wheeler.jpg" />
-            <AvatarFallback>SW</AvatarFallback>
+            <AvatarImage src={user?.imageUrl || user?.avatar} />
+            <AvatarFallback>
+              {user?.name
+                ?.split(" ")
+                .map((n) => n[0])
+                .join("")
+                .toUpperCase() || "U"}
+            </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="text-xs font-medium text-gray-900 truncate">
-              Sam Wheeler
+              {user?.name || "User"}
             </p>
-            <p className="text-xs text-gray-500 truncate">sam@example.com</p>
+            <p className="text-xs text-gray-500 truncate">{user?.email}</p>
           </div>
         </div>
       </div>
