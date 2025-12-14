@@ -254,57 +254,11 @@ export class TasksService {
 				status: filters?.status ?? undefined,
 				archived,
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 			orderBy: { createdAt: 'desc' },
 		});
 
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return tasks.map((t) => ({
-			...t,
-			assignedUsers:
-				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		}));
+		return tasks.map((t) => this.mapTask(t));
 	}
 
 	async archive(id: string, userId: string) {
@@ -329,29 +283,12 @@ export class TasksService {
 				'Only completed tasks can be archived',
 			);
 		}
-		return this.prisma.task.update({
+		const result = await this.prisma.task.update({
 			where: { id },
 			data: { archived: true, archivedAt: new Date() },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-			},
+			include: this.taskInclude,
 		});
+		return this.mapTask(result);
 	}
 
 	async unarchive(id: string, userId: string) {
@@ -369,29 +306,12 @@ export class TasksService {
 		if (!task.archived) {
 			return task; // idempotent
 		}
-		return this.prisma.task.update({
+		const result = await this.prisma.task.update({
 			where: { id },
 			data: { archived: false, archivedAt: null },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-			},
+			include: this.taskInclude,
 		});
+		return this.mapTask(result);
 	}
 
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
@@ -444,7 +364,7 @@ export class TasksService {
 
 		await this.notifyCompletion(task, updatedTask, userId);
 
-		return updatedTask;
+		return this.mapTask(updatedTask);
 	}
 
 	async remove(id: string, userId: string) {
