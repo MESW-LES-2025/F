@@ -9,9 +9,29 @@ import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationLevel, Task } from '@prisma/client';
 
 interface TaskWithRelations extends Task {
-	house: { name: string };
-	assignee?: { name: string | null } | null;
-	createdBy: { name: string | null };
+	house: { id: string; name: string };
+	assignee?: {
+		id: string;
+		name: string | null;
+		email: string;
+		username: string;
+		imageUrl: string | null;
+	} | null;
+	createdBy: {
+		id: string;
+		name: string | null;
+		email: string;
+		username: string;
+		imageUrl: string | null;
+	};
+	assigneeLinks: {
+		user: {
+			id: string;
+			name: string | null;
+			imageUrl: string | null;
+			username: string;
+		};
+	}[];
 }
 import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
@@ -22,6 +42,47 @@ export class TasksService {
 		private readonly prisma: PrismaService,
 		private readonly notificationsService: NotificationsService,
 	) {}
+
+	private readonly taskInclude = {
+		assignee: {
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				username: true,
+				imageUrl: true,
+			},
+		},
+		createdBy: {
+			select: {
+				id: true,
+				name: true,
+				email: true,
+				username: true,
+				imageUrl: true,
+			},
+		},
+		house: { select: { id: true, name: true } },
+		assigneeLinks: {
+			include: {
+				user: {
+					select: {
+						id: true,
+						name: true,
+						imageUrl: true,
+						username: true,
+					},
+				},
+			},
+		},
+	};
+
+	private mapTask(task: TaskWithRelations) {
+		return {
+			...task,
+			assignedUsers: task.assigneeLinks?.map((l) => l.user) ?? [],
+		};
+	}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
 		const {
@@ -144,116 +205,23 @@ export class TasksService {
 
 	async findAll() {
 		const tasks = await this.prisma.task.findMany({
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 			orderBy: { createdAt: 'desc' },
 		});
 
-		// Map join rows to assignedUsers convenience field
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return tasks.map((t) => ({
-			...t,
-			assignedUsers:
-				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		}));
+		return tasks.map((t) => this.mapTask(t));
 	}
 
 	async findOne(id: string) {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 		});
 
 		if (!task) {
 			throw new NotFoundException('Task not found');
 		}
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return {
-			...task,
-			assignedUsers:
-				(task.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		};
+		return this.mapTask(task);
 	}
 
 	async findAllForUser(
@@ -467,43 +435,7 @@ export class TasksService {
 		const updatedTask = await this.prisma.task.update({
 			where: { id },
 			data: dataToUpdate,
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 		});
 
 		if (assignedUserIds?.length) {
@@ -535,57 +467,11 @@ export class TasksService {
 	async findByAssignee(assigneeId: string) {
 		const tasks = await this.prisma.task.findMany({
 			where: { assigneeId },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 			orderBy: { createdAt: 'desc' },
 		});
 
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return tasks.map((t) => ({
-			...t,
-			assignedUsers:
-				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		}));
+		return tasks.map((t) => this.mapTask(t));
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
@@ -600,111 +486,19 @@ export class TasksService {
 					archived: archivedFilter,
 				}),
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 			orderBy: { createdAt: 'desc' },
 		});
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return tasks.map((t) => ({
-			...t,
-			assignedUsers:
-				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		}));
+		return tasks.map((t) => this.mapTask(t));
 	}
 
 	async findByStatus(status: string) {
 		const tasks = await this.prisma.task.findMany({
 			where: { status },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: this.taskInclude,
 			orderBy: { createdAt: 'desc' },
 		});
-		type AssigneeLink = {
-			user: {
-				id: string;
-				name: string;
-				imageUrl?: string | null;
-				username: string;
-			};
-		};
-		return tasks.map((t) => ({
-			...t,
-			assignedUsers:
-				(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
-					(l) => l.user,
-				) ?? [],
-		}));
+		return tasks.map((t) => this.mapTask(t));
 	}
 
 	private async validateAssignees(
