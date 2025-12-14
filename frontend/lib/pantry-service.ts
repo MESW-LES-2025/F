@@ -35,7 +35,10 @@ function transformPantryItem(backendItem: PantryItemResponse): PantryItem {
     unit: backendItem.item?.measurementUnit ?? "unit",
     category: backendItem.item?.category ?? "OTHER",
     addedBy: backendItem.user?.name ?? "Unknown",
-    addedByAvatar: backendItem.user?.avatarUrl ?? "",
+    addedByAvatar:
+      (backendItem.user as any)?.imageUrl ||
+      backendItem.user?.avatarUrl ||
+      undefined,
     expiryDate: backendItem.expiryDate
       ? new Date(backendItem.expiryDate)
       : undefined,

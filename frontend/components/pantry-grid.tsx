@@ -523,9 +523,7 @@ export function PantryGrid({
 
                 <div className="flex items-center gap-2 pt-3 border-t border-gray-100">
                   <Avatar className="w-6 h-6">
-                    <AvatarImage
-                      src={item.addedByAvatar || "/placeholder.svg"}
-                    />
+                    <AvatarImage src={item.addedByAvatar} />
                     <AvatarFallback className="text-xs">
                       {(item.addedBy && item.addedBy.trim()
                         ? item.addedBy

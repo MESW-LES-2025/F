@@ -126,7 +126,6 @@ export default function VerifyEmailPage() {
               className="rounded-2xl shadow-lg"
             />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">Concordia</h1>
         </div>
 
         {/* Card */}

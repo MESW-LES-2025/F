@@ -247,6 +247,7 @@ describe('HouseService', () => {
 					email: true,
 					username: true,
 					name: true,
+					imageUrl: true,
 				},
 				orderBy: {
 					name: 'asc',
@@ -299,6 +300,7 @@ describe('HouseService', () => {
 					name: mockHouse.name,
 					invitationCode: mockHouse.invitationCode,
 					createdAt: mockHouse.createdAt,
+					imageUrl: undefined,
 				},
 				users: mockUsers,
 			});
@@ -324,6 +326,7 @@ describe('HouseService', () => {
 					username: true,
 					name: true,
 					imagePublicId: true,
+					imageUrl: true,
 					houses: {
 						where: { houseId: mockHouse.id },
 						select: { role: true },

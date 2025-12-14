@@ -31,6 +31,7 @@ export interface TaskResponse {
     name: string;
     email: string;
     username: string;
+    imageUrl?: string | null;
   };
   createdById: string;
   createdBy: {
@@ -38,6 +39,7 @@ export interface TaskResponse {
     name: string;
     email: string;
     username: string;
+    imageUrl?: string | null;
   };
   houseId: string;
   house: {
@@ -67,7 +69,8 @@ function transformTask(backendTask: TaskResponse): Task {
       backendTask.assignee?.username,
     assigneeAvatar:
       (backendTask.assignedUsers && backendTask.assignedUsers[0]?.imageUrl) ||
-      "",
+      backendTask.assignee?.imageUrl ||
+      undefined,
     assignedUsers:
       backendTask.assignedUsers?.map((u) => ({
         id: u.id,
