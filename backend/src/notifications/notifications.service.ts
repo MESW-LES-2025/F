@@ -107,28 +107,26 @@ export class NotificationsService {
 			},
 		});
 
-		if (!notification) {
-			notification ??= await this.prisma.notificationToUser.findFirst({
-				where: { notificationId, userId, deletedAt: null },
-				select: {
-					id: true,
-					userId: true,
-					isRead: true,
-					readAt: true,
-					createdAt: true,
-					notification: {
-						select: {
-							id: true,
-							title: true,
-							body: true,
-							actionUrl: true,
-							level: true,
-							category: true,
-						},
+		notification ??= await this.prisma.notificationToUser.findFirst({
+			where: { notificationId, userId, deletedAt: null },
+			select: {
+				id: true,
+				userId: true,
+				isRead: true,
+				readAt: true,
+				createdAt: true,
+				notification: {
+					select: {
+						id: true,
+						title: true,
+						body: true,
+						actionUrl: true,
+						level: true,
+						category: true,
 					},
 				},
-			});
-		}
+			},
+		});
 
 		if (!notification) {
 			throw new NotFoundException(

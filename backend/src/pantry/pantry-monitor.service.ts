@@ -40,70 +40,86 @@ export class PantryMonitorService {
 			},
 		});
 
-		for (const pti of pantryItems) {
-			const isLowStock =
-				typeof pti.quantity === 'number' && pti.quantity <= 1;
+		await Promise.all(
+			pantryItems.map((pti) =>
+				this.processPantryItem(pti, now, threeDaysFromNow, cooldownMs),
+			),
+		);
+	}
 
-			let isNearExpiry = false;
-			if (pti.expiryDate) {
-				isNearExpiry =
-					pti.expiryDate > now && pti.expiryDate <= threeDaysFromNow;
-			}
+	private async processPantryItem(
+		pti: {
+			id: string;
+			quantity: unknown;
+			expiryDate: Date | null;
+			lastExpiryNotificationAt: Date | null;
+			pantry: { houseId: string };
+			item: { name: string } | null;
+		},
+		now: Date,
+		threeDaysFromNow: Date,
+		cooldownMs: number,
+	) {
+		const isLowStock =
+			typeof pti.quantity === 'number' && pti.quantity <= 1;
 
-			// cooldown for expiry notifications: 36 hours
-			let canNotifyExpiry = false;
-			if (isNearExpiry) {
-				const last = pti.lastExpiryNotificationAt;
-				canNotifyExpiry =
-					!last || last.getTime() <= now.getTime() - cooldownMs;
-			}
+		let isNearExpiry = false;
+		if (pti.expiryDate) {
+			isNearExpiry =
+				pti.expiryDate > now && pti.expiryDate <= threeDaysFromNow;
+		}
 
-			if (!isLowStock && !(isNearExpiry && canNotifyExpiry)) {
-				continue;
-			}
+		// cooldown for expiry notifications: 36 hours
+		let canNotifyExpiry = false;
+		if (isNearExpiry) {
+			const last = pti.lastExpiryNotificationAt;
+			canNotifyExpiry =
+				!last || last.getTime() <= now.getTime() - cooldownMs;
+		}
 
-			const houseId = pti.pantry.houseId;
+		if (!isLowStock && !(isNearExpiry && canNotifyExpiry)) {
+			return;
+		}
 
-			const houseUsers = await this.prisma.houseToUser.findMany({
-				where: { houseId },
-				select: { userId: true },
+		const houseUsers = await this.prisma.houseToUser.findMany({
+			where: { houseId: pti.pantry.houseId },
+			select: { userId: true },
+		});
+
+		const userIds = houseUsers.map((u) => u.userId);
+		if (userIds.length === 0) return;
+
+		const itemName = pti.item?.name ?? 'Pantry item';
+
+		if (isLowStock) {
+			await this.notificationsService.create({
+				category: 'PANTRY',
+				level: 'MEDIUM',
+				title: `Pantry item (${itemName}) is near expiry`,
+				body: `${itemName} is low on stock in the Pantry!`,
+				userIds,
+				houseId: pti.pantry.houseId,
+				actionUrl: undefined,
+			});
+		}
+
+		if (isNearExpiry && canNotifyExpiry && pti.expiryDate) {
+			const dateText = pti.expiryDate.toISOString().substring(0, 10);
+			await this.notificationsService.create({
+				category: 'PANTRY',
+				level: 'MEDIUM',
+				title: `Pantry item (${itemName}) is near expiry`,
+				body: `${itemName} is expiring soon (expiry date: ${dateText}).`,
+				userIds,
+				houseId: pti.pantry.houseId,
+				actionUrl: undefined,
 			});
 
-			const userIds = houseUsers.map((u) => u.userId);
-			if (userIds.length === 0) continue;
-
-			const itemName = pti.item?.name ?? 'Pantry item';
-
-			if (isLowStock) {
-				await this.notificationsService.create({
-					category: 'PANTRY',
-					level: 'MEDIUM',
-					title: `Pantry item (${itemName}) is near expiry`,
-					body: `${itemName} is low on stock in the Pantry!`,
-					userIds,
-					houseId,
-					actionUrl: undefined,
-				});
-			}
-
-			if (isNearExpiry && canNotifyExpiry && pti.expiryDate) {
-				const dateText = pti.expiryDate.toISOString().substring(0, 10);
-				await this.notificationsService.create({
-					category: 'PANTRY',
-					level: 'MEDIUM',
-					title: `Pantry item (${itemName}) is near expiry`,
-					body: `${itemName} is expiring soon (expiry date: ${dateText}).`,
-					userIds,
-					houseId,
-					actionUrl: undefined,
-				});
-
-				// Update cooldown
-				await this.prisma.pantryToItem.update({
-					where: { id: pti.id },
-					data: { lastExpiryNotificationAt: now },
-				});
-			}
+			// Update cooldown
+			await this.prisma.pantryToItem.update({
+				where: { id: pti.id },
+				data: { lastExpiryNotificationAt: now },
+			});
 		}
 	}
 }
