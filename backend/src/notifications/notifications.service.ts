@@ -5,7 +5,7 @@ import { FindAllNotificationsByUserDto } from './dto/find-all-by-user.dto';
 
 @Injectable()
 export class NotificationsService {
-	constructor(private prisma: PrismaService) {}
+	constructor(private readonly prisma: PrismaService) {}
 
 	async create(dto: CreateNotificationDto) {
 		const users = await this.prisma.user.findMany({
@@ -108,7 +108,7 @@ export class NotificationsService {
 		});
 
 		if (!notification) {
-			notification = await this.prisma.notificationToUser.findFirst({
+			notification ??= await this.prisma.notificationToUser.findFirst({
 				where: { notificationId, userId, deletedAt: null },
 				select: {
 					id: true,
@@ -146,12 +146,11 @@ export class NotificationsService {
 				where: { id: paramId, userId, deletedAt: null },
 			});
 
-		if (!existingNotification) {
-			existingNotification =
-				await this.prisma.notificationToUser.findFirst({
-					where: { notificationId: paramId, userId, deletedAt: null },
-				});
-		}
+		existingNotification ??= await this.prisma.notificationToUser.findFirst(
+			{
+				where: { notificationId: paramId, userId, deletedAt: null },
+			},
+		);
 
 		if (!existingNotification) {
 			throw new NotFoundException(
@@ -195,12 +194,11 @@ export class NotificationsService {
 				where: { id: paramId, userId, deletedAt: null },
 			});
 
-		if (!existingNotification) {
-			existingNotification =
-				await this.prisma.notificationToUser.findFirst({
-					where: { notificationId: paramId, userId, deletedAt: null },
-				});
-		}
+		existingNotification ??= await this.prisma.notificationToUser.findFirst(
+			{
+				where: { notificationId: paramId, userId, deletedAt: null },
+			},
+		);
 
 		if (!existingNotification) {
 			throw new NotFoundException(

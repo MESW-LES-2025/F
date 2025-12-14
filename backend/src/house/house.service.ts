@@ -6,7 +6,7 @@ import {
 } from '@nestjs/common';
 import { CreateHouseDto } from './dto/create-house.dto';
 import { PrismaService } from '../prisma/prisma.service';
-import { randomBytes } from 'crypto';
+import { randomBytes } from 'node:crypto';
 import { PantryService } from '../pantry/pantry.service';
 import { verifyIsString } from '../shared/function-verify-string';
 import { UpdateHouseDto } from './dto/update-house.dto';
@@ -14,8 +14,8 @@ import { UpdateHouseDto } from './dto/update-house.dto';
 @Injectable()
 export class HouseService {
 	constructor(
-		private prisma: PrismaService,
-		private pantryService: PantryService,
+		private readonly prisma: PrismaService,
+		private readonly pantryService: PantryService,
 	) {}
 
 	async create(createHouseDto: CreateHouseDto, createdByUserId: string) {

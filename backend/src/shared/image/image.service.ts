@@ -5,7 +5,7 @@ import { MulterFile } from 'src/shared/types/multer_file';
 
 @Injectable()
 export class ImageService {
-	private provider: ImageProvider;
+	private readonly provider: ImageProvider;
 
 	constructor() {
 		this.provider = new CloudinaryImageProvider();

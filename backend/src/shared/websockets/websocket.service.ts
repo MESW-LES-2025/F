@@ -4,7 +4,7 @@ import { PusherWebsocketProvider } from './providers/pusher.provider';
 
 @Injectable()
 export class WebsocketService {
-	private provider: WebsocketProvider;
+	private readonly provider: WebsocketProvider;
 
 	constructor() {
 		this.provider = new PusherWebsocketProvider();

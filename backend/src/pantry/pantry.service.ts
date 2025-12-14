@@ -6,8 +6,8 @@ import { NotificationsService } from 'src/notifications/notifications.service';
 @Injectable()
 export class PantryService {
 	constructor(
-		private prisma: PrismaService,
-		private notificationsService: NotificationsService,
+		private readonly prisma: PrismaService,
+		private readonly notificationsService: NotificationsService,
 	) {}
 
 	// The pantry create will only be called when a new house is created
@@ -106,10 +106,10 @@ export class PantryService {
 			select: { itemId: true, id: true, quantity: true },
 		});
 
-		const existingItemIds = existingItems.map((i) => i.itemId);
+		const existingItemIds = new Set(existingItems.map((i) => i.itemId));
 
 		const itemsToUpdate = updatePantryDto.items.filter((i) =>
-			existingItemIds.includes(i.itemId),
+			existingItemIds.has(i.itemId),
 		);
 
 		if (itemsToUpdate) {
@@ -197,7 +197,7 @@ export class PantryService {
 		}
 
 		const itemsToCreate = updatePantryDto.items
-			.filter((i) => !existingItemIds.includes(i.itemId))
+			.filter((i) => !existingItemIds.has(i.itemId))
 			// ignore items with non-positive quantity
 			.filter((i) =>
 				typeof i.quantity === 'number' ? i.quantity > 0 : true,

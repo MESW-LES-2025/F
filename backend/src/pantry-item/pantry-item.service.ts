@@ -11,16 +11,13 @@ import { verifyIsString } from '../shared/function-verify-string';
 
 @Injectable()
 export class PantryItemService {
-	constructor(private prisma: PrismaService) {}
+	constructor(private readonly prisma: PrismaService) {}
 
 	async create(
 		createPantryItemDto: CreatePantryItemDto,
 		_userId: string,
 		_houseId: string,
 	) {
-		// mark unused params as used to satisfy lint rules
-		void _userId;
-		void _houseId;
 		if (!verifyIsString(createPantryItemDto.name)) {
 			throw new UnauthorizedException(
 				'The name is not in the right format',
