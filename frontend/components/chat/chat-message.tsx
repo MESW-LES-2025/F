@@ -154,7 +154,7 @@ export function ChatMessage({
               </Button>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap break-words leading-relaxed">
+            <p className="whitespace-pre-wrap break-all leading-relaxed">
               {message.content}
             </p>
           )}
