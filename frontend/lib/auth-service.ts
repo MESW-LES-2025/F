@@ -237,6 +237,21 @@ class AuthService {
       throw error;
     }
   }
+
+  async verifyGoogleOneTap(credential: string): Promise<AuthResponse> {
+    try {
+      const data = await apiPost<AuthResponse>("/auth/google/verify", {
+        credential,
+      });
+      this.setTokens(data.access_token, data.refresh_token);
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
 }
 
 export const authService = new AuthService();
