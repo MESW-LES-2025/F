@@ -111,12 +111,4 @@ export class UserController {
 			req.user.userId,
 		);
 	}
-
-	@UseGuards(JwtAuthGuard)
-	@ApiBearerAuth('JWT-auth')
-	@ApiOperation({ summary: 'Get a user activity overview' })
-	@Get('overview')
-	activityOverview(@Request() req: UserRequest) {
-		return this.userService.activityOverview(req.user.userId);
-	}
 }

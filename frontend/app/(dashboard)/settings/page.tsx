@@ -3,7 +3,6 @@
 import SettingsSecurity from "@/components/settings/settings-security";
 import SettingsDangerArea from "@/components/settings/settings-danger-area";
 import AccountSettings from "@/components/settings/settings-account";
-import SettingsNotifications from "@/components/settings/settings-notifications";
 
 export default function SettingsPage() {
   return (

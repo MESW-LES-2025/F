@@ -236,7 +236,7 @@ export function ProfileContent() {
     .toUpperCase();
 
   return (
-    <div className="grid gap-6 max-w-4xl">
+    <div className="grid gap-6 max-w-5xl">
       {/* Profile Header */}
       <Card className="p-6">
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
@@ -372,6 +372,19 @@ export function ProfileContent() {
               ) : (
                 <p className="font-medium">{user.username}</p>
               )}
+            </div>
+            
+          </div>
+
+          <div className="flex items-center gap-3 p-3 border border-border rounded-lg md:col-span-1">
+            <Calendar className="w-5 h-5 text-muted-foreground" />
+            <div>
+              <p className="text-sm text-muted-foreground">Member since</p>
+              <p className="font-medium text-xs">
+                {user.createdAt
+                  ? new Date(user.createdAt).toLocaleDateString()
+                  : "—"}
+              </p>
             </div>
           </div>
         </div>
