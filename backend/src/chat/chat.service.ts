@@ -14,8 +14,8 @@ import { WebsocketService } from '../shared/websockets/websocket.service';
 @Injectable()
 export class ChatService {
 	constructor(
-		private prisma: PrismaService,
-		private websocketService: WebsocketService,
+		private readonly prisma: PrismaService,
+		private readonly websocketService: WebsocketService,
 	) {}
 
 	async create(
@@ -100,6 +100,25 @@ export class ChatService {
 			'message-created',
 			message,
 		);
+
+		// Create notification for reply
+		if (message.parent && message.parent.userId !== userId) {
+			await this.prisma.notification.create({
+				data: {
+					category: 'CHAT',
+					level: 'MEDIUM',
+					title: `${message.user.name} replied to your message`,
+					body: message.content,
+					actionUrl: `/chat?houseId=${houseId}&messageId=${message.id}`,
+					houseId,
+					deliveredTo: {
+						create: {
+							userId: message.parent.userId,
+						},
+					},
+				},
+			});
+		}
 
 		return message;
 	}
@@ -264,7 +283,7 @@ export class ChatService {
 		let nextCursor: string | null = null;
 		if (messages.length > take) {
 			messages.pop();
-			nextCursor = messages[messages.length - 1].id;
+			nextCursor = messages.at(-1)!.id;
 		}
 
 		return {

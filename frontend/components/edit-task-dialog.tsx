@@ -1,7 +1,7 @@
-"use client"
+"use client";
 
-import { useState, useEffect } from "react"
-import { Button } from "@/components/ui/button"
+import { useState, useEffect } from "react";
+import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
@@ -9,148 +9,172 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-} from "@/components/ui/dialog"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuCheckboxItem,
   DropdownMenuLabel,
-} from "@/components/ui/dropdown-menu"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
+} from "@/components/ui/dropdown-menu";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
+} from "@/components/ui/select";
 // Removed unused Select import
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { updateTask } from "@/lib/tasks-service"
-import { apiGet } from "@/lib/api-client"
-import type { Task, User } from "@/lib/types"
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { updateTask } from "@/lib/tasks-service";
+import { apiGet } from "@/lib/api-client";
+import type { Task, User } from "@/lib/types";
 
 interface EditTaskDialogProps {
-  task: Task
-  open: boolean
-  onOpenChange: (open: boolean) => void
-  onTaskUpdated?: (task: Task) => void
+  task: Task;
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  onTaskUpdated?: (task: Task) => void;
 }
 
-export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: EditTaskDialogProps) {
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-  const [users, setUsers] = useState<User[]>([])
+export function EditTaskDialog({
+  task,
+  open,
+  onOpenChange,
+  onTaskUpdated,
+}: EditTaskDialogProps) {
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
     title: task.title,
     description: task.description || "",
-    assignedUserIds: task.assignedUsers ? task.assignedUsers.map(u => u.id) : [] as string[],
-    size: (task as any).size || '',
+    assignedUserIds: task.assignedUsers
+      ? task.assignedUsers.map((u) => u.id)
+      : ([] as string[]),
+    size: (task as any).size || "",
     assignee: "",
-    deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
+    deadline: task.deadline
+      ? new Date(task.deadline).toISOString().split("T")[0]
+      : "",
     status: task.status,
-  })
+  });
 
   const [formErrors, setFormErrors] = useState({
     title: false,
     assignee: false,
     deadline: false,
-  })
+  });
 
   // Load users from task's house when dialog opens
   useEffect(() => {
     if (open) {
-      loadHouseUsers()
+      loadHouseUsers();
       // Reset form data when opening
       setFormData({
         title: task.title,
         description: task.description || "",
-        assignedUserIds: task.assignedUsers ? task.assignedUsers.map(u => u.id) : [],
-        size: (task as any).size || '',
+        assignedUserIds: task.assignedUsers
+          ? task.assignedUsers.map((u) => u.id)
+          : [],
+        size: (task as any).size || "",
         assignee: "",
-        deadline: task.deadline ? new Date(task.deadline).toISOString().split("T")[0] : "",
+        deadline: task.deadline
+          ? new Date(task.deadline).toISOString().split("T")[0]
+          : "",
         status: task.status,
-      })
+      });
       setFormErrors({
         title: false,
         assignee: false,
         deadline: false,
-      })
-      setError(null)
+      });
+      setError(null);
     }
-  }, [open, task])
+  }, [open, task]);
 
   const loadHouseUsers = async () => {
     if (!task.houseId) {
-      setError('Task does not have an associated house.')
-      setUsers([])
-      return
+      setError("Task does not have an associated house.");
+      setUsers([]);
+      return;
     }
 
     try {
       // Fetch users from the task's house
-      const response = await apiGet<User[]>(`/house/${task.houseId}/users`, { requiresAuth: true })
-      setUsers(response)
+      const response = await apiGet<User[]>(`/house/${task.houseId}/users`, {
+        requiresAuth: true,
+      });
+      setUsers(response);
     } catch (err) {
-      console.error('Failed to load users:', err)
-      setError('Failed to load users from this house.')
+      console.error("Failed to load users:", err);
+      setError("Failed to load users from this house.");
     }
-  }
+  };
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
   ) => {
-    const { name, value } = e.target
-    setFormData((prev) => ({ ...prev, [name]: value }))
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
     // Clear error for this field when user starts typing
     if (formErrors[name as keyof typeof formErrors]) {
-      setFormErrors((prev) => ({ ...prev, [name]: false }))
+      setFormErrors((prev) => ({ ...prev, [name]: false }));
     }
-  }
+  };
 
   const handleAssigneeChange = (value: string) => {
     // keep single-assignee compatibility
-    setFormData((prev) => ({ ...prev, assignee: value, assignedUserIds: [value] }))
+    setFormData((prev) => ({
+      ...prev,
+      assignee: value,
+      assignedUserIds: [value],
+    }));
     if (formErrors.assignee) {
-      setFormErrors((prev) => ({ ...prev, assignee: false }))
+      setFormErrors((prev) => ({ ...prev, assignee: false }));
     }
-  }
+  };
 
   const handleStatusChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, status: value as 'todo' | 'doing' | 'done' }))
-  }
+    setFormData((prev) => ({
+      ...prev,
+      status: value as "todo" | "doing" | "done",
+    }));
+  };
 
   const handleSizeChange = (value: string) => {
-    setFormData((prev) => ({ ...prev, size: value as 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL' }))
-  }
+    setFormData((prev) => ({
+      ...prev,
+      size: value as "SMALL" | "MEDIUM" | "LARGE" | "XL",
+    }));
+  };
 
   const validateForm = () => {
     const errors = {
       title: !formData.title.trim(),
       assignee: false, // Assignee is optional on edit
       deadline: !formData.deadline,
-    }
+    };
 
-    setFormErrors(errors)
+    setFormErrors(errors);
 
-    return !Object.values(errors).some((error) => error)
-  }
+    return !Object.values(errors).some((error) => error);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
+    e.preventDefault();
+    setError(null);
 
     // Validate required fields
     if (!validateForm()) {
-      setError("Please fill in all required fields (Title and Deadline).")
-      return
+      setError("Please fill in all required fields (Title and Deadline).");
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
 
     try {
       // Build update payload - only include changed fields
@@ -158,37 +182,44 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
         title: formData.title.trim(),
         deadline: new Date(formData.deadline).toISOString(),
         status: formData.status,
-      }
+      };
 
       if (formData.description.trim()) {
-        updatePayload.description = formData.description.trim()
+        updatePayload.description = formData.description.trim();
       }
 
-      if ((formData as any).assignedUserIds && (formData as any).assignedUserIds.length > 0) {
-        updatePayload.assignedUserIds = (formData as any).assignedUserIds
-        updatePayload.assigneeId = (formData as any).assignedUserIds[0]
+      if (
+        (formData as any).assignedUserIds &&
+        (formData as any).assignedUserIds.length > 0
+      ) {
+        updatePayload.assignedUserIds = (formData as any).assignedUserIds;
+        updatePayload.assigneeId = (formData as any).assignedUserIds[0];
       } else if (formData.assignee) {
-        updatePayload.assigneeId = formData.assignee
+        updatePayload.assigneeId = formData.assignee;
       }
 
       if ((formData as any).size) {
-        updatePayload.size = (formData as any).size
+        updatePayload.size = (formData as any).size;
       }
 
       // Update the task via API
-      const updatedTask = await updateTask(task.id, updatePayload)
+      const updatedTask = await updateTask(task.id, updatePayload);
 
       // Call the callback with the updated task
-      onTaskUpdated?.(updatedTask)
+      onTaskUpdated?.(updatedTask);
 
       // Close dialog
-      onOpenChange(false)
+      onOpenChange(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Failed to update task. Please try again.")
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Failed to update task. Please try again.",
+      );
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -240,7 +271,10 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
             <div className="space-y-2">
               <Label htmlFor="status">Status</Label>
-              <Select value={formData.status} onValueChange={(v) => handleStatusChange(v)}>
+              <Select
+                value={formData.status}
+                onValueChange={(v) => handleStatusChange(v)}
+              >
                 <SelectTrigger className="w-full" size="sm">
                   <SelectValue />
                 </SelectTrigger>
@@ -256,32 +290,49 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
               <Label htmlFor="assignee">Change Assignee (optional)</Label>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button type="button" variant="outline" className="w-full justify-between font-normal">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className="w-full justify-between font-normal"
+                  >
                     {((formData as any).assignedUserIds || []).length > 0 ? (
                       <span className="text-xs text-gray-700 truncate">
                         {users
-                          .filter(u => ((formData as any).assignedUserIds || []).includes(u.id))
-                          .map(u => u.name.split(' ')[0])
-                          .join(', ')}
+                          .filter((u) =>
+                            ((formData as any).assignedUserIds || []).includes(
+                              u.id,
+                            ),
+                          )
+                          .map((u) => u.name.split(" ")[0])
+                          .join(", ")}
                       </span>
                     ) : (
-                      'Select assignees'
+                      "Select assignees"
                     )}
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent className="w-64 max-h-72 overflow-y-auto">
-                  <DropdownMenuLabel>Select one or more users</DropdownMenuLabel>
+                  <DropdownMenuLabel>
+                    Select one or more users
+                  </DropdownMenuLabel>
                   {users.map((user) => (
                     <DropdownMenuCheckboxItem
                       key={user.id}
-                      checked={(formData as any).assignedUserIds.includes(user.id)}
+                      checked={(formData as any).assignedUserIds.includes(
+                        user.id,
+                      )}
                       onCheckedChange={(checked) => {
                         setFormData((prev) => {
-                          const ids = new Set((prev as any).assignedUserIds)
-                          if (checked) ids.add(user.id)
-                          else ids.delete(user.id)
-                          return { ...prev, assignedUserIds: Array.from(ids) }
-                        })
+                          const ids = new Set(
+                            (prev as any).assignedUserIds as string[],
+                          );
+                          if (checked) ids.add(user.id);
+                          else ids.delete(user.id);
+                          return {
+                            ...prev,
+                            assignedUserIds: Array.from(ids) as string[],
+                          };
+                        });
                       }}
                     >
                       <div className="flex items-center gap-2">
@@ -295,7 +346,10 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
 
             <div className="space-y-2">
               <Label htmlFor="size">Effort Size</Label>
-              <Select value={(formData as any).size || ''} onValueChange={(v) => handleSizeChange(v)}>
+              <Select
+                value={(formData as any).size || ""}
+                onValueChange={(v) => handleSizeChange(v)}
+              >
                 <SelectTrigger className="w-full" size="sm">
                   <SelectValue placeholder="Select size (optional)" />
                 </SelectTrigger>
@@ -349,5 +403,5 @@ export function EditTaskDialog({ task, open, onOpenChange, onTaskUpdated }: Edit
         </form>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

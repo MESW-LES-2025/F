@@ -18,7 +18,9 @@ function VerifyEmailContent() {
   const token = searchParams.get("token");
   const { updateUser } = useAuth();
 
-  const [status, setStatus] = useState<"verifying" | "success" | "error">("verifying");
+  const [status, setStatus] = useState<"verifying" | "success" | "error">(
+    "verifying",
+  );
   const [message, setMessage] = useState("Verifying your email...");
   const verifyCalled = useRef(false);
 
@@ -36,9 +38,11 @@ function VerifyEmailContent() {
       try {
         const response = await authService.verifyEmail(token);
         setStatus("success");
-        setMessage("Email verified successfully! You can now access your account.");
+        setMessage(
+          "Email verified successfully! You can now access your account.",
+        );
         updateUser(response.user);
-        
+
         // Redirect to dashboard after a delay
         setTimeout(() => {
           const houses = response.user.houses || [];
@@ -53,7 +57,9 @@ function VerifyEmailContent() {
       } catch (err) {
         setStatus("error");
         setMessage(
-          err instanceof Error ? err.message : "Failed to verify email. Please try again."
+          err instanceof Error
+            ? err.message
+            : "Failed to verify email. Please try again.",
         );
       }
     };
@@ -70,9 +76,7 @@ function VerifyEmailContent() {
         {status === "success" && (
           <CheckCircle className="w-16 h-16 text-green-500" />
         )}
-        {status === "error" && (
-          <XCircle className="w-16 h-16 text-red-500" />
-        )}
+        {status === "error" && <XCircle className="w-16 h-16 text-red-500" />}
       </div>
 
       <h2 className="text-2xl font-bold mb-4">
@@ -91,9 +95,11 @@ function VerifyEmailContent() {
           <Link href="/login">Back to Login</Link>
         </Button>
       )}
-      
+
       {status === "success" && (
-        <p className="text-sm text-muted-foreground">Redirecting you to the app...</p>
+        <p className="text-sm text-muted-foreground">
+          Redirecting you to the app...
+        </p>
       )}
     </div>
   );
@@ -120,9 +126,6 @@ export default function VerifyEmailPage() {
               className="rounded-2xl shadow-lg"
             />
           </div>
-          <h1 className="text-3xl font-bold text-foreground mb-2">
-            Concordia
-          </h1>
         </div>
 
         {/* Card */}

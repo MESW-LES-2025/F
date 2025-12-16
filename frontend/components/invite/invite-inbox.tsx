@@ -39,7 +39,8 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         });
         // Newest first
         const sorted = [...data].sort(
-          (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
         );
         setInvites(sorted);
       } catch (error) {
@@ -55,7 +56,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         setRefreshing(false);
       }
     },
-    [toast]
+    [toast],
   );
 
   useEffect(() => {
@@ -67,8 +68,8 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
       current.map((item) =>
         item.notification.id === notificationId
           ? { ...item, isRead: true, readAt: new Date().toISOString() }
-          : item
-      )
+          : item,
+      ),
     );
   };
 
@@ -76,7 +77,15 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
     setActionId(notificationRowOrNotificationId);
     try {
       await notificationService.dismiss(notificationRowOrNotificationId);
-      setInvites((current) => current.filter((item) => !(item.id === notificationRowOrNotificationId || item.notification.id === notificationRowOrNotificationId)));
+      setInvites((current) =>
+        current.filter(
+          (item) =>
+            !(
+              item.id === notificationRowOrNotificationId ||
+              item.notification.id === notificationRowOrNotificationId
+            ),
+        ),
+      );
       toast({
         title: "Invite dismissed",
         description: "You can still join later via invite code if shared.",
@@ -126,7 +135,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
       await notificationService.dismiss(notificationId);
       // Remove after acceptance
       setInvites((current) =>
-        current.filter((item) => item.notification.id !== notificationId)
+        current.filter((item) => item.notification.id !== notificationId),
       );
 
       toast({
@@ -134,7 +143,7 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
         description: `You are now part of ${house.name}.`,
       });
 
-  await onRefreshHouses?.();
+      await onRefreshHouses?.();
     } catch (error) {
       const message =
         error instanceof Error ? error.message : "Failed to accept invite.";
@@ -190,10 +199,12 @@ export function InviteInbox({ onRefreshHouses }: InviteInboxProps) {
           {invites.map((invite) => (
             <div
               key={invite.notification.id}
-              className={"rounded-lg border border-border p-4 transition-colors " +
+              className={
+                "rounded-lg border border-border p-4 transition-colors " +
                 (invite.isRead
                   ? "bg-muted/40 hover:bg-muted/50"
-                  : "bg-card hover:bg-accent/40")}
+                  : "bg-card hover:bg-accent/40")
+              }
             >
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                 <div>

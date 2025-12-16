@@ -1,9 +1,9 @@
 "use client";
 
-import SettingsNotifications from "@/components/settings/settings-notifications";
-import AccountSettings from "@/components/settings/settings-account";
 import SettingsSecurity from "@/components/settings/settings-security";
 import SettingsDangerArea from "@/components/settings/settings-danger-area";
+import AccountSettings from "@/components/settings/settings-account";
+import SettingsNotifications from "@/components/settings/settings-notifications";
 
 export default function SettingsPage() {
   return (
@@ -20,9 +20,6 @@ export default function SettingsPage() {
       <div className="grid gap-6 max-w-4xl">
         {/* Account Settings */}
         <AccountSettings />
-
-        {/* Notifications */}
-        <SettingsNotifications />
 
         {/* Security - Hide for Google users */}
         <SettingsSecurity />

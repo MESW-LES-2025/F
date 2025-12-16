@@ -43,7 +43,7 @@ export default function LoginPage() {
       }
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Login failed. Please try again."
+        err instanceof Error ? err.message : "Login failed. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -150,7 +150,7 @@ export default function LoginPage() {
               onClick={() =>
                 (window.location.href = `${
                   process.env.NEXT_PUBLIC_API_URL ||
-                  'http://localhost:3000/api/v1'
+                  "http://localhost:3000/api/v1"
                 }/auth/google`)
               }
             >
@@ -174,7 +174,6 @@ export default function LoginPage() {
               </svg>
               Google
             </Button>
-
           </div>
 
           <p className="text-center text-sm text-muted-foreground mt-6">

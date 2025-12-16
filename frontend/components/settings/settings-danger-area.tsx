@@ -53,7 +53,9 @@ export default function SettingsDangerArea() {
       router.push("/login");
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to logout from all devices"
+        err instanceof Error
+          ? err.message
+          : "Failed to logout from all devices",
       );
     } finally {
       setLogoutAllLoading(false);
@@ -174,7 +176,7 @@ export default function SettingsDangerArea() {
                         setDeleteError(
                           err instanceof Error
                             ? err.message
-                            : "Failed to delete account"
+                            : "Failed to delete account",
                         );
                       } finally {
                         setDeleting(false);

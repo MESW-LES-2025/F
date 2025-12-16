@@ -35,6 +35,6 @@ export function SuccessActionModal({
         </div>
       </div>
     </div>,
-    document.body
+    document.body,
   );
 }

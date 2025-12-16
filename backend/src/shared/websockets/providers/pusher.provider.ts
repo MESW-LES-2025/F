@@ -4,7 +4,7 @@ import { Injectable, Logger } from '@nestjs/common';
 
 @Injectable()
 export class PusherWebsocketProvider implements WebsocketProvider {
-	private pusher: Pusher;
+	private readonly pusher: Pusher;
 	private readonly logger = new Logger(PusherWebsocketProvider.name);
 
 	constructor() {

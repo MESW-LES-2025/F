@@ -1,6 +1,6 @@
-'use client'
+"use client";
 
-import { useState } from 'react'
+import { useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -9,61 +9,67 @@ import {
   DialogTitle,
   DialogTrigger,
   DialogFooter,
-} from '@/components/ui/dialog'
-import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
-import { HandCoins } from 'lucide-react'
-import { createExpense, type CreateExpensePayload } from '@/lib/expense-service'
-import { useHouse } from '@/lib/house-context'
-import { toast } from 'sonner'
+} from "@/components/ui/dialog";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { HandCoins } from "lucide-react";
+import {
+  createExpense,
+  type CreateExpensePayload,
+} from "@/lib/expense-service";
+import { useHouse } from "@/lib/house-context";
+import { toast } from "sonner";
 
 interface SettlementDialogProps {
   settlement: {
-    from: string
-    fromName: string
-    to: string
-    toName: string
-    amount: number
-  }
-  onSettled?: () => void
+    from: string;
+    fromName: string;
+    to: string;
+    toName: string;
+    amount: number;
+  };
+  onSettled?: () => void;
 }
 
-export function SettlementDialog({ settlement, onSettled }: SettlementDialogProps) {
-  const [open, setOpen] = useState(false)
-  const [amount, setAmount] = useState(settlement.amount.toFixed(2))
-  const [loading, setLoading] = useState(false)
-  const { selectedHouse } = useHouse()
+export function SettlementDialog({
+  settlement,
+  onSettled,
+}: SettlementDialogProps) {
+  const [open, setOpen] = useState(false);
+  const [amount, setAmount] = useState(settlement.amount.toFixed(2));
+  const [loading, setLoading] = useState(false);
+  const { selectedHouse } = useHouse();
 
   const handleSettle = async () => {
-    if (!selectedHouse) return
+    if (!selectedHouse) return;
 
     try {
-      setLoading(true)
-      
+      setLoading(true);
+
       const payload: CreateExpensePayload = {
         amount: parseFloat(amount),
         description: `Settlement: ${settlement.fromName} pays ${settlement.toName}`,
-        category: 'SETTLEMENT',
+        category: "SETTLEMENT",
         paidById: settlement.from,
         houseId: selectedHouse.id,
         splitWith: [settlement.to], // The receiver is in splitWith for settlement
         date: new Date().toISOString(),
-      }
+      };
 
-      await createExpense(payload)
-      
-      toast.success('Settlement recorded successfully!')
-      setOpen(false)
-      onSettled?.()
+      await createExpense(payload);
+
+      toast.success("Settlement recorded successfully!");
+      setOpen(false);
+      onSettled?.();
     } catch (error) {
-      console.error('Failed to record settlement:', error)
-      toast.error('Failed to record settlement. Please try again.')
+      console.error("Failed to record settlement:", error);
+      toast.error("Failed to record settlement. Please try again.");
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }
+  };
 
   return (
     <Dialog open={open} onOpenChange={setOpen}>
@@ -80,7 +86,7 @@ export function SettlementDialog({ settlement, onSettled }: SettlementDialogProp
             Record a payment to settle the balance between members
           </DialogDescription>
         </DialogHeader>
-        
+
         <div className="space-y-4 py-4">
           <div className="flex items-center justify-between p-4 bg-muted rounded-lg">
             <div className="flex items-center gap-3">
@@ -94,9 +100,9 @@ export function SettlementDialog({ settlement, onSettled }: SettlementDialogProp
                 <p className="text-sm text-muted-foreground">Paying</p>
               </div>
             </div>
-            
+
             <div className="text-2xl font-bold">→</div>
-            
+
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <p className="font-medium">{settlement.toName}</p>
@@ -131,21 +137,25 @@ export function SettlementDialog({ settlement, onSettled }: SettlementDialogProp
               💡 How settlements work
             </p>
             <p className="text-blue-700 dark:text-blue-200 text-xs">
-              Recording this settlement will update both members&apos; balances. 
+              Recording this settlement will update both members&apos; balances.
               {settlement.fromName} will pay ${amount} to {settlement.toName}.
             </p>
           </div>
         </div>
 
         <DialogFooter className="gap-2 sm:gap-0">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={loading}>
+          <Button
+            variant="outline"
+            onClick={() => setOpen(false)}
+            disabled={loading}
+          >
             Cancel
           </Button>
           <Button onClick={handleSettle} disabled={loading}>
-            {loading ? 'Recording...' : 'Record Settlement'}
+            {loading ? "Recording..." : "Record Settlement"}
           </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
-  )
+  );
 }

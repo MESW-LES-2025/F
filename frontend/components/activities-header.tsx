@@ -122,7 +122,10 @@ export function ActivitiesHeader({
 
           <div className="flex items-center gap-2">
             <span className="text-sm text-gray-600">Size:</span>
-            <Select value={size} onValueChange={(v) => onSizeChange?.(v as any)}>
+            <Select
+              value={size}
+              onValueChange={(v) => onSizeChange?.(v as any)}
+            >
               <SelectTrigger className="w-[140px] h-9">
                 <SelectValue />
               </SelectTrigger>

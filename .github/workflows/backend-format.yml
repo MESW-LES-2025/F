@@ -1,0 +1,40 @@
+name: Format Backend
+
+on:
+  push:
+    paths:
+      - 'backend/**'
+
+jobs:
+  format-backend:
+    name: Format Backend Code
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+          cache: 'npm'
+          cache-dependency-path: 'backend/package-lock.json'
+
+      - name: Install backend dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: Run format
+        run: |
+          cd backend
+          npm run format
+
+      - name: Verify no uncommitted changes
+        run: |
+          if [ -n "$(git status --porcelain)" ]; then
+            echo "::error::Code is not formatted. Run 'npm run format' locally and commit changes."
+            git diff
+            exit 1
+          fi

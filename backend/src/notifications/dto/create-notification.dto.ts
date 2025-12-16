@@ -52,7 +52,7 @@ export class CreateNotificationDto {
 	@IsString({ each: true })
 	@Transform(({ value }) => {
 		if (Array.isArray(value)) {
-			return value.map((v) => String(v));
+			return value.map(String);
 		}
 		return [String(value)];
 	})

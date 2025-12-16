@@ -173,7 +173,7 @@ export function HouseDetailsModal({
               setHouseData({
                 ...houseData,
                 users: houseData.users.filter(
-                  (u) => u.id !== selectedUserToDelete.id
+                  (u) => u.id !== selectedUserToDelete.id,
                 ),
               });
             }
@@ -210,7 +210,7 @@ export function HouseDetailsModal({
                           },
                         ],
                       }
-                    : user
+                    : user,
                 ),
               });
 
@@ -241,6 +241,6 @@ export function HouseDetailsModal({
         }}
       />
     </div>,
-    document.body
+    document.body,
   );
 }

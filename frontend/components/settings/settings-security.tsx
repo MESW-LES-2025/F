@@ -96,7 +96,7 @@ export default function SettingsSecurity() {
                 try {
                   await changePassword(currentPassword, newPassword);
                   setSuccessMessage(
-                    "Password updated successfully. You will be logged out to re-authenticate."
+                    "Password updated successfully. You will be logged out to re-authenticate.",
                   );
 
                   // force logout so user re-authenticates with the new password
@@ -106,7 +106,7 @@ export default function SettingsSecurity() {
                   setError(
                     err instanceof Error
                       ? err.message
-                      : "Failed to update password"
+                      : "Failed to update password",
                   );
                 } finally {
                   setChangingPassword(false);

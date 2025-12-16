@@ -13,6 +13,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../shared/email/email.service';
 import { v4 as uuidv4 } from 'uuid';
+import { randomInt } from 'node:crypto';
 
 interface JwtPayload {
 	sub: string;
@@ -37,9 +38,9 @@ export interface GoogleTokens {
 @Injectable()
 export class AuthService {
 	constructor(
-		private prisma: PrismaService,
-		private jwtService: JwtService,
-		private emailService: EmailService,
+		private readonly prisma: PrismaService,
+		private readonly jwtService: JwtService,
+		private readonly emailService: EmailService,
 	) {}
 
 	async storeGoogleTokens(tokens: GoogleTokens): Promise<string> {
@@ -120,7 +121,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
+					isEmailVerified: isDev,
 					deletedAt: null,
 				},
 			});
@@ -133,7 +134,7 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
+					isEmailVerified: isDev,
 				},
 			});
 		}
@@ -338,7 +339,7 @@ export class AuthService {
 		// 3. Create new user if not found by googleId or email
 		const password = uuidv4(); // Generate random password
 		const hashedPassword = await bcrypt.hash(password, 10);
-		const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+		const username = email.split('@')[0] + randomInt(1000);
 
 		const newUser = await this.prisma.user.create({
 			data: {

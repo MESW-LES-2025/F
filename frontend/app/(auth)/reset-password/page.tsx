@@ -49,14 +49,19 @@ function ResetPasswordForm() {
     setIsLoading(true);
 
     try {
-      const response = await authService.resetPassword(token, formData.password);
+      const response = await authService.resetPassword(
+        token,
+        formData.password,
+      );
       setSuccess(response.message);
       setTimeout(() => {
         router.push("/login");
       }, 2000);
     } catch (err) {
       setError(
-        err instanceof Error ? err.message : "Failed to reset password. Please try again."
+        err instanceof Error
+          ? err.message
+          : "Failed to reset password. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -87,7 +92,7 @@ function ResetPasswordForm() {
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-      
+
       {success && (
         <Alert className="mb-6 bg-green-50 text-green-800 border-green-200">
           <AlertDescription>{success}</AlertDescription>

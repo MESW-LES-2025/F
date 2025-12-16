@@ -56,7 +56,7 @@ export default function RegisterPage() {
         formData.email,
         formData.username,
         formData.password,
-        formData.name
+        formData.name,
       );
       // Redirect to login
       router.push("/login");
@@ -64,7 +64,7 @@ export default function RegisterPage() {
       setError(
         err instanceof Error
           ? err.message
-          : "Registration failed. Please try again."
+          : "Registration failed. Please try again.",
       );
     } finally {
       setIsLoading(false);
@@ -246,7 +246,7 @@ export default function RegisterPage() {
               onClick={() =>
                 (window.location.href = `${
                   process.env.NEXT_PUBLIC_API_URL ||
-                  'http://localhost:3000/api/v1'
+                  "http://localhost:3000/api/v1"
                 }/auth/google`)
               }
             >

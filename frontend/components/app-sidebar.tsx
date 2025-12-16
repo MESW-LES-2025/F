@@ -77,7 +77,7 @@ export function AppSidebar() {
           "fixed left-0 top-0 h-screen w-64 lg:w-40 bg-white border-r border-gray-200 flex flex-col z-50 transition-transform duration-300",
           isMobileMenuOpen
             ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+            : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Logo */}
@@ -89,7 +89,6 @@ export function AppSidebar() {
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="text-xs text-gray-600 font-medium">Concordia</span>
         </div>
 
         {/* Navigation */}
@@ -105,7 +104,7 @@ export function AppSidebar() {
                   "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
                   isActive
                     ? "bg-green-50 text-gray-900 font-medium"
-                    : "text-gray-600 hover:bg-gray-50"
+                    : "text-gray-600 hover:bg-gray-50",
                 )}
               >
                 <item.icon className="w-4 h-4" />
@@ -133,7 +132,7 @@ export function AppSidebar() {
                       "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
                       isActive
                         ? "bg-green-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50",
                     )}
                   >
                     <item.icon className="w-4 h-4" />
@@ -154,7 +153,7 @@ export function AppSidebar() {
                       "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
                       isActive
                         ? "bg-green-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50",
                     )}
                   >
                     <item.icon className="w-4 h-4" />
@@ -183,7 +182,7 @@ export function AppSidebar() {
             className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-md transition-colors"
           >
             <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.imageUrl || "/placeholder-user.jpg"} />
+              <AvatarImage src={user?.imageUrl} />
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

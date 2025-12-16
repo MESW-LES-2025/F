@@ -1,47 +1,70 @@
-'use client'
+"use client";
 
-import { useEffect, useState } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PieChart, Pie, Cell, ResponsiveContainer, Legend, Tooltip, BarChart, Bar, XAxis, YAxis, CartesianGrid } from 'recharts'
-import { getCategoryBreakdown, type CategoryBreakdown } from '@/lib/expense-service'
-import { Loader2 } from 'lucide-react'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { useEffect, useState } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  ResponsiveContainer,
+  Legend,
+  Tooltip,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+} from "recharts";
+import {
+  getCategoryBreakdown,
+  type CategoryBreakdown,
+} from "@/lib/expense-service";
+import { Loader2 } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CategoryBreakdownChartProps {
-  houseId: string
+  houseId: string;
 }
 
 const COLORS = [
-  'var(--chart-1)',
-  'var(--chart-2)',
-  'var(--chart-3)',
-  'var(--chart-4)',
-  'var(--chart-5)',
-]
+  "var(--chart-1)",
+  "var(--chart-2)",
+  "var(--chart-3)",
+  "var(--chart-4)",
+  "var(--chart-5)",
+];
 
-export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps) {
-  const [categories, setCategories] = useState<CategoryBreakdown[]>([])
-  const [loading, setLoading] = useState(true)
-  const [totalSpending, setTotalSpending] = useState(0)
+export function CategoryBreakdownChart({
+  houseId,
+}: CategoryBreakdownChartProps) {
+  const [categories, setCategories] = useState<CategoryBreakdown[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [totalSpending, setTotalSpending] = useState(0);
 
   useEffect(() => {
     const fetchCategoryBreakdown = async () => {
       try {
-        setLoading(true)
-        const response = await getCategoryBreakdown(houseId)
-        setCategories(response.categories)
-        setTotalSpending(response.totalSpending)
+        setLoading(true);
+        const response = await getCategoryBreakdown(houseId);
+        setCategories(response.categories);
+        setTotalSpending(response.totalSpending);
       } catch (error) {
-        console.error('Failed to fetch category breakdown:', error)
+        console.error("Failed to fetch category breakdown:", error);
       } finally {
-        setLoading(false)
+        setLoading(false);
       }
-    }
+    };
 
     if (houseId) {
-      fetchCategoryBreakdown()
+      fetchCategoryBreakdown();
     }
-  }, [houseId])
+  }, [houseId]);
 
   if (loading) {
     return (
@@ -54,7 +77,7 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
           <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
         </CardContent>
       </Card>
-    )
+    );
   }
 
   if (categories.length === 0) {
@@ -68,13 +91,13 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
           No expense data available
         </CardContent>
       </Card>
-    )
+    );
   }
 
   const pieData = categories.map((cat) => ({
     name: cat.category,
     value: cat.total,
-  }))
+  }));
 
   return (
     <Card>
@@ -112,7 +135,9 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
                     />
                   ))}
                 </Pie>
-                <Tooltip formatter={(value: number) => `$${value.toFixed(2)}`} />
+                <Tooltip
+                  formatter={(value: number) => `$${value.toFixed(2)}`}
+                />
                 <Legend />
               </PieChart>
             </ResponsiveContainer>
@@ -134,14 +159,20 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
                 />
                 <Bar dataKey="total">
                   {categories.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Bar>
               </BarChart>
             </ResponsiveContainer>
             <div className="mt-4 space-y-2">
               {categories.map((cat, index) => (
-                <div key={cat.category} className="flex items-center justify-between text-sm">
+                <div
+                  key={cat.category}
+                  className="flex items-center justify-between text-sm"
+                >
                   <div className="flex items-center gap-2">
                     <div
                       className="w-3 h-3 rounded"
@@ -150,8 +181,12 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
                     <span className="font-medium">{cat.category}</span>
                   </div>
                   <div className="flex items-center gap-4">
-                    <span className="text-muted-foreground">{cat.count} expenses</span>
-                    <span className="font-semibold">${cat.total.toFixed(2)}</span>
+                    <span className="text-muted-foreground">
+                      {cat.count} expenses
+                    </span>
+                    <span className="font-semibold">
+                      ${cat.total.toFixed(2)}
+                    </span>
                   </div>
                 </div>
               ))}
@@ -160,5 +195,5 @@ export function CategoryBreakdownChart({ houseId }: CategoryBreakdownChartProps)
         </Tabs>
       </CardContent>
     </Card>
-  )
+  );
 }

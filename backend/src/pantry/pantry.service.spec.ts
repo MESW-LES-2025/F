@@ -115,7 +115,11 @@ describe('PantryService', () => {
 								},
 							},
 							user: {
-								select: { id: true, name: true },
+								select: {
+									id: true,
+									name: true,
+									imageUrl: true,
+								},
 							},
 						},
 					},

@@ -1,17 +1,17 @@
-"use client"
+"use client";
 
-import { useHouse } from "@/lib/house-context"
+import { useHouse } from "@/lib/house-context";
 import {
   Select,
   SelectContent,
   SelectItem,
   SelectTrigger,
   SelectValue,
-} from "@/components/ui/select"
-import { Home } from "lucide-react"
+} from "@/components/ui/select";
+import { Home } from "lucide-react";
 
 export function HouseSelector() {
-  const { selectedHouse, houses, setSelectedHouse, isLoading } = useHouse()
+  const { selectedHouse, houses, setSelectedHouse, isLoading } = useHouse();
 
   if (isLoading) {
     return (
@@ -19,7 +19,7 @@ export function HouseSelector() {
         <Home className="w-4 h-4" />
         <span className="text-sm">Loading...</span>
       </div>
-    )
+    );
   }
 
   if (!houses || houses.length === 0) {
@@ -28,7 +28,7 @@ export function HouseSelector() {
         <Home className="w-4 h-4" />
         <span className="text-sm">No houses available</span>
       </div>
-    )
+    );
   }
 
   return (
@@ -37,9 +37,9 @@ export function HouseSelector() {
       <Select
         value={selectedHouse?.id || ""}
         onValueChange={(value) => {
-          const house = houses.find((h) => h.id === value)
+          const house = houses.find((h) => h.id === value);
           if (house) {
-            setSelectedHouse(house)
+            setSelectedHouse(house);
           }
         }}
       >
@@ -57,5 +57,5 @@ export function HouseSelector() {
         </SelectContent>
       </Select>
     </div>
-  )
+  );
 }

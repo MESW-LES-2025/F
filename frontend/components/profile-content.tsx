@@ -19,7 +19,7 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
-import { profileService } from "@/lib/profile-service";
+import { profileService, UserDashboard } from "@/lib/profile-service";
 import type { User as UserType } from "@/lib/types";
 import SettingsSecurity from "./settings/settings-security";
 import SettingsDangerArea from "./settings/settings-danger-area";
@@ -27,48 +27,64 @@ import { ProfileActivityOverview } from "./profile/activity-overview";
 
 export function ProfileContent() {
   const [user, setUser] = useState<UserType | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [dashboard, setDashboard] = useState<UserDashboard | null>(null);;
+  const [isLoading, setIsLoading] = useState(true);;
+  const [isUploading, setIsUploading] = useState(false);;
+  const [error, setError] = useState<string | null>(null);;
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedUsername, setEditedUsername] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [nameError, setNameError] = useState("");
   const [usernameError, setUsernameError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const { toast } = useToast();
-  const { updateUser } = useAuth();
+  const fileInputRef = useRef<HTMLInputElement>(null);;
+  const { toast } = useToast();;
+  const { updateUser } = useAuth();;
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        setIsLoading(true);
-        const profileData = await profileService.getProfile();
-        setUser(profileData);
+        setIsLoading(true);;
+        const profileData = await profileService.getProfile();;
+        setUser(profileData);;
         setEditedName(profileData.name);
         setEditedUsername(profileData.username || "");
-        setError(null);
+        setError(null);;
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
         console.error("Failed to fetch profile:", err);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false);;
       }
     };
 
-    fetchProfile();
+    fetchProfile();;
   }, []);
 
+  useEffect(() => {
+    const fetchDashboard = async () => {
+      try {
+        const data = await profileService.getDashboard();
+        setDashboard(data);
+      } catch (err) {
+        console.error("Failed to fetch dashboard data:", err);
+      }
+    };
+
+    fetchDashboard();
+  }, []);;
+
   const handleImageClick = () => {
-    fileInputRef.current?.click();
-  };
+    fileInputRef.current?.click();;
+  };;
 
   const handleImageChange = async (
-    event: React.ChangeEvent<HTMLInputElement>
+    
+    event: React.ChangeEvent<HTMLInputElement>,
+  
   ) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+    const file = event.target.files?.[0];;
+    if (!file) return;;
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
@@ -81,7 +97,7 @@ export function ProfileContent() {
     }
 
     // Validate file size (e.g., max 5MB)
-    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
+    const maxSize = 5 * 1024 * 1024;; // 5MB in bytes
     if (file.size > maxSize) {
       toast({
         title: "File too large",
@@ -362,50 +378,73 @@ export function ProfileContent() {
       </Card>
 
       {/* Activity Stats */}
-      <ProfileActivityOverview />
+      <Card className="p-6 space-y-6">
+        <h3 className="text-lg font-semibold">Activity Overview</h3>
+
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="text-center p-4 border border-border rounded-lg">
+            <p className="text-3xl font-bold text-primary">
+              {dashboard?.stats.tasksCompleted ?? 0}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">
+              Tasks Completed
+            </p>
+          </div>
+          <div className="text-center p-4 border border-border rounded-lg">
+            <p className="text-3xl font-bold text-primary">
+              €{dashboard?.stats.totalExpenses.toFixed(0) ?? 0}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Total Expenses</p>
+          </div>
+          <div className="text-center p-4 border border-border rounded-lg">
+            <p className="text-3xl font-bold text-primary">
+              {dashboard?.stats.itemsAdded ?? 0}
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Items Added</p>
+          </div>
+          <div className="text-center p-4 border border-border rounded-lg">
+            <p className="text-3xl font-bold text-primary">
+              {dashboard?.stats.contribution ?? 0}%
+            </p>
+            <p className="text-sm text-muted-foreground mt-1">Contribution</p>
+          </div>
+        </div>
+      </Card>
 
       {/* Recent Activity */}
       <Card className="p-6">
         <h3 className="text-lg font-semibold">Recent Activity</h3>
 
-        <div className="space-y-4">
-          {[
-            {
-              action: "Completed task",
-              detail: "Clean the Kitchen",
-              time: "2 hours ago",
-            },
-            {
-              action: "Added expense",
-              detail: "Groceries - €45.50",
-              time: "5 hours ago",
-            },
-            {
-              action: "Updated pantry",
-              detail: "Added Milk, Bread",
-              time: "1 day ago",
-            },
-            {
-              action: "Completed task",
-              detail: "Take out the trash",
-              time: "2 days ago",
-            },
-          ].map((activity, i) => (
-            <div
-              key={i}
-              className="flex items-start gap-3 p-3 border border-border rounded-lg"
-            >
-              <div className="w-2 h-2 rounded-full bg-primary mt-2" />
-              <div className="flex-1">
-                <p className="font-medium">{activity.action}</p>
+        {dashboard?.recentActivity.length ? (
+          <div className="space-y-4">
+            {dashboard.recentActivity.map((activity, i) => (
+              <div
+                key={i}
+                className="flex items-start gap-3 p-3 border border-border rounded-lg"
+              >
+                <div className="w-2 h-2 rounded-full bg-primary mt-2" />
+                <div className="flex-1">
+                  <p className="font-medium">{activity.action}</p>
+                  <p className="text-sm text-muted-foreground">
+                    {activity.detail}
+                  </p>
+                </div>
                 <p className="text-sm text-muted-foreground">
-                  {activity.detail}
+                  {new Date(activity.date).toLocaleDateString(undefined, {
+                    month: "short",
+                    day: "numeric",
+                    hour: "numeric",
+                    minute: "numeric",
+                  })}
                 </p>
               </div>
-              <p className="text-sm text-muted-foreground">{activity.time}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        ) : (
+          <p className="text-muted-foreground text-sm">
+            No recent activity found.
+          </p>
+        )}
       </Card>
 
       {/* Change Password */}

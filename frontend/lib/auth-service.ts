@@ -1,5 +1,5 @@
-import type { AuthResponse, User } from './types'
-import { apiPost, ApiError } from './api-client'
+import type { AuthResponse, User } from "./types";
+import { apiPost, ApiError } from "./api-client";
 
 class AuthService {
   private accessToken: string | null = null;
@@ -7,9 +7,9 @@ class AuthService {
 
   constructor() {
     // Initialize from cookies (server will set HttpOnly cookies in production)
-    if (typeof window !== 'undefined') {
-      this.accessToken = this.getCookie('access_token');
-      this.refreshToken = this.getCookie('refresh_token');
+    if (typeof window !== "undefined") {
+      this.accessToken = this.getCookie("access_token");
+      this.refreshToken = this.getCookie("refresh_token");
     }
   }
 
@@ -17,9 +17,9 @@ class AuthService {
    * Get cookie value by name
    */
   private getCookie(name: string): string | null {
-    if (typeof document === 'undefined') return null;
-    const nameEQ = name + '=';
-    const cookies = document.cookie.split(';');
+    if (typeof document === "undefined") return null;
+    const nameEQ = name + "=";
+    const cookies = document.cookie.split(";");
     for (let cookie of cookies) {
       cookie = cookie.trim();
       if (cookie.indexOf(nameEQ) === 0) {
@@ -34,7 +34,7 @@ class AuthService {
    * In production, backend should set HttpOnly Secure cookies
    */
   private setCookie(name: string, value: string, days: number = 7): void {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     const expires = new Date();
     expires.setDate(expires.getDate() + days);
     document.cookie = `${name}=${encodeURIComponent(value)}; path=/; expires=${expires.toUTCString()}`;
@@ -44,13 +44,33 @@ class AuthService {
    * Remove cookie (client-side fallback)
    */
   private removeCookie(name: string): void {
-    if (typeof document === 'undefined') return;
+    if (typeof document === "undefined") return;
     document.cookie = `${name}=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC;`;
   }
 
-  async register(email: string, username: string, password: string, name: string): Promise<AuthResponse> {
+  async verifyEmail(token: string): Promise<AuthResponse> {
     try {
-      const data = await apiPost<AuthResponse>('/auth/register', {
+      const data = await apiPost<AuthResponse>("/auth/verify-email", {
+        token,
+      });
+      this.setTokens(data.access_token, data.refresh_token);
+      return data;
+    } catch (error) {
+      if (error instanceof ApiError) {
+        throw error;
+      }
+      throw error;
+    }
+  }
+
+  async register(
+    email: string,
+    username: string,
+    password: string,
+    name: string,
+  ): Promise<AuthResponse> {
+    try {
+      const data = await apiPost<AuthResponse>("/auth/register", {
         email,
         username,
         password,
@@ -67,7 +87,7 @@ class AuthService {
 
   async login(email: string, password: string): Promise<AuthResponse> {
     try {
-      const data = await apiPost<AuthResponse>('/auth/login', {
+      const data = await apiPost<AuthResponse>("/auth/login", {
         email,
         password,
       });
@@ -84,9 +104,13 @@ class AuthService {
   async logout(): Promise<void> {
     if (this.refreshToken) {
       try {
-        await apiPost('/auth/logout', { refresh_token: this.refreshToken }, { requiresAuth: true });
+        await apiPost(
+          "/auth/logout",
+          { refresh_token: this.refreshToken },
+          { requiresAuth: true },
+        );
       } catch (error) {
-        console.error('Logout failed:', error);
+        console.error("Logout failed:", error);
       }
     }
     this.clearTokens();
@@ -98,9 +122,9 @@ class AuthService {
    */
   async logoutAllDevices(): Promise<void> {
     try {
-      await apiPost('/auth/logout-all', {}, { requiresAuth: true });
+      await apiPost("/auth/logout-all", {}, { requiresAuth: true });
     } catch (error) {
-      console.error('Logout all devices failed:', error);
+      console.error("Logout all devices failed:", error);
       // Proceed to clear tokens locally regardless of server failure
     }
     this.clearTokens();
@@ -110,9 +134,16 @@ class AuthService {
    * Change the user's password. Caller is responsible for signing out the user
    * if they want to force re-authentication after a password change.
    */
-  async changePassword(currentPassword: string, newPassword: string): Promise<void> {
+  async changePassword(
+    currentPassword: string,
+    newPassword: string,
+  ): Promise<void> {
     try {
-      await apiPost('/auth/change-password', { currentPassword, newPassword }, { requiresAuth: true });
+      await apiPost(
+        "/auth/change-password",
+        { currentPassword, newPassword },
+        { requiresAuth: true },
+      );
     } catch (error) {
       // Re-throw ApiError or other errors for the caller to handle
       if (error instanceof ApiError) throw error;
@@ -122,11 +153,11 @@ class AuthService {
 
   async refreshAccessToken(): Promise<string> {
     if (!this.refreshToken) {
-      throw new Error('No refresh token available');
+      throw new Error("No refresh token available");
     }
 
     try {
-      const data = await apiPost<AuthResponse>('/auth/refresh', {
+      const data = await apiPost<AuthResponse>("/auth/refresh", {
         refresh_token: this.refreshToken,
       });
       this.setTokens(data.access_token, data.refresh_token);
@@ -153,11 +184,11 @@ class AuthService {
     this.accessToken = accessToken;
     this.refreshToken = refreshToken;
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // Store in cookies only (best practice for auth tokens)
       // In production, backend should set HttpOnly Secure cookies for auto-refresh
-      this.setCookie('access_token', accessToken, 7);
-      this.setCookie('refresh_token', refreshToken, 7);
+      this.setCookie("access_token", accessToken, 7);
+      this.setCookie("refresh_token", refreshToken, 7);
     }
   }
 
@@ -165,10 +196,10 @@ class AuthService {
     this.accessToken = null;
     this.refreshToken = null;
 
-    if (typeof window !== 'undefined') {
+    if (typeof window !== "undefined") {
       // Remove from cookies only
-      this.removeCookie('access_token');
-      this.removeCookie('refresh_token');
+      this.removeCookie("access_token");
+      this.removeCookie("refresh_token");
     }
   }
 
@@ -176,19 +207,25 @@ class AuthService {
    * Request password reset
    */
   async forgotPassword(email: string): Promise<{ message: string }> {
-    return apiPost<{ message: string }>('/auth/forgot-password', { email });
+    return apiPost<{ message: string }>("/auth/forgot-password", { email });
   }
 
   /**
    * Reset password
    */
-  async resetPassword(token: string, password: string): Promise<{ message: string }> {
-    return apiPost<{ message: string }>('/auth/reset-password', { token, password });
+  async resetPassword(
+    token: string,
+    password: string,
+  ): Promise<{ message: string }> {
+    return apiPost<{ message: string }>("/auth/reset-password", {
+      token,
+      password,
+    });
   }
 
   async exchangeGoogleCode(code: string): Promise<AuthResponse> {
     try {
-      const data = await apiPost<AuthResponse>('/auth/google/exchange', {
+      const data = await apiPost<AuthResponse>("/auth/google/exchange", {
         code,
       });
       this.setTokens(data.access_token, data.refresh_token);
@@ -205,4 +242,4 @@ class AuthService {
 export const authService = new AuthService();
 
 // Re-export types for backwards compatibility and convenience
-export type { AuthResponse, User } from './types';
+export type { AuthResponse, User } from "./types";

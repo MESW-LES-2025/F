@@ -7,7 +7,6 @@ import {
 	Param,
 	Delete,
 	UseGuards,
-	Request,
 	Query,
 } from '@nestjs/common';
 import {
@@ -107,7 +106,7 @@ export class ExpenseController {
 		return this.expenseService.getSpendingOverTime(
 			houseId,
 			period || 'day',
-			days ? parseInt(days) : 30,
+			days ? Number.parseInt(days, 10) : 30,
 		);
 	}
 
