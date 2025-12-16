@@ -1,4 +1,4 @@
-import { apiDelete, apiPost } from "./api-client";
+import { apiDelete, apiGet, apiPost } from "./api-client";
 import { HouseToUser } from "./types";
 
 export interface JoinHousePayload {
@@ -11,6 +11,13 @@ export interface LeaveHousePayload {
 
 export interface JoinHouseResponse {
   houseId: string | null;
+}
+
+export interface OverviewResponse {
+  tasksCompleted: number;
+  itemsAdded: number;
+  totalExpenses: number;
+  contributionLevel: number;
 }
 
 export interface InviteUserPayload {
@@ -51,6 +58,10 @@ class UserService {
 
   async inviteUserToHouse(payload: InviteUserPayload): Promise<void> {
     await apiPost("/user/invite", payload, { requiresAuth: true });
+  }
+
+  async activityOverview(): Promise<OverviewResponse> {
+    return await apiGet("/user/overview", { requiresAuth: true });
   }
 }
 

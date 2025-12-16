@@ -178,7 +178,7 @@ export class HouseService {
 				email: true,
 				username: true,
 				name: true,
-				imagePublicId: true,
+				imageUrl: true,
 				houses: {
 					where: {
 						houseId: house.id,

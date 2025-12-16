@@ -39,12 +39,6 @@ export default function SettingsWithoutHousePage() {
         {/* Account Settings */}
         <AccountSettings />
 
-        {/* Notifications */}
-        <SettingsNotifications />
-
-        {/* Preferences */}
-        <SettingsPreferences />
-
         {/* Security */}
         <SettingsSecurity />
 

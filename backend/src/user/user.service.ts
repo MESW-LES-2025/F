@@ -331,4 +331,68 @@ export class UserService {
 
 		return deletedRelation;
 	}
+
+	async activityOverview(userId: string) {
+		const tasksCompleted = await this.prisma.taskToUser.count({
+			where: { userId, task: { status: 'done' } },
+		});
+
+		const itemsAdded = await this.prisma.pantryItem.count({
+			where: { createdByUser: userId },
+		});
+
+		const expensesByUser = await this.prisma.expense.findMany({
+			where: { paidById: userId },
+			select: { amount: true, splitWith: true },
+		});
+
+		let totalExpenses = 0;
+		for (const expense of expensesByUser) {
+			let amount = expense.amount;
+			if (expense.splitWith.length) {
+				amount = amount / expense.splitWith.length;
+			}
+
+			totalExpenses += amount;
+		}
+
+		const expensesByOthers = await this.prisma.expense.findMany({
+			where: { splitWith: { has: userId }, paidById: { not: userId } },
+			select: { amount: true, splitWith: true },
+		});
+
+		for (const expense of expensesByOthers) {
+			let amount = expense.amount;
+			if (expense.splitWith.length) {
+				amount = amount / expense.splitWith.length;
+			}
+
+			totalExpenses += amount;
+		}
+
+		let contributionLevel = 1;
+
+		if (tasksCompleted > 5 && itemsAdded > 5) {
+			contributionLevel = 2;
+		}
+
+		if (tasksCompleted > 15 && itemsAdded > 10 && totalExpenses > 50) {
+			contributionLevel = 3;
+		}
+
+		if (tasksCompleted > 35 && itemsAdded > 15 && totalExpenses > 100) {
+			contributionLevel = 4;
+		}
+
+		if (tasksCompleted > 50 && itemsAdded > 30 && totalExpenses > 150) {
+			contributionLevel = 5;
+		}
+
+		return {
+			tasksCompleted,
+			itemsAdded,
+			totalExpenses,
+			contributionLevel,
+		};
+	}
 }

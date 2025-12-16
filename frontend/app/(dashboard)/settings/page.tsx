@@ -2,7 +2,6 @@
 
 import SettingsNotifications from "@/components/settings/settings-notifications";
 import AccountSettings from "@/components/settings/settings-account";
-import SettingsPreferences from "@/components/settings/settings-preferences";
 import SettingsSecurity from "@/components/settings/settings-security";
 import SettingsDangerArea from "@/components/settings/settings-danger-area";
 
@@ -24,9 +23,6 @@ export default function SettingsPage() {
 
         {/* Notifications */}
         <SettingsNotifications />
-
-        {/* Preferences */}
-        <SettingsPreferences />
 
         {/* Security - Hide for Google users */}
         <SettingsSecurity />

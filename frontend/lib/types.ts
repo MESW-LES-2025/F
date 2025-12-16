@@ -53,7 +53,7 @@ export interface HouseDetails {
     name: string;
     email: string;
     username: string;
-    imagePublicId: string | null;
+    imageUrl?: string;
     houses: {
       role: string;
     }[];
