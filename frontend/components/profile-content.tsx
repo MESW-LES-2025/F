@@ -27,38 +27,38 @@ import { ProfileActivityOverview } from "./profile/activity-overview";
 
 export function ProfileContent() {
   const [user, setUser] = useState<UserType | null>(null);
-  const [dashboard, setDashboard] = useState<UserDashboard | null>(null);;
-  const [isLoading, setIsLoading] = useState(true);;
-  const [isUploading, setIsUploading] = useState(false);;
-  const [error, setError] = useState<string | null>(null);;
+  const [dashboard, setDashboard] = useState<UserDashboard | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isUploading, setIsUploading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedName, setEditedName] = useState("");
   const [editedUsername, setEditedUsername] = useState("");
   const [isSaving, setIsSaving] = useState(false);
   const [nameError, setNameError] = useState("");
   const [usernameError, setUsernameError] = useState("");
-  const fileInputRef = useRef<HTMLInputElement>(null);;
-  const { toast } = useToast();;
-  const { updateUser } = useAuth();;
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const { toast } = useToast();
+  const { updateUser } = useAuth();
 
   useEffect(() => {
     const fetchProfile = async () => {
       try {
-        setIsLoading(true);;
-        const profileData = await profileService.getProfile();;
-        setUser(profileData);;
+        setIsLoading(true);
+        const profileData = await profileService.getProfile();
+        setUser(profileData);
         setEditedName(profileData.name);
         setEditedUsername(profileData.username || "");
-        setError(null);;
+        setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
         console.error("Failed to fetch profile:", err);
       } finally {
-        setIsLoading(false);;
+        setIsLoading(false);
       }
     };
 
-    fetchProfile();;
+    fetchProfile();
   }, []);
 
   useEffect(() => {
@@ -72,19 +72,17 @@ export function ProfileContent() {
     };
 
     fetchDashboard();
-  }, []);;
+  }, []);
 
   const handleImageClick = () => {
-    fileInputRef.current?.click();;
-  };;
+    fileInputRef.current?.click();
+  };
 
   const handleImageChange = async (
-    
     event: React.ChangeEvent<HTMLInputElement>,
-  
   ) => {
-    const file = event.target.files?.[0];;
-    if (!file) return;;
+    const file = event.target.files?.[0];
+    if (!file) return;
 
     // Validate file type
     if (!file.type.startsWith("image/")) {
@@ -97,7 +95,7 @@ export function ProfileContent() {
     }
 
     // Validate file size (e.g., max 5MB)
-    const maxSize = 5 * 1024 * 1024;; // 5MB in bytes
+    const maxSize = 5 * 1024 * 1024; // 5MB in bytes
     if (file.size > maxSize) {
       toast({
         title: "File too large",
@@ -373,7 +371,6 @@ export function ProfileContent() {
                 <p className="font-medium">{user.username}</p>
               )}
             </div>
-            
           </div>
 
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg md:col-span-1">

@@ -38,9 +38,9 @@ export default function GetStartedPage() {
           </div>
 
           <p className="text-muted-foreground leading-relaxed">
-            Concordia is a complete house-management platform built to make shared
-            living easier. Inside a house, you can organize expenses, activities,
-            pantry items and communication — all in one place.
+            Concordia is a complete house-management platform built to make
+            shared living easier. Inside a house, you can organize expenses,
+            activities, pantry items and communication — all in one place.
           </p>
         </div>
 

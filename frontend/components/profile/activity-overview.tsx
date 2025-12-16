@@ -43,7 +43,7 @@ export function ProfileActivityOverview() {
         setError(null);
       } catch (err) {
         setError(
-          err instanceof Error ? err.message : "Failed to load overview"
+          err instanceof Error ? err.message : "Failed to load overview",
         );
         console.error("Failed to fetch overview:", err);
       } finally {
