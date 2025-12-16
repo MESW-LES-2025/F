@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Zap,
   Users,
   Calendar,
   Lightbulb,
-  Settings,
   UserPlus,
   Menu,
   X,
@@ -33,19 +32,15 @@ const navigation = [
 ];
 
 const support = [
-  { name: "Get Started", href: "#", icon: Lightbulb },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Get Started", href: "/get-started", icon: Lightbulb },
   { name: "Invite People", href: "#", icon: UserPlus },
 ];
 
 export function AppSidebar() {
-  const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
-
-  const houseId = searchParams.get("houseId");
 
   return (
     <>
@@ -141,34 +136,22 @@ export function AppSidebar() {
                 );
               }
 
-              const isActive =
-                item.href === "/settings" && pathname === "/settings";
-              if (item.href === "/settings") {
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                      isActive
-                        ? "bg-green-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50",
-                    )}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              }
+              const isActive = pathname === item.href;
               return (
-                <button
+                <Link
                   key={item.name}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    isActive
+                      ? "bg-green-50 text-gray-900 font-medium"
+                      : "text-gray-600 hover:bg-gray-50",
+                  )}
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                </button>
+                </Link>
               );
             })}
           </div>
