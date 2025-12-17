@@ -1,6 +1,6 @@
 # Concordia
 
-A full-stack home management application built with Next.js and NestJS
+A full-stack home management application built with Next.js and NestJS.
 
 Current Production URL: https://concordia-smoky.vercel.app/
 
