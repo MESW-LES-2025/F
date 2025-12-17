@@ -189,7 +189,8 @@ export class ChatService {
 
 	async remove(id: string, userId: string) {
 		// Validate uuid to prevent P2023 (Prisma crash on invalid uuid)
-		const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		const uuidRegex =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 		if (!uuidRegex.test(id)) {
 			throw new NotFoundException('Message not found (invalid id)');
 		}
