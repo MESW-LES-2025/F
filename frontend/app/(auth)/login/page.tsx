@@ -50,7 +50,7 @@ export default function LoginPage() {
     onError: () => {
       console.log("Google One Tap Error");
     },
-    use_fedcm_for_prompt: true,
+    use_fedcm_for_prompt: false,
   });
 
   const formSchema = z.object({
@@ -190,9 +190,8 @@ export default function LoginPage() {
               variant="outline"
               className="h-11 bg-transparent"
               onClick={() =>
-                (window.location.href = `${
-                  process.env.NEXT_PUBLIC_API_URL ||
-                  "http://localhost:3000/api/v1"
+              (window.location.href = `${process.env.NEXT_PUBLIC_API_URL ||
+                "http://localhost:3000/api/v1"
                 }/auth/google`)
               }
             >
