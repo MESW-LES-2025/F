@@ -50,7 +50,7 @@ export default function LoginPage() {
     onError: () => {
       console.log("Google One Tap Error");
     },
-    use_fedcm_for_prompt: false,
+    use_fedcm_for_prompt: true,
   });
 
   const formSchema = z.object({
