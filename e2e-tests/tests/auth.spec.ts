@@ -130,8 +130,8 @@ test.describe('Auth Acceptance Tests', () => {
 			await page.click('button[type="submit"]');
 			await expect(page).toHaveURL('/join-house');
 
-			await page.goto('/settings');
-			await expect(page).toHaveURL('/settings');
+			await page.goto('/settings-without-house');
+			await expect(page).toHaveURL('/settings-without-house');
 			await page.getByRole('button', { name: /^Log Out$/i }).click({ force: true });
 			await page.waitForTimeout(500); // Wait for navigation to complete
 			await expect(page).toHaveURL('/login');
