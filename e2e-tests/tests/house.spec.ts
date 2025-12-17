@@ -3,15 +3,15 @@ import { test, expect } from "@playwright/test";
 // Shared test user credentials
 const testUser1 = {
   name: "E2E Test User",
-  username: `e2euser${Date.now()}`,
-  email: `e2etest${Date.now()}@example.com`,
+  username: `e2euser${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+  email: `e2etest${Date.now()}_${Math.floor(Math.random() * 10000)}@example.com`,
   password: "TestPassword123!",
 };
 
 const testUser2 = {
   name: "E2E Test User 2",
-  username: `e2euser2${Date.now()}`,
-  email: `e2etest2${Date.now()}@example.com`,
+  username: `e2euser2${Date.now()}_${Math.floor(Math.random() * 10000)}`,
+  email: `e2etest2${Date.now()}_${Math.floor(Math.random() * 10000)}@example.com`,
   password: "TestPassword123!",
 };
 
@@ -47,9 +47,9 @@ test.describe("House Acceptance Tests", () => {
       // User is redirected to login page
       await expect(page).toHaveURL("/login");
 
-	  await page.fill('input[name="email"]', testUser1.email);
-	  await page.fill('input[name="password"]', testUser1.password);
-	  await page.click('button[type="submit"]');
+      await page.fill('input[name="email"]', testUser1.email);
+      await page.fill('input[name="password"]', testUser1.password);
+      await page.click('button[type="submit"]');
 
       // Timeout
       await page.waitForTimeout(1000);
@@ -144,9 +144,9 @@ test.describe("House Acceptance Tests", () => {
       // User is redirected to login page
       await expect(page).toHaveURL("/login");
 
-	  await page.fill('input[name="email"]', testUser2.email);
-	  await page.fill('input[name="password"]', testUser2.password);
-	  await page.click('button[type="submit"]');
+      await page.fill('input[name="email"]', testUser2.email);
+      await page.fill('input[name="password"]', testUser2.password);
+      await page.click('button[type="submit"]');
 
       // Timeout
       await page.waitForTimeout(1000);

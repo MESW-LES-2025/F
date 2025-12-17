@@ -11,29 +11,67 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
+import { useGoogleOneTapLogin, CredentialResponse } from "@react-oauth/google";
 
 export default function LoginPage() {
   const router = useRouter();
-  const { login } = useAuth();
+  const { login, loginWithGoogleOneTap } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+  const handleGoogleSuccess = async (
+    credentialResponse: CredentialResponse,
+  ) => {
+    if (credentialResponse.credential) {
+      try {
+        setIsLoading(true);
+        const data = await loginWithGoogleOneTap(credentialResponse.credential);
+        if (!data.user.houses.length) {
+          router.push("/join-house");
+        } else if (data.user.houses.length && data.user.houses.length > 1) {
+          router.push("/choose-house");
+        } else {
+          router.push(`/?houseId=${data.user.houses[0].id}`);
+        }
+      } catch (err) {
+        console.error("Google One Tap Code Exchange Failed", err);
+        setError("Google Login Failed");
+      } finally {
+        setIsLoading(false);
+      }
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  useGoogleOneTapLogin({
+    onSuccess: handleGoogleSuccess,
+    onError: () => {
+      console.log("Google One Tap Error");
+    },
+    use_fedcm_for_prompt: true,
+  });
+
+  const formSchema = z.object({
+    email: z.string().email({ message: "Invalid email address" }),
+    password: z.string().min(1, { message: "Password is required" }),
+  });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      email: "",
+      password: "",
+    },
+  });
+
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setError(null);
     setIsLoading(true);
 
     try {
-      const data = await login(formData.email, formData.password);
+      const data = await login(values.email, values.password);
       if (!data.user.houses.length) {
         router.push("/join-house");
       } else if (data.user.houses.length && data.user.houses.length > 1) {
@@ -84,20 +122,22 @@ export default function LoginPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="h-11"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.email ? "border-red-500 is-invalid" : ""}`}
+                  {...form.register("email")}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
@@ -112,14 +152,16 @@ export default function LoginPage() {
                 </div>
                 <Input
                   id="password"
-                  name="password"
                   type="password"
                   placeholder="Enter your password"
-                  className="h-11"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.password ? "border-red-500 is-invalid" : ""}`}
+                  {...form.register("password")}
                 />
+                {form.formState.errors.password && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
+                )}
               </div>
             </div>
 

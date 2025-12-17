@@ -36,6 +36,8 @@
 		"class-validator": "^0.14.2",
 		"cloudinary": "^2.8.0",
 		"dotenv": "^17.2.3",
+		"google-auth-library": "^10.5.0",
+		"helmet": "^8.1.0",
 		"passport": "^0.7.0",
 		"passport-google-oauth20": "^2.0.0",
 		"passport-jwt": "^4.0.1",

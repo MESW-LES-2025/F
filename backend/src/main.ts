@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import helmet from 'helmet';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 
@@ -18,6 +19,9 @@ async function bootstrap() {
 
 	// Global prefix for all routes
 	app.setGlobalPrefix('api/v1');
+
+	// Security middleware
+	app.use(helmet());
 
 	// Only enable Swagger in development
 	if (process.env.NODE_ENV !== 'production') {

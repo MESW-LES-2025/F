@@ -4,21 +4,26 @@ import { useEffect, useState, useRef } from "react";
 import {
   User,
   Mail,
-  Phone,
   MapPin,
   Calendar,
-  Edit2,
   Camera,
+  Pencil,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
-import { profileService, type UserDashboard } from "@/lib/profile-service";
+import { profileService, UserDashboard } from "@/lib/profile-service";
 import type { User as UserType } from "@/lib/types";
+import SettingsSecurity from "./settings/settings-security";
+import SettingsDangerArea from "./settings/settings-danger-area";
+import { ProfileActivityOverview } from "./profile/activity-overview";
 
 export function ProfileContent() {
   const [user, setUser] = useState<UserType | null>(null);
@@ -26,6 +31,12 @@ export function ProfileContent() {
   const [isLoading, setIsLoading] = useState(true);
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState("");
+  const [editedUsername, setEditedUsername] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+  const [nameError, setNameError] = useState("");
+  const [usernameError, setUsernameError] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
   const { updateUser } = useAuth();
@@ -36,6 +47,8 @@ export function ProfileContent() {
         setIsLoading(true);
         const profileData = await profileService.getProfile();
         setUser(profileData);
+        setEditedName(profileData.name);
+        setEditedUsername(profileData.username || "");
         setError(null);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to load profile");
@@ -118,6 +131,77 @@ export function ProfileContent() {
     }
   };
 
+  const handleEditClick = () => {
+    setIsEditing(true);
+    setEditedName(user?.name || "");
+    setEditedUsername(user?.username || "");
+    setNameError("");
+    setUsernameError("");
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditedName(user?.name || "");
+    setEditedUsername(user?.username || "");
+    setNameError("");
+    setUsernameError("");
+  };
+
+  const validateFields = () => {
+    let isValid = true;
+
+    if (!editedName.trim()) {
+      setNameError("Name is required");
+      isValid = false;
+    } else {
+      setNameError("");
+    }
+
+    if (!editedUsername.trim()) {
+      setUsernameError("Username is required");
+      isValid = false;
+    } else {
+      setUsernameError("");
+    }
+
+    return isValid;
+  };
+
+  const handleSaveEdit = async () => {
+    if (!validateFields()) {
+      toast({
+        title: "Error",
+        description: "Please fill in all fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsSaving(true);
+    try {
+      const updated = await profileService.updateProfile({
+        name: editedName,
+        username: editedUsername,
+      });
+      setUser(updated);
+      updateUser(updated);
+      setIsEditing(false);
+      toast({
+        title: "Success",
+        description: "Profile updated successfully",
+      });
+    } catch (err) {
+      toast({
+        title: "Update failed",
+        description:
+          err instanceof Error ? err.message : "Failed to update profile",
+        variant: "destructive",
+      });
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center p-8">
@@ -150,13 +234,16 @@ export function ProfileContent() {
     .toUpperCase();
 
   return (
-    <div className="grid gap-6 max-w-4xl">
+    <div className="grid gap-6 max-w-5xl">
       {/* Profile Header */}
       <Card className="p-6">
         <div className="flex flex-col md:flex-row gap-6 items-start md:items-center">
           <div className="relative group">
             <Avatar className="w-24 h-24">
-              <AvatarImage src={user.imageUrl || undefined} alt={user.name} />
+              <AvatarImage
+                src={user.imageUrl || "/placeholder-user.jpg"}
+                alt={user.name}
+              />
               <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <button
@@ -186,15 +273,63 @@ export function ProfileContent() {
       </Card>
 
       {/* Personal Information */}
-      <Card className="p-6 space-y-6">
-        <h3 className="text-lg font-semibold">Personal Information</h3>
+      <Card className="p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-semibold">Personal Information</h3>
+          {!isEditing ? (
+            <Pencil
+              className="w-4 h-4 cursor-pointer text-muted-foreground hover:text-foreground transition-colors"
+              onClick={handleEditClick}
+            />
+          ) : (
+            <div className="flex gap-2">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={handleCancelEdit}
+                disabled={isSaving}
+              >
+                <X className="w-4 h-4 mr-1" />
+                Cancel
+              </Button>
+              <Button size="sm" onClick={handleSaveEdit} disabled={isSaving}>
+                <Check className="w-4 h-4 mr-1" />
+                {isSaving ? "Saving..." : "Save"}
+              </Button>
+            </div>
+          )}
+        </div>
 
         <div className="grid md:grid-cols-2 gap-4">
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
             <User className="w-5 h-5 text-muted-foreground" />
-            <div>
+            <div className="flex-1">
               <p className="text-sm text-muted-foreground">Full Name</p>
-              <p className="font-medium">{user.name}</p>
+              {isEditing ? (
+                <div className="space-y-1">
+                  <Input
+                    value={editedName}
+                    onChange={(e) => {
+                      setEditedName(e.target.value);
+                      if (e.target.value.trim()) setNameError("");
+                    }}
+                    onBlur={() => {
+                      if (!editedName.trim()) {
+                        setNameError("Name is required");
+                      }
+                    }}
+                    className={`mt-1 h-8 ${
+                      nameError ? "border-destructive" : ""
+                    }`}
+                    placeholder="Enter your name"
+                  />
+                  {nameError && (
+                    <p className="text-xs text-destructive">{nameError}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="font-medium">{user.name}</p>
+              )}
             </div>
           </div>
 
@@ -208,13 +343,37 @@ export function ProfileContent() {
 
           <div className="flex items-center gap-3 p-3 border border-border rounded-lg">
             <MapPin className="w-5 h-5 text-muted-foreground" />
-            <div>
+            <div className="flex-1">
               <p className="text-sm text-muted-foreground">Username</p>
-              <p className="font-medium">{user.username}</p>
+              {isEditing ? (
+                <div className="space-y-1">
+                  <Input
+                    value={editedUsername}
+                    onChange={(e) => {
+                      setEditedUsername(e.target.value);
+                      if (e.target.value.trim()) setUsernameError("");
+                    }}
+                    onBlur={() => {
+                      if (!editedUsername.trim()) {
+                        setUsernameError("Username is required");
+                      }
+                    }}
+                    className={`mt-1 h-8 ${
+                      usernameError ? "border-destructive" : ""
+                    }`}
+                    placeholder="Enter your username"
+                  />
+                  {usernameError && (
+                    <p className="text-xs text-destructive">{usernameError}</p>
+                  )}
+                </div>
+              ) : (
+                <p className="font-medium">{user.username}</p>
+              )}
             </div>
           </div>
 
-          <div className="flex items-center gap-3 p-3 border border-border rounded-lg md:col-span-2">
+          <div className="flex items-center gap-3 p-3 border border-border rounded-lg md:col-span-1">
             <Calendar className="w-5 h-5 text-muted-foreground" />
             <div>
               <p className="text-sm text-muted-foreground">Member since</p>
@@ -263,7 +422,7 @@ export function ProfileContent() {
       </Card>
 
       {/* Recent Activity */}
-      <Card className="p-6 space-y-6">
+      <Card className="p-6">
         <h3 className="text-lg font-semibold">Recent Activity</h3>
 
         {dashboard?.recentActivity.length ? (
@@ -297,6 +456,12 @@ export function ProfileContent() {
           </p>
         )}
       </Card>
+
+      {/* Change Password */}
+      <SettingsSecurity />
+
+      {/* Danger Zone */}
+      <SettingsDangerArea />
     </div>
   );
 }

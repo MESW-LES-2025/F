@@ -89,7 +89,7 @@ export function ChatInput({
               onChange={handleInput}
               onKeyDown={handleKeyDown}
               placeholder="Type a message..."
-              className="min-h-[44px] max-h-32 py-3 px-4 resize-none rounded-2xl bg-gray-50 border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary pr-12"
+              className="min-h-[44px] max-h-32 py-3 px-4 resize-none rounded-2xl bg-gray-50 border-gray-200 focus:ring-1 focus:ring-primary focus:border-primary pr-12 break-all"
               rows={1}
             />
           </div>

@@ -20,7 +20,8 @@ interface AuthContextType {
     username: string,
     password: string,
     name: string,
-  ) => Promise<void>;
+  ) => Promise<AuthResponse>;
+  loginWithGoogleOneTap: (credential: string) => Promise<AuthResponse>;
   logout: () => Promise<void>;
   changePassword: (
     currentPassword: string,
@@ -133,6 +134,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const loginWithGoogleOneTap = async (credential: string) => {
+    setIsLoading(true);
+    try {
+      const response = await authService.verifyGoogleOneTap(credential);
+      setUser(response.user);
+      setIsAuthenticated(true);
+      sessionStorage.setItem("user", JSON.stringify(response.user));
+      return response;
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const logout = async () => {
     setIsLoading(true);
     try {
@@ -185,6 +199,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     isLoading,
     login,
     register,
+    loginWithGoogleOneTap,
     logout,
     changePassword,
     logoutAllDevices,

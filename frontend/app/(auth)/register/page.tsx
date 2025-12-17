@@ -4,6 +4,7 @@ import type React from "react";
 
 import { useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
@@ -11,52 +12,65 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import TermsAndConditionsModal from "./modal-terms-and-conditions";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import * as z from "zod";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { register } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [passwordMismatch, setPasswordMismatch] = useState(false);
-  const [formData, setFormData] = useState({
-    name: "",
-    username: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
   const [open, setOpen] = useState(false);
   const [tab, setTab] = useState<"terms" | "privacy">("terms");
+
+  const formSchema = z
+    .object({
+      name: z.string().optional(),
+      username: z
+        .string()
+        .min(3, { message: "Username must be at least 3 characters" }),
+      email: z.string().email({ message: "Invalid email address" }),
+      password: z
+        .string()
+        .min(6, { message: "Password must be at least 6 characters" }),
+      confirmPassword: z.string(),
+      terms: z.boolean().refine((val) => val === true, {
+        message: "You must agree to the terms and privacy policy",
+      }),
+    })
+    .refine((data) => data.password === data.confirmPassword, {
+      message: "Passwords do not match",
+      path: ["confirmPassword"],
+    });
+
+  const form = useForm<z.infer<typeof formSchema>>({
+    resolver: zodResolver(formSchema),
+    defaultValues: {
+      name: "",
+      username: "",
+      email: "",
+      password: "",
+      confirmPassword: "",
+      terms: false,
+    },
+  });
+
   const openWithTab = (selected: "terms" | "privacy") => {
     setTab(selected);
     setOpen(true);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (name === "confirmPassword" || name === "password") {
-      setPasswordMismatch(false);
-    }
-  };
-
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const onSubmit = async (values: z.infer<typeof formSchema>) => {
     setError(null);
-
-    if (formData.password !== formData.confirmPassword) {
-      setPasswordMismatch(true);
-      return;
-    }
-
     setIsLoading(true);
 
     try {
       await register(
-        formData.email,
-        formData.username,
-        formData.password,
-        formData.name,
+        values.email,
+        values.username,
+        values.password,
+        values.name || "",
       );
       // Redirect to login
       router.push("/login");
@@ -82,20 +96,14 @@ export default function RegisterPage() {
       <div className="relative w-full max-w-md">
         {/* Logo and branding */}
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 mb-4 shadow-lg">
-            <svg
-              className="w-8 h-8 text-white"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"
-              />
-            </svg>
+          <div className="inline-flex items-center justify-center mb-4">
+            <Image
+              src="/concordia-logo.png"
+              alt="Concordia Logo"
+              width={80}
+              height={80}
+              className="rounded-2xl shadow-lg"
+            />
           </div>
           <h1 className="text-3xl font-bold text-foreground mb-2">
             Create your account
@@ -113,19 +121,16 @@ export default function RegisterPage() {
             </Alert>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <div className="space-y-2">
                 <Label htmlFor="name">Full name</Label>
                 <Input
                   id="name"
-                  name="name"
                   type="text"
                   placeholder="John Doe"
                   className="h-11"
-                  value={formData.name}
-                  onChange={handleChange}
-                  required
+                  {...form.register("name")}
                 />
               </div>
 
@@ -133,58 +138,63 @@ export default function RegisterPage() {
                 <Label htmlFor="username">Username</Label>
                 <Input
                   id="username"
-                  name="username"
                   type="text"
                   placeholder="johndoe"
-                  className="h-11"
-                  value={formData.username}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.username ? "border-red-500 is-invalid" : ""}`}
+                  {...form.register("username")}
                 />
+                {form.formState.errors.username && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.username.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="email">Email address</Label>
                 <Input
                   id="email"
-                  name="email"
                   type="email"
                   placeholder="you@example.com"
-                  className="h-11"
-                  value={formData.email}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.email ? "border-red-500 is-invalid" : ""}`}
+                  {...form.register("email")}
                 />
+                {form.formState.errors.email && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.email.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  name="password"
                   type="password"
                   placeholder="Create a strong password"
-                  className="h-11"
-                  value={formData.password}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.password ? "border-red-500 is-invalid" : ""}`}
+                  {...form.register("password")}
                 />
+                {form.formState.errors.password && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.password.message}
+                  </p>
+                )}
               </div>
 
               <div className="space-y-2">
                 <Label htmlFor="confirmPassword">Confirm password</Label>
                 <Input
                   id="confirmPassword"
-                  name="confirmPassword"
                   type="password"
                   placeholder="Re-enter your password"
-                  className={`h-11 ${passwordMismatch ? "border-red-500" : ""}`}
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  required
+                  className={`h-11 ${form.formState.errors.confirmPassword ? "border-red-500" : ""}`}
+                  {...form.register("confirmPassword")}
                 />
-                {passwordMismatch && (
-                  <p className="text-sm text-red-500">Passwords do not match</p>
+                {form.formState.errors.confirmPassword && (
+                  <p className="text-sm text-red-500">
+                    {form.formState.errors.confirmPassword.message}
+                  </p>
                 )}
               </div>
             </div>
@@ -194,7 +204,7 @@ export default function RegisterPage() {
                 type="checkbox"
                 id="terms"
                 className="w-4 h-4 rounded border-input mt-0.5"
-                required
+                {...form.register("terms")}
               />
               <Label
                 htmlFor="terms"
@@ -218,6 +228,11 @@ export default function RegisterPage() {
                 </button>
               </Label>
             </div>
+            {form.formState.errors.terms && (
+              <p className="text-sm text-red-500 mt-1">
+                {form.formState.errors.terms.message}
+              </p>
+            )}
 
             <Button
               type="submit"
