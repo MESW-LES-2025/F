@@ -25,13 +25,6 @@ export function DashboardHeader() {
           <HouseSelector />
         </div>
         <div className="flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="sm"
-            className="text-sm bg-transparent"
-          >
-            + New Activity
-          </Button>
           <NotificationsBell />
         </div>
       </div>
@@ -49,22 +42,6 @@ export function DashboardHeader() {
               <SelectItem value="last-month">Last Month</SelectItem>
               <SelectItem value="this-month">This Month</SelectItem>
               <SelectItem value="last-week">Last Week</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-gray-600 whitespace-nowrap">
-            People:
-          </span>
-          <Select defaultValue="all">
-            <SelectTrigger className="w-full sm:w-36 h-9">
-              <SelectValue />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All</SelectItem>
-              <SelectItem value="joana">Joana Maria</SelectItem>
-              <SelectItem value="marcos">Marcos Salgado</SelectItem>
             </SelectContent>
           </Select>
         </div>

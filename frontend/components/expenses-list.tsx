@@ -3,11 +3,14 @@
 import { useEffect, useState, useMemo } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { format } from "date-fns";
 import { getExpenses } from "@/lib/expense-service";
 import type { Expense } from "@/lib/types";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { DeleteExpenseDialog } from "@/components/delete-expense-dialog";
+import { Trash2 } from "lucide-react";
 
 interface ExpensesListProps {
   houseId?: string;
@@ -36,6 +39,7 @@ export function ExpensesList({
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [deletingExpense, setDeletingExpense] = useState<Expense | null>(null);
 
   useEffect(() => {
     loadExpenses();
@@ -53,6 +57,10 @@ export function ExpensesList({
     } finally {
       setIsLoading(false);
     }
+  };
+
+  const handleExpenseDeleted = (expenseId: string) => {
+    setExpenses((prev) => prev.filter((exp) => exp.id !== expenseId));
   };
 
   // Compute filtered and sorted expenses
@@ -154,80 +162,18 @@ export function ExpensesList({
 
   if (compact) {
     return (
-      <div className="space-y-2">
-        {filteredAndSortedExpenses.map((expense) => {
-          const splitCount = expense.splitWith.length;
+      <>
+        <div className="space-y-2">
+          {filteredAndSortedExpenses.map((expense) => {
+            const splitCount = expense.splitWith.length;
 
-          return (
-            <div
-              key={expense.id}
-              className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md transition-colors cursor-pointer"
-            >
-              <div className="flex items-center gap-3 flex-1 min-w-0">
-                <Avatar className="w-8 h-8">
-                  <AvatarImage src={expense.paidByAvatar} />
-                  <AvatarFallback>
-                    {expense.paidBy
-                      .split(" ")
-                      .map((n) => n[0])
-                      .join("")}
-                  </AvatarFallback>
-                </Avatar>
-
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-gray-900 truncate">
-                      {expense.title}
-                    </p>
-                    <Badge variant="secondary" className="text-xs shrink-0">
-                      {expense.category}
-                    </Badge>
-                  </div>
-                  <p className="text-xs text-gray-500">
-                    {expense.paidBy} • {format(expense.date, "MMM d")}
-                  </p>
-                </div>
-              </div>
-
-              <div className="text-right shrink-0">
-                <p className="text-sm font-bold text-gray-900">
-                  {expense.amount.toFixed(2)}€
-                </p>
-              </div>
-            </div>
-          );
-        })}
-      </div>
-    );
-  }
-
-  return (
-    <div className="bg-white rounded-lg border border-gray-200">
-      <div className="p-4 border-b border-gray-200">
-        <div className="flex items-center justify-between">
-          <h2 className="text-sm font-semibold text-gray-900">
-            Recent Expenses
-          </h2>
-          <p className="text-xs text-gray-500">
-            Showing {filteredAndSortedExpenses.length} of {expenses.length}{" "}
-            expenses
-          </p>
-        </div>
-      </div>
-
-      <div className="divide-y divide-gray-200">
-        {filteredAndSortedExpenses.map((expense) => {
-          const splitCount = expense.splitWith.length;
-          const perPersonAmount = expense.amount / splitCount;
-
-          return (
-            <div
-              key={expense.id}
-              className="p-4 hover:bg-gray-50 transition-colors cursor-pointer"
-            >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-3 flex-1">
-                  <Avatar className="w-10 h-10">
+            return (
+              <div
+                key={expense.id}
+                className="flex items-center justify-between p-2 hover:bg-muted/50 rounded-md transition-colors group"
+              >
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <Avatar className="w-8 h-8">
                     <AvatarImage src={expense.paidByAvatar} />
                     <AvatarFallback>
                       {expense.paidBy
@@ -237,38 +183,142 @@ export function ExpensesList({
                     </AvatarFallback>
                   </Avatar>
 
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-sm font-medium text-gray-900">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-0.5">
+                      <p className="text-sm font-medium text-gray-900 truncate">
                         {expense.title}
                       </p>
-                      <Badge variant="secondary" className="text-xs">
+                      <Badge variant="secondary" className="text-xs shrink-0">
                         {expense.category}
                       </Badge>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-gray-500">
-                      <span>Paid by {expense.paidBy}</span>
-                      <span>•</span>
-                      <span>{format(expense.date, "MMM d, yyyy")}</span>
-                      <span>•</span>
-                      <span>Split {splitCount} ways</span>
-                    </div>
+                    <p className="text-xs text-gray-500">
+                      {expense.paidBy} • {format(expense.date, "MMM d")}
+                    </p>
                   </div>
                 </div>
 
-                <div className="text-right">
-                  <p className="text-lg font-bold text-gray-900">
-                    {expense.amount.toFixed(2)}€
-                  </p>
-                  <p className="text-xs text-gray-500">
-                    {perPersonAmount.toFixed(2)}€ per person
-                  </p>
+                <div className="flex items-center gap-2">
+                  <div className="text-right shrink-0">
+                    <p className="text-sm font-bold text-gray-900">
+                      {expense.amount.toFixed(2)}€
+                    </p>
+                  </div>
+                  <Button
+                    size="sm"
+                    variant="ghost"
+                    className="h-7 w-7 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                    onClick={() => setDeletingExpense(expense)}
+                  >
+                    <Trash2 className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
+
+        {deletingExpense && (
+          <DeleteExpenseDialog
+            expense={deletingExpense}
+            open={!!deletingExpense}
+            onOpenChange={(open) => !open && setDeletingExpense(null)}
+            onExpenseDeleted={handleExpenseDeleted}
+          />
+        )}
+      </>
+    );
+  }
+
+  return (
+    <>
+      <div className="bg-white rounded-lg border border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-gray-900">
+              Recent Expenses
+            </h2>
+            <p className="text-xs text-gray-500">
+              Showing {filteredAndSortedExpenses.length} of {expenses.length}{" "}
+              expenses
+            </p>
+          </div>
+        </div>
+
+        <div className="divide-y divide-gray-200">
+          {filteredAndSortedExpenses.map((expense) => {
+            const splitCount = expense.splitWith.length;
+            const perPersonAmount = expense.amount / splitCount;
+
+            return (
+              <div
+                key={expense.id}
+                className="p-4 hover:bg-gray-50 transition-colors group"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 flex-1">
+                    <Avatar className="w-10 h-10">
+                      <AvatarImage src={expense.paidByAvatar} />
+                      <AvatarFallback>
+                        {expense.paidBy
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-1">
+                        <p className="text-sm font-medium text-gray-900">
+                          {expense.title}
+                        </p>
+                        <Badge variant="secondary" className="text-xs">
+                          {expense.category}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2 text-xs text-gray-500">
+                        <span>Paid by {expense.paidBy}</span>
+                        <span>•</span>
+                        <span>{format(expense.date, "MMM d, yyyy")}</span>
+                        <span>•</span>
+                        <span>Split {splitCount} ways</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="text-lg font-bold text-gray-900">
+                        {expense.amount.toFixed(2)}€
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {perPersonAmount.toFixed(2)}€ per person
+                      </p>
+                    </div>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-8 w-8 p-0 opacity-0 group-hover:opacity-100 transition-opacity text-destructive hover:text-destructive"
+                      onClick={() => setDeletingExpense(expense)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
-    </div>
+
+      {deletingExpense && (
+        <DeleteExpenseDialog
+          expense={deletingExpense}
+          open={!!deletingExpense}
+          onOpenChange={(open) => !open && setDeletingExpense(null)}
+          onExpenseDeleted={handleExpenseDeleted}
+        />
+      )}
+    </>
   );
 }

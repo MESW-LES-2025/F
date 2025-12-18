@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./api-client";
-import type { Expense } from "./types";
+import type { Expense, ExpenseSplit } from "./types";
 
 export interface CreateExpensePayload {
   amount: number;
@@ -8,6 +8,7 @@ export interface CreateExpensePayload {
   paidById: string;
   houseId: string;
   splitWith: string[];
+  splits?: ExpenseSplit[];
   date?: string;
 }
 
@@ -18,6 +19,7 @@ export interface UpdateExpensePayload {
   paidById?: string;
   houseId?: string;
   splitWith?: string[];
+  splits?: ExpenseSplit[];
   date?: string;
 }
 
@@ -30,6 +32,7 @@ export interface ExpenseResponse {
   paidById: string;
   houseId: string;
   splitWith: string[];
+  splits?: ExpenseSplit[];
   createdAt: string;
   updatedAt: string;
   paidBy: {
@@ -58,6 +61,7 @@ function transformExpense(backendExpense: ExpenseResponse): Expense {
     paidByAvatar: backendExpense.paidBy.imageUrl || "",
     date: new Date(backendExpense.date),
     splitWith: backendExpense.splitWith,
+    splits: backendExpense.splits,
   };
 }
 

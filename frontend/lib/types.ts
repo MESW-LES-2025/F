@@ -60,6 +60,12 @@ export interface HouseDetails {
   }[];
 }
 
+export interface ExpenseSplit {
+  id?: string;
+  userId: string;
+  percentage: number;
+}
+
 export interface Expense {
   id: string;
   title: string;
@@ -69,6 +75,7 @@ export interface Expense {
   paidByAvatar: string;
   date: Date;
   splitWith: string[];
+  splits?: ExpenseSplit[];
 }
 
 export interface PantryItem {

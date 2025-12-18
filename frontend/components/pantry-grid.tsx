@@ -194,6 +194,7 @@ export function PantryGrid({
                                 setLocalItems((prev) =>
                                   prev.filter((it) => it.id !== item.id),
                                 );
+                                window.location.reload();
                               } catch (err) {
                                 toast({
                                   title: "Remove failed",
@@ -324,6 +325,7 @@ export function PantryGrid({
                                       setLocalItems((prev) =>
                                         prev.filter((it) => it.id !== item.id),
                                       );
+                                      window.location.reload();
                                     } catch (err) {
                                       toast({
                                         title: "Remove failed",
@@ -664,6 +666,7 @@ export function PantryGrid({
                         prev.filter((it) => it.id !== dialogItem.id),
                       );
                       setDialogOpen(false);
+                      window.location.reload();
                       return;
                     } catch (err: any) {
                       // If delete is forbidden (not creator) or not found, attempt to at least remove from this pantry
@@ -694,6 +697,7 @@ export function PantryGrid({
                             prev.filter((it) => it.id !== dialogItem.id),
                           );
                           setDialogOpen(false);
+                          window.location.reload();
                           return;
                         } catch (err2) {
                           toast({
@@ -794,6 +798,7 @@ export function PantryGrid({
                               // close edit dialog as the item is removed
                               setDialogOpen(false);
                               setDialogItem(null);
+                              window.location.reload();
                             } catch (err) {
                               toast({
                                 title: "Remove failed",
@@ -840,6 +845,7 @@ export function PantryGrid({
                               : it,
                           ),
                         );
+                        window.location.reload();
                       }
                     } catch (err) {
                       toast({ title: "Save failed", description: String(err) });
