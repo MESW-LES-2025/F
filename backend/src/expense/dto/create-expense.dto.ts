@@ -10,7 +10,10 @@ import {
 	Min,
 	MaxLength,
 	IsDateString,
+	ValidateNested,
+	Max,
 } from 'class-validator';
+import { Type } from 'class-transformer';
 
 export enum ExpenseCategory {
 	GROCERIES = 'GROCERIES',
@@ -21,6 +24,28 @@ export enum ExpenseCategory {
 	TRANSPORTATION = 'TRANSPORTATION',
 	SETTLEMENT = 'SETTLEMENT',
 	OTHER = 'OTHER',
+}
+
+export class ExpenseSplitDto {
+	@ApiProperty({
+		example: '550e8400-e29b-41d4-a716-446655440000',
+		description: 'UUID of the user',
+	})
+	@IsNotEmpty()
+	@IsUUID()
+	userId: string;
+
+	@ApiProperty({
+		example: 33.33,
+		description: 'Percentage share of the expense (0-100)',
+		minimum: 0,
+		maximum: 100,
+	})
+	@IsNotEmpty()
+	@IsNumber()
+	@Min(0)
+	@Max(100)
+	percentage: number;
 }
 
 export class CreateExpenseDto {
@@ -83,6 +108,21 @@ export class CreateExpenseDto {
 	splitWith: string[];
 
 	@ApiPropertyOptional({
+		example: [
+			{ userId: '550e8400-e29b-41d4-a716-446655440000', percentage: 50 },
+			{ userId: '550e8400-e29b-41d4-a716-446655440002', percentage: 50 },
+		],
+		description:
+			'Array of user splits with percentage shares. If not provided, expense will be split equally.',
+		type: [ExpenseSplitDto],
+	})
+	@IsOptional()
+	@IsArray()
+	@ValidateNested({ each: true })
+	@Type(() => ExpenseSplitDto)
+	splits?: ExpenseSplitDto[];
+
+	@ApiPropertyOptional({
 		example: '2025-11-11T10:30:00.000Z',
 		description: 'Date of the expense in ISO 8601 format',
 	})
@@ -90,3 +130,4 @@ export class CreateExpenseDto {
 	@IsDateString()
 	date?: string;
 }
+

@@ -20,6 +20,7 @@ export class ExpenseService {
 			houseId,
 			splitWith,
 			date,
+			splits,
 		} = createExpenseDto;
 
 		// Verify payer exists and is not soft-deleted
@@ -77,7 +78,50 @@ export class ExpenseService {
 			);
 		}
 
-		// Create the expense
+		// Validate splits if provided
+		let expenseSplits: { userId: string; percentage: number }[];
+		if (splits && splits.length > 0) {
+			// Validate that splits match splitWith users
+			const splitUserIds = splits.map((s) => s.userId);
+			const splitWithSet = new Set(splitWith);
+			const splitsSet = new Set(splitUserIds);
+
+			if (splitUserIds.length !== splitWith.length) {
+				throw new BadRequestException(
+					'Splits must match the users in splitWith',
+				);
+			}
+
+			for (const userId of splitWith) {
+				if (!splitsSet.has(userId)) {
+					throw new BadRequestException(
+						'Splits must include all users from splitWith',
+					);
+				}
+			}
+
+			// Validate that percentages sum to 100
+			const totalPercentage = splits.reduce(
+				(sum, split) => sum + split.percentage,
+				0,
+			);
+			if (Math.abs(totalPercentage - 100) > 0.01) {
+				throw new BadRequestException(
+					'Split percentages must sum to 100',
+				);
+			}
+
+			expenseSplits = splits;
+		} else {
+			// Default to equal split
+			const equalPercentage = 100 / splitWith.length;
+			expenseSplits = splitWith.map((userId) => ({
+				userId,
+				percentage: equalPercentage,
+			}));
+		}
+
+		// Create the expense with splits
 		const expense = await this.prisma.expense.create({
 			data: {
 				amount,
@@ -87,6 +131,9 @@ export class ExpenseService {
 				houseId,
 				splitWith,
 				date: date ? new Date(date) : new Date(),
+				splits: {
+					create: expenseSplits,
+				},
 			},
 			include: {
 				paidBy: {
@@ -104,6 +151,7 @@ export class ExpenseService {
 						name: true,
 					},
 				},
+				splits: true,
 			},
 		});
 
@@ -128,6 +176,7 @@ export class ExpenseService {
 						name: true,
 					},
 				},
+				splits: true,
 			},
 			orderBy: {
 				date: 'desc',
@@ -154,6 +203,7 @@ export class ExpenseService {
 						name: true,
 					},
 				},
+				splits: true,
 			},
 		});
 
@@ -192,6 +242,7 @@ export class ExpenseService {
 						name: true,
 					},
 				},
+				splits: true,
 			},
 			orderBy: {
 				date: 'desc',
@@ -258,6 +309,51 @@ export class ExpenseService {
 			}
 		}
 
+		// Validate splits if provided
+		const splitWith =
+			updateExpenseDto.splitWith || existingExpense.splitWith;
+		let expenseSplits: { userId: string; percentage: number }[] | undefined;
+
+		if (updateExpenseDto.splits && updateExpenseDto.splits.length > 0) {
+			// Validate that splits match splitWith users
+			const splitUserIds = updateExpenseDto.splits.map((s) => s.userId);
+			const splitsSet = new Set(splitUserIds);
+
+			if (splitUserIds.length !== splitWith.length) {
+				throw new BadRequestException(
+					'Splits must match the users in splitWith',
+				);
+			}
+
+			for (const userId of splitWith) {
+				if (!splitsSet.has(userId)) {
+					throw new BadRequestException(
+						'Splits must include all users from splitWith',
+					);
+				}
+			}
+
+			// Validate that percentages sum to 100
+			const totalPercentage = updateExpenseDto.splits.reduce(
+				(sum, split) => sum + split.percentage,
+				0,
+			);
+			if (Math.abs(totalPercentage - 100) > 0.01) {
+				throw new BadRequestException(
+					'Split percentages must sum to 100',
+				);
+			}
+
+			expenseSplits = updateExpenseDto.splits;
+		} else if (updateExpenseDto.splitWith) {
+			// If splitWith changed but no splits provided, recalculate equal split
+			const equalPercentage = 100 / splitWith.length;
+			expenseSplits = splitWith.map((userId) => ({
+				userId,
+				percentage: equalPercentage,
+			}));
+		}
+
 		// Cast incoming DTO to a known partial type so we avoid `any` usage
 		const dto = updateExpenseDto as Partial<CreateExpenseDto>;
 		// Use a safe, loosely-typed container for the update payload that avoids `any`
@@ -265,10 +361,21 @@ export class ExpenseService {
 		if (dto.date) {
 			updateData.date = new Date(dto.date);
 		}
+		// Remove splits from the main update data as we'll handle it separately
+		delete updateData.splits;
 
+		// Update expense with splits
 		const expense = await this.prisma.expense.update({
 			where: { id },
-			data: updateData,
+			data: {
+				...updateData,
+				...(expenseSplits && {
+					splits: {
+						deleteMany: {},
+						create: expenseSplits,
+					},
+				}),
+			},
 			include: {
 				paidBy: {
 					select: {
@@ -285,6 +392,7 @@ export class ExpenseService {
 						name: true,
 					},
 				},
+				splits: true,
 			},
 		});
 
@@ -348,6 +456,7 @@ export class ExpenseService {
 						imageUrl: true,
 					},
 				},
+				splits: true,
 			},
 		});
 
@@ -401,12 +510,11 @@ export class ExpenseService {
 				payerData.totalPaid += expense.amount;
 			}
 
-			// Calculate how much each person in splitWith owes
-			const splitAmount = expense.amount / expense.splitWith.length;
-			expense.splitWith.forEach((userId) => {
-				const userData = perPersonData.get(userId);
+			// Calculate how much each person owes based on their split percentage
+			expense.splits.forEach((split) => {
+				const userData = perPersonData.get(split.userId);
 				if (userData) {
-					userData.totalOwed += splitAmount;
+					userData.totalOwed += (expense.amount * split.percentage) / 100;
 				}
 			});
 		});
@@ -484,6 +592,7 @@ export class ExpenseService {
 						imageUrl: true,
 					},
 				},
+				splits: true,
 			},
 		});
 
@@ -526,36 +635,34 @@ export class ExpenseService {
 		expenses.forEach((expense) => {
 			if (expense.category === 'SETTLEMENT') {
 				// For settlements:
-				// - paidById is the person paying (FROM)
-				// - splitWith[0] is the person receiving (TO)
-				// The payer's balance decreases (they paid money out)
+				// - paidById is the person paying (FROM) - their debt decreases
+				// - splitWith[0] is the person receiving (TO) - their credit decreases
+				// The payer's balance increases (they're settling their debt)
 				const payerData = balanceData.get(expense.paidById);
 				if (payerData) {
-					payerData.balance -= expense.amount;
+					payerData.balance += expense.amount;
 				}
 
-				// The receiver's balance increases (they received money)
+				// The receiver's balance decreases (they're being paid back)
 				if (expense.splitWith.length > 0) {
 					const receiverData = balanceData.get(expense.splitWith[0]);
 					if (receiverData) {
-						receiverData.balance += expense.amount;
+						receiverData.balance -= expense.amount;
 					}
 				}
 			} else {
-				// Regular expense: standard split logic
-				const splitAmount = expense.amount / expense.splitWith.length;
-
+				// Regular expense: use percentage-based split logic
 				// Payer gets credited
 				const payerData = balanceData.get(expense.paidById);
 				if (payerData) {
 					payerData.balance += expense.amount;
 				}
 
-				// Each person in splitWith gets debited
-				expense.splitWith.forEach((userId) => {
-					const userData = balanceData.get(userId);
+				// Each person in splits gets debited based on their percentage
+				expense.splits.forEach((split) => {
+					const userData = balanceData.get(split.userId);
 					if (userData) {
-						userData.balance -= splitAmount;
+						userData.balance -= (expense.amount * split.percentage) / 100;
 					}
 				});
 			}

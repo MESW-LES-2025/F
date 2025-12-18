@@ -185,12 +185,28 @@ model Expense {
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
-  paidBy      User     @relation("PaidExpenses", fields: [paidById], references: [id], onDelete: Cascade)
-  house       House    @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  paidBy      User          @relation("PaidExpenses", fields: [paidById], references: [id], onDelete: Cascade)
+  house       House         @relation(fields: [houseId], references: [id], onDelete: Cascade)
+  splits      ExpenseSplit[]
 
   @@index([houseId])
   @@index([paidById])
   @@index([date])
+}
+
+model ExpenseSplit {
+  id         String   @id @default(uuid()) @db.Uuid
+  expenseId  String   @db.Uuid
+  userId     String   @db.Uuid
+  percentage Float
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+  
+  expense    Expense  @relation(fields: [expenseId], references: [id], onDelete: Cascade)
+  
+  @@unique([expenseId, userId])
+  @@index([expenseId])
+  @@index([userId])
 }
 
 model Notification {

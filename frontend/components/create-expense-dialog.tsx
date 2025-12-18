@@ -23,7 +23,7 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Plus } from "lucide-react";
 import { createExpense } from "@/lib/expense-service";
-import type { Expense, User } from "@/lib/types";
+import type { Expense, User, ExpenseSplit } from "@/lib/types";
 import { apiGet } from "@/lib/api-client";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useHouse } from "@/lib/house-context";
@@ -51,6 +51,9 @@ export function CreateExpenseDialog({
     splitWith: [] as string[],
     date: new Date().toISOString().split("T")[0],
   });
+  const [splitPercentages, setSplitPercentages] = useState<
+    Record<string, number>
+  >({});
 
   const [formErrors, setFormErrors] = useState({
     amount: false,
@@ -59,6 +62,7 @@ export function CreateExpenseDialog({
     paidBy: false,
     splitWith: false,
     houseId: false,
+    splitPercentages: false,
   });
 
   const categories = [
@@ -93,6 +97,15 @@ export function CreateExpenseDialog({
       const splitWith = prev.splitWith.includes(value)
         ? prev.splitWith
         : [...prev.splitWith, value];
+
+      // Recalculate equal percentages when payer changes
+      const equalPercentage = splitWith.length > 0 ? 100 / splitWith.length : 0;
+      const newPercentages: Record<string, number> = {};
+      splitWith.forEach((id) => {
+        newPercentages[id] = equalPercentage;
+      });
+      setSplitPercentages(newPercentages);
+
       return { ...prev, paidBy: value, splitWith };
     });
     if (formErrors.paidBy) {
@@ -109,6 +122,15 @@ export function CreateExpenseDialog({
       const splitWith = prev.splitWith.includes(userId)
         ? prev.splitWith.filter((id) => id !== userId)
         : [...prev.splitWith, userId];
+
+      // Recalculate equal percentages when members change
+      const equalPercentage = splitWith.length > 0 ? 100 / splitWith.length : 0;
+      const newPercentages: Record<string, number> = {};
+      splitWith.forEach((id) => {
+        newPercentages[id] = equalPercentage;
+      });
+      setSplitPercentages(newPercentages);
+
       return { ...prev, splitWith };
     });
     if (formErrors.splitWith) {
@@ -116,7 +138,23 @@ export function CreateExpenseDialog({
     }
   };
 
+  const handlePercentageChange = (userId: string, value: string) => {
+    const percentage = parseFloat(value) || 0;
+    setSplitPercentages((prev) => ({
+      ...prev,
+      [userId]: percentage,
+    }));
+    if (formErrors.splitPercentages) {
+      setFormErrors((prev) => ({ ...prev, splitPercentages: false }));
+    }
+  };
+
+  const getTotalPercentage = () => {
+    return Object.values(splitPercentages).reduce((sum, val) => sum + val, 0);
+  };
+
   const validateForm = () => {
+    const totalPercentage = getTotalPercentage();
     const errors = {
       amount: !formData.amount || parseFloat(formData.amount) <= 0,
       description: !formData.description.trim(),
@@ -124,6 +162,7 @@ export function CreateExpenseDialog({
       paidBy: !formData.paidBy,
       splitWith: formData.splitWith.length === 0,
       houseId: false,
+      splitPercentages: Math.abs(totalPercentage - 100) > 0.01,
     };
 
     setFormErrors(errors);
@@ -199,6 +238,10 @@ export function CreateExpenseDialog({
         paidById: formData.paidBy,
         houseId: selectedHouse.id,
         splitWith: formData.splitWith,
+        splits: formData.splitWith.map((userId) => ({
+          userId,
+          percentage: splitPercentages[userId] || 0,
+        })),
         date: expenseDate.toISOString(),
       });
 
@@ -215,6 +258,7 @@ export function CreateExpenseDialog({
         splitWith: [],
         date: new Date().toISOString().split("T")[0],
       });
+      setSplitPercentages({});
       setFormErrors({
         amount: false,
         description: false,
@@ -222,6 +266,7 @@ export function CreateExpenseDialog({
         paidBy: false,
         splitWith: false,
         houseId: false,
+        splitPercentages: false,
       });
       setOpen(false);
     } catch (err) {
@@ -247,6 +292,7 @@ export function CreateExpenseDialog({
         splitWith: [],
         date: new Date().toISOString().split("T")[0],
       });
+      setSplitPercentages({});
       setFormErrors({
         amount: false,
         description: false,
@@ -254,6 +300,7 @@ export function CreateExpenseDialog({
         paidBy: false,
         splitWith: false,
         houseId: false,
+        splitPercentages: false,
       });
       setError(null);
     }
@@ -409,9 +456,12 @@ export function CreateExpenseDialog({
               <Label>
                 Split With <span className="text-destructive">*</span>
               </Label>
-              <div className="border rounded-md p-3 space-y-2 max-h-[150px] overflow-y-auto">
+              <div className="border rounded-md p-3 space-y-3 max-h-[200px] overflow-y-auto">
                 {users.map((user) => (
-                  <div key={user.id} className="flex items-center space-x-2">
+                  <div
+                    key={user.id}
+                    className="flex items-center space-x-2 gap-2"
+                  >
                     <Checkbox
                       id={`split-${user.id}`}
                       checked={formData.splitWith.includes(user.id)}
@@ -419,16 +469,52 @@ export function CreateExpenseDialog({
                     />
                     <label
                       htmlFor={`split-${user.id}`}
-                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer flex-1"
                     >
                       {user.name || user.username}
                     </label>
+                    {formData.splitWith.includes(user.id) && (
+                      <div className="flex items-center gap-1">
+                        <Input
+                          type="number"
+                          min="0"
+                          max="100"
+                          step="0.01"
+                          value={splitPercentages[user.id] || ""}
+                          onChange={(e) =>
+                            handlePercentageChange(user.id, e.target.value)
+                          }
+                          className="w-20 h-8 text-sm"
+                          placeholder="0"
+                        />
+                        <span className="text-sm text-muted-foreground">%</span>
+                      </div>
+                    )}
                   </div>
                 ))}
               </div>
+              {formData.splitWith.length > 0 && (
+                <div className="flex justify-between items-center text-sm mt-2 px-3">
+                  <span className="font-medium">Total:</span>
+                  <span
+                    className={`font-bold ${
+                      Math.abs(getTotalPercentage() - 100) > 0.01
+                        ? "text-destructive"
+                        : "text-green-600"
+                    }`}
+                  >
+                    {getTotalPercentage().toFixed(2)}%
+                  </span>
+                </div>
+              )}
               {formErrors.splitWith && (
                 <p className="text-sm text-destructive">
                   Select at least one person to split with
+                </p>
+              )}
+              {formErrors.splitPercentages && (
+                <p className="text-sm text-destructive">
+                  Split percentages must sum to 100%
                 </p>
               )}
             </div>
