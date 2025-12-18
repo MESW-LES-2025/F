@@ -914,4 +914,141 @@ export class TasksService {
 
 		return nextDate;
 	}
+
+	/**
+	 * Stop a recurring task (sets isRecurring to false)
+	 */
+	async stopRecurrence(id: string, userId: string) {
+		const task = await this.findOne(id);
+
+		// Only creator can stop recurrence
+		if (task.createdById !== userId) {
+			throw new ForbiddenException(
+				'You do not have permission to stop this recurring task',
+			);
+		}
+
+		if (!task.isRecurring) {
+			throw new BadRequestException('This task is not recurring');
+		}
+
+		const updatedTask = await this.prisma.task.update({
+			where: { id },
+			data: {
+				isRecurring: false,
+				nextRecurrenceDate: null,
+			},
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+			},
+		});
+
+		return {
+			message: 'Recurring task stopped successfully',
+			task: updatedTask,
+		};
+	}
+
+	/**
+	 * Get all instances of a recurring task
+	 */
+	async getRecurringTaskInstances(id: string, userId: string) {
+		const task = await this.findOne(id);
+
+		// Verify user has permission (shares house with task)
+		const userInHouse = await this.prisma.houseToUser.findFirst({
+			where: {
+				userId,
+				houseId: task.houseId,
+			},
+		});
+
+		if (!userInHouse) {
+			throw new ForbiddenException(
+				'You do not have permission to view this task',
+			);
+		}
+
+		if (!task.isRecurring) {
+			throw new BadRequestException('This task is not a recurring task');
+		}
+
+		const instances = await this.prisma.task.findMany({
+			where: {
+				parentRecurringTaskId: id,
+			},
+			include: {
+				assignee: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				createdBy: {
+					select: {
+						id: true,
+						name: true,
+						email: true,
+						username: true,
+						imageUrl: true,
+					},
+				},
+				house: {
+					select: {
+						id: true,
+						name: true,
+					},
+				},
+				assigneeLinks: {
+					include: {
+						user: {
+							select: {
+								id: true,
+								name: true,
+								imageUrl: true,
+								username: true,
+							},
+						},
+					},
+				},
+			},
+			orderBy: { deadline: 'desc' },
+		});
+
+		type AssigneeLink = {
+			user: {
+				id: string;
+				name: string;
+				imageUrl?: string | null;
+				username: string;
+			};
+		};
+
+		return {
+			template: task,
+			instances: instances.map((t) => ({
+				...t,
+				assignedUsers:
+					(t.assigneeLinks as AssigneeLink[] | undefined)?.map(
+						(l) => l.user,
+					) ?? [],
+			})),
+		};
+	}
 }
