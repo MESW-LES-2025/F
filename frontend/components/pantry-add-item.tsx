@@ -190,7 +190,7 @@ export default function PantryAddItem({ onItemAdded }: PantryAddItemProps) {
 
           // Call the callback to refresh the pantry list
           onItemAdded?.();
-          
+
           // Reload page to ensure frontend state is updated
           window.location.reload();
         } catch (err: any) {
