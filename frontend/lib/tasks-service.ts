@@ -1,5 +1,5 @@
 import { apiGet, apiPost, apiPatch, apiDelete } from "./api-client";
-import type { Task } from "./types";
+import type { Task, RecurrencePattern } from "./types";
 
 export interface CreateTaskPayload {
   title: string;
@@ -8,6 +8,9 @@ export interface CreateTaskPayload {
   assignedUserIds?: string[];
   deadline: string;
   houseId: string;
+  isRecurring?: boolean;
+  recurrencePattern?: RecurrencePattern;
+  recurrenceInterval?: number;
 }
 
 export interface UpdateTaskPayload {
@@ -18,6 +21,9 @@ export interface UpdateTaskPayload {
   size?: "SMALL" | "MEDIUM" | "LARGE" | "XL";
   deadline?: string;
   status?: "todo" | "doing" | "done";
+  isRecurring?: boolean;
+  recurrencePattern?: RecurrencePattern;
+  recurrenceInterval?: number;
 }
 
 export interface TaskResponse {
@@ -53,6 +59,12 @@ export interface TaskResponse {
   archivedAt?: string | null;
   assignedUsers?: { id: string; name: string; imageUrl?: string | null }[];
   size?: "SMALL" | "MEDIUM" | "LARGE" | "XL";
+  isRecurring?: boolean;
+  recurrencePattern?: "DAILY" | "WEEKLY" | "MONTHLY";
+  recurrenceInterval?: number;
+  nextRecurrenceDate?: string | null;
+  lastRecurrenceDate?: string | null;
+  parentRecurringTaskId?: string | null;
 }
 
 /**
@@ -87,6 +99,16 @@ function transformTask(backendTask: TaskResponse): Task {
       ? new Date(backendTask.archivedAt)
       : null,
     size: backendTask.size || "MEDIUM",
+    isRecurring: backendTask.isRecurring || false,
+    recurrencePattern: backendTask.recurrencePattern || undefined,
+    recurrenceInterval: backendTask.recurrenceInterval || undefined,
+    nextRecurrenceDate: backendTask.nextRecurrenceDate
+      ? new Date(backendTask.nextRecurrenceDate)
+      : null,
+    lastRecurrenceDate: backendTask.lastRecurrenceDate
+      ? new Date(backendTask.lastRecurrenceDate)
+      : null,
+    parentRecurringTaskId: backendTask.parentRecurringTaskId || null,
   };
 }
 
@@ -196,4 +218,43 @@ export async function unarchiveTask(taskId: string): Promise<Task> {
     },
   );
   return transformTask(task);
+}
+
+/**
+ * Stop a recurring task
+ */
+export async function stopRecurringTask(taskId: string): Promise<{
+  message: string;
+  task: Task;
+}> {
+  const response = await apiPatch<{ message: string; task: TaskResponse }>(
+    `/tasks/${taskId}/stop-recurrence`,
+    undefined,
+    {
+      requiresAuth: true,
+    },
+  );
+  return {
+    message: response.message,
+    task: transformTask(response.task),
+  };
+}
+
+/**
+ * Get all instances of a recurring task
+ */
+export async function getRecurringTaskInstances(taskId: string): Promise<{
+  template: Task;
+  instances: Task[];
+}> {
+  const response = await apiGet<{
+    template: TaskResponse;
+    instances: TaskResponse[];
+  }>(`/tasks/${taskId}/instances`, {
+    requiresAuth: true,
+  });
+  return {
+    template: transformTask(response.template),
+    instances: response.instances.map(transformTask),
+  };
 }

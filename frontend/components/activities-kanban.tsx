@@ -2,7 +2,14 @@
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { GripVertical, Pencil, Trash2, ArchiveRestore } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import {
+  GripVertical,
+  Pencil,
+  Trash2,
+  ArchiveRestore,
+  Repeat,
+} from "lucide-react";
 import { archiveTask } from "@/lib/tasks-service";
 import { toast } from "@/hooks/use-toast";
 import type { Task } from "@/lib/types";
@@ -151,6 +158,22 @@ function TaskColumn({
                   <p className="text-xs text-gray-600 mb-2 line-clamp-2">
                     {task.description}
                   </p>
+                )}
+                {task.isRecurring && (
+                  <div className="mb-2">
+                    <Badge
+                      variant="outline"
+                      className="text-xs bg-purple-50 text-purple-700 border-purple-200 font-medium"
+                    >
+                      <Repeat className="w-3 h-3 mr-1" />
+                      {task.recurrencePattern === "DAILY" && "Daily"}
+                      {task.recurrencePattern === "WEEKLY" && "Weekly"}
+                      {task.recurrencePattern === "MONTHLY" && "Monthly"}
+                      {task.recurrenceInterval && task.recurrenceInterval > 1
+                        ? ` (every ${task.recurrenceInterval})`
+                        : ""}
+                    </Badge>
+                  </div>
                 )}
                 {task.deadline && (
                   <p className="text-xs text-gray-500 mb-2">

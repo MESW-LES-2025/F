@@ -14,6 +14,7 @@ const nextConfig = {
   turbopack: {
     root: path.resolve(__dirname),
   },
+  reactStrictMode: false,
 };
 
 export default nextConfig;

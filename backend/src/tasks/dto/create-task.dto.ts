@@ -6,6 +6,10 @@ import {
 	IsOptional,
 	IsDateString,
 	IsArray,
+	IsBoolean,
+	IsEnum,
+	IsInt,
+	Min,
 } from 'class-validator';
 
 export enum TaskSize {
@@ -19,6 +23,12 @@ export enum TaskStatus {
 	TODO = 'todo',
 	DOING = 'doing',
 	DONE = 'done',
+}
+
+export enum RecurrencePattern {
+	DAILY = 'DAILY',
+	WEEKLY = 'WEEKLY',
+	MONTHLY = 'MONTHLY',
 }
 
 export class CreateTaskDto {
@@ -70,6 +80,35 @@ export class CreateTaskDto {
 	@IsNotEmpty()
 	@IsDateString()
 	deadline: string;
+
+	@ApiPropertyOptional({
+		example: false,
+		description: 'Whether this task is recurring',
+		default: false,
+	})
+	@IsOptional()
+	@IsBoolean()
+	isRecurring?: boolean;
+
+	@ApiPropertyOptional({
+		enum: RecurrencePattern,
+		example: RecurrencePattern.WEEKLY,
+		description: 'Recurrence pattern (DAILY, WEEKLY, or MONTHLY)',
+	})
+	@IsOptional()
+	@IsEnum(RecurrencePattern)
+	recurrencePattern?: RecurrencePattern;
+
+	@ApiPropertyOptional({
+		example: 1,
+		description:
+			'Recurrence interval (e.g., every 1, 2, 3... days/weeks/months)',
+		default: 1,
+	})
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	recurrenceInterval?: number;
 
 	@ApiProperty({
 		example: '550e8400-e29b-41d4-a716-446655440000',

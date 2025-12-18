@@ -157,4 +157,41 @@ export class TasksController {
 	) {
 		return this.tasksService.remove(id, req.user.userId);
 	}
+
+	@Patch(':id/stop-recurrence')
+	@ApiOperation({ summary: 'Stop a recurring task' })
+	@ApiParam({ name: 'id', description: 'Task UUID' })
+	@ApiResponse({
+		status: 200,
+		description: 'Recurring task stopped successfully',
+	})
+	@ApiResponse({ status: 400, description: 'Task is not recurring' })
+	@ApiResponse({
+		status: 403,
+		description: 'Forbidden - only creator can stop recurrence',
+	})
+	@ApiResponse({ status: 404, description: 'Task not found' })
+	async stopRecurrence(
+		@Param('id') id: string,
+		@Request() req: { user: { userId: string } },
+	) {
+		return this.tasksService.stopRecurrence(id, req.user.userId);
+	}
+
+	@Get(':id/instances')
+	@ApiOperation({ summary: 'Get all instances of a recurring task' })
+	@ApiParam({ name: 'id', description: 'Recurring task UUID' })
+	@ApiResponse({
+		status: 200,
+		description: 'Recurring task instances retrieved successfully',
+	})
+	@ApiResponse({ status: 400, description: 'Task is not recurring' })
+	@ApiResponse({ status: 403, description: 'Forbidden' })
+	@ApiResponse({ status: 404, description: 'Task not found' })
+	async getRecurringTaskInstances(
+		@Param('id') id: string,
+		@Request() req: { user: { userId: string } },
+	) {
+		return this.tasksService.getRecurringTaskInstances(id, req.user.userId);
+	}
 }
