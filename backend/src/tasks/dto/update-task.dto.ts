@@ -6,8 +6,11 @@ import {
 	IsDateString,
 	IsEnum,
 	IsArray,
+	IsBoolean,
+	IsInt,
+	Min,
 } from 'class-validator';
-import { TaskStatus, TaskSize } from './create-task.dto';
+import { TaskStatus, TaskSize, RecurrencePattern } from './create-task.dto';
 
 export class UpdateTaskDto {
 	@ApiPropertyOptional({
@@ -68,4 +71,30 @@ export class UpdateTaskDto {
 	@IsOptional()
 	@IsEnum(TaskSize)
 	size?: TaskSize;
+
+	@ApiPropertyOptional({
+		example: false,
+		description: 'Whether this task is recurring',
+	})
+	@IsOptional()
+	@IsBoolean()
+	isRecurring?: boolean;
+
+	@ApiPropertyOptional({
+		enum: RecurrencePattern,
+		example: RecurrencePattern.WEEKLY,
+		description: 'Recurrence pattern (DAILY, WEEKLY, or MONTHLY)',
+	})
+	@IsOptional()
+	@IsEnum(RecurrencePattern)
+	recurrencePattern?: RecurrencePattern;
+
+	@ApiPropertyOptional({
+		example: 1,
+		description: 'Recurrence interval (e.g., every 1, 2, 3... days/weeks/months)',
+	})
+	@IsOptional()
+	@IsInt()
+	@Min(1)
+	recurrenceInterval?: number;
 }
