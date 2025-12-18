@@ -48,12 +48,16 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
+  
+  // Helper to get today's date in YYYY-MM-DD format
+  const getTodayDate = () => new Date().toISOString().split("T")[0];
+  
   const [formData, setFormData] = useState({
     title: "",
     description: "",
     assignedUserIds: [] as string[],
     size: "",
-    deadline: "",
+    deadline: getTodayDate(),
     isRecurring: false,
     recurrencePattern: "" as RecurrencePattern | "",
     recurrenceInterval: 1,
@@ -180,7 +184,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         description: "",
         assignedUserIds: [],
         size: "",
-        deadline: "",
+        deadline: getTodayDate(),
         isRecurring: false,
         recurrencePattern: "",
         recurrenceInterval: 1,
@@ -211,7 +215,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         description: "",
         assignedUserIds: [],
         size: "",
-        deadline: "",
+        deadline: getTodayDate(),
         isRecurring: false,
         recurrencePattern: "",
         recurrenceInterval: 1,
