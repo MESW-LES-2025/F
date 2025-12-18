@@ -30,9 +30,10 @@ import {
 } from "@/components/ui/select";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Plus } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Repeat } from "lucide-react";
 import { createTask } from "@/lib/tasks-service";
-import type { Task, User } from "@/lib/types";
+import type { Task, User, RecurrencePattern } from "@/lib/types";
 import { useEffect } from "react";
 import { apiGet } from "@/lib/api-client";
 import { useHouse } from "@/lib/house-context";
@@ -53,6 +54,9 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     assignedUserIds: [] as string[],
     size: "",
     deadline: "",
+    isRecurring: false,
+    recurrencePattern: "" as RecurrencePattern | "",
+    recurrenceInterval: 1,
   });
 
   const [formErrors, setFormErrors] = useState({
@@ -150,6 +154,13 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         size: (formData as any).size || undefined,
         deadline: new Date(formData.deadline).toISOString(),
         houseId: selectedHouse.id,
+        isRecurring: formData.isRecurring,
+        recurrencePattern: formData.isRecurring && formData.recurrencePattern 
+          ? (formData.recurrencePattern as RecurrencePattern)
+          : undefined,
+        recurrenceInterval: formData.isRecurring && formData.recurrenceInterval
+          ? formData.recurrenceInterval
+          : undefined,
       });
 
       // Call the callback with the new task
@@ -162,6 +173,9 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         assignedUserIds: [],
         size: "",
         deadline: "",
+        isRecurring: false,
+        recurrencePattern: "",
+        recurrenceInterval: 1,
       });
       setFormErrors({
         title: false,
@@ -189,6 +203,9 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         assignedUserIds: [],
         size: "",
         deadline: "",
+        isRecurring: false,
+        recurrencePattern: "",
+        recurrenceInterval: 1,
       });
       setFormErrors({
         title: false,
@@ -211,7 +228,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
           New Task
         </Button>
       </DialogTrigger>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Create New Task</DialogTitle>
@@ -358,6 +375,91 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
               />
               {formErrors.deadline && (
                 <p className="text-sm text-destructive">Deadline is required</p>
+              )}
+            </div>
+
+            {/* Recurrence Section */}
+            <div className="space-y-3 border-t pt-4">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="isRecurring"
+                  checked={formData.isRecurring}
+                  onCheckedChange={(checked) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      isRecurring: checked as boolean,
+                      recurrencePattern: checked ? prev.recurrencePattern : "",
+                    }))
+                  }
+                />
+                <Label
+                  htmlFor="isRecurring"
+                  className="text-sm font-medium flex items-center gap-2 cursor-pointer"
+                >
+                  <Repeat className="w-4 h-4" />
+                  Make this a recurring task
+                </Label>
+              </div>
+
+              {formData.isRecurring && (
+                <div className="ml-6 space-y-3 animate-in fade-in-50 duration-200">
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrencePattern">
+                      Recurrence Pattern
+                    </Label>
+                    <Select
+                      value={formData.recurrencePattern}
+                      onValueChange={(v) =>
+                        setFormData((prev) => ({
+                          ...prev,
+                          recurrencePattern: v as RecurrencePattern,
+                        }))
+                      }
+                    >
+                      <SelectTrigger className="w-full">
+                        <SelectValue placeholder="Select pattern" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="DAILY">Daily</SelectItem>
+                        <SelectItem value="WEEKLY">Weekly</SelectItem>
+                        <SelectItem value="MONTHLY">Monthly</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label htmlFor="recurrenceInterval">
+                      Repeat every
+                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Input
+                        id="recurrenceInterval"
+                        name="recurrenceInterval"
+                        type="number"
+                        min="1"
+                        max="365"
+                        value={formData.recurrenceInterval}
+                        onChange={(e) =>
+                          setFormData((prev) => ({
+                            ...prev,
+                            recurrenceInterval: parseInt(e.target.value) || 1,
+                          }))
+                        }
+                        className="w-20"
+                      />
+                      <span className="text-sm text-muted-foreground">
+                        {formData.recurrencePattern === "DAILY" && "day(s)"}
+                        {formData.recurrencePattern === "WEEKLY" && "week(s)"}
+                        {formData.recurrencePattern === "MONTHLY" &&
+                          "month(s)"}
+                        {!formData.recurrencePattern && "unit(s)"}
+                      </span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Task will automatically reappear based on this schedule
+                    </p>
+                  </div>
+                </div>
               )}
             </div>
           </div>
