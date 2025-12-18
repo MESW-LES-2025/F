@@ -251,6 +251,60 @@ describe('AuthService', () => {
 				}),
 			).rejects.toThrow(ConflictException);
 		});
+
+		it('should throw ConflictException if username is taken by active user', async () => {
+			mockPrismaService.user.findUnique
+				.mockResolvedValueOnce(null) // email check
+				.mockResolvedValueOnce(mockUser); // username check
+
+			await expect(
+				service.register({
+					email: 'new@example.com',
+					username: 'testuser',
+					password: 'password123',
+				}),
+			).rejects.toThrow('Username is already taken');
+		});
+
+		it('should throw ConflictException if username is taken by a different deleted user', async () => {
+			const deletedUserEmail = {
+				...mockUser,
+				id: 'user-1',
+				deletedAt: new Date(),
+			};
+			const otherDeletedUserUsername = {
+				...mockUser,
+				id: 'user-2',
+				deletedAt: new Date(),
+			};
+
+			mockPrismaService.user.findUnique
+				.mockResolvedValueOnce(deletedUserEmail) // email check (reactivating)
+				.mockResolvedValueOnce(otherDeletedUserUsername); // username check (taken by someone else)
+
+			await expect(
+				service.register({
+					email: 'test@example.com',
+					username: 'otherusername',
+					password: 'password123',
+				}),
+			).rejects.toThrow('Username is already taken');
+		});
+
+		it('should throw generic error during registration if not P2002', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+			mockPrismaService.user.create.mockRejectedValue(
+				new Error('Generic failure'),
+			);
+
+			await expect(
+				service.register({
+					email: 'test@example.com',
+					username: 'testuser',
+					password: 'password123',
+				}),
+			).rejects.toThrow('Generic failure');
+		});
 	});
 
 	describe('login', () => {
@@ -590,6 +644,20 @@ describe('AuthService', () => {
 				}),
 			).rejects.toThrow(UnauthorizedException);
 		});
+
+		it('should throw UnauthorizedException for Google users', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue({
+				...mockUser,
+				googleId: 'google-123',
+			});
+
+			await expect(
+				service.changePassword(mockUser.id, {
+					currentPassword: 'any',
+					newPassword: 'any',
+				}),
+			).rejects.toThrow('Google accounts cannot change password');
+		});
 	});
 
 	describe('storeGoogleTokens', () => {
@@ -782,6 +850,41 @@ describe('AuthService', () => {
 			);
 			expect(consoleSpy).toHaveBeenCalled();
 		});
+
+		it('should handle missing given_name, family_name, and picture', async () => {
+			mockVerifyIdToken.mockResolvedValue({
+				getPayload: () => ({
+					email: 'test@example.com',
+					sub: 'google-id',
+				}),
+			});
+
+			const validateSpy = jest
+				.spyOn(service, 'validateGoogleUser')
+				.mockResolvedValue(
+					{} as unknown as Awaited<
+						ReturnType<typeof service.validateGoogleUser>
+					>,
+				);
+
+			await service.loginWithGoogleIdToken(token);
+
+			expect(validateSpy).toHaveBeenCalledWith(
+				expect.objectContaining({
+					firstName: '',
+					lastName: '',
+					picture: '',
+				}),
+			);
+		});
+
+		it('should handle errors with missing message', async () => {
+			mockVerifyIdToken.mockRejectedValue({});
+
+			await expect(service.loginWithGoogleIdToken(token)).rejects.toThrow(
+				'Invalid Google token: Unknown error',
+			);
+		});
 	});
 
 	describe('validateGoogleUser', () => {
@@ -877,6 +980,34 @@ describe('AuthService', () => {
 			expect(result.user).toHaveProperty('houses');
 			expect(mockPrismaService.user.create).toHaveBeenCalled();
 		});
+
+		it('should use existing imageUrl if picture is missing', async () => {
+			const existingUser = {
+				...mockUser,
+				googleId: null,
+				imageUrl: 'old-url',
+			};
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+			mockPrismaService.user.findFirst.mockResolvedValue(existingUser);
+			mockPrismaService.user.update.mockResolvedValue({
+				...existingUser,
+				googleId: 'google-id',
+				imageUrl: 'old-url',
+			});
+
+			await service.validateGoogleUser({
+				...googleUser,
+				picture: '',
+			});
+
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						imageUrl: 'old-url',
+					}) as unknown,
+				}),
+			);
+		});
 	});
 
 	describe('forgotPassword', () => {
@@ -921,6 +1052,24 @@ describe('AuthService', () => {
 				'password reset link has been sent',
 			);
 			expect(mockEmailService.sendEmail).not.toHaveBeenCalled();
+		});
+
+		it('should use default CORS origin if not set', async () => {
+			const originalOrigin = process.env.CORS_ORIGIN;
+			delete process.env.CORS_ORIGIN;
+
+			mockPrismaService.user.findUnique.mockResolvedValue(mockUser);
+			mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+			await service.forgotPassword({ email: mockUser.email });
+
+			expect(mockEmailService.sendEmail).toHaveBeenCalledWith(
+				expect.any(String),
+				expect.any(String),
+				expect.stringContaining('http://localhost:8080'),
+			);
+
+			process.env.CORS_ORIGIN = originalOrigin;
 		});
 	});
 

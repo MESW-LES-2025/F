@@ -77,7 +77,6 @@ export class HouseController {
 	})
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')
-	@ApiOperation({ summary: 'Find a specific house' })
 	@Get(':id')
 	findOne(@Param('id') id: string) {
 		return this.houseService.findOne(id);

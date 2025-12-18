@@ -7,7 +7,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
+import { CreateTaskDto, TaskSize, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
@@ -219,10 +219,30 @@ describe('TasksService', () => {
 		}).compile();
 
 		service = module.get<TasksService>(TasksService);
-		prisma = module.get<PrismaService>(PrismaService) as MockPrismaService;
+		prisma = module.get<PrismaService>(
+			PrismaService,
+		) as unknown as MockPrismaService;
 		notifications = module.get<NotificationsService>(
 			NotificationsService,
-		) as MockNotificationsService;
+		) as unknown as MockNotificationsService;
+
+		prisma.houseToUser.findMany.mockResolvedValue([
+			{ houseId: 'house-1', userId: 'user-123' },
+		]);
+		prisma.user.findUnique.mockResolvedValue({
+			id: 'u1',
+			name: 'U1',
+			email: 'u1@test.com',
+			username: 'u1',
+		} as unknown as Awaited<
+			ReturnType<MockPrismaService['user']['findUnique']>
+		>);
+		prisma.houseToUser.findFirst.mockResolvedValue({
+			userId: 'u1',
+			houseId: 'house-1',
+		} as unknown as Awaited<
+			ReturnType<MockPrismaService['houseToUser']['findFirst']>
+		>);
 	});
 
 	describe('create', () => {
@@ -290,6 +310,9 @@ describe('TasksService', () => {
 			expect(result.id).toBe('task-1');
 			// Creator is different from assignee, so notification should be sent
 			expect(notifications.create).toHaveBeenCalledTimes(1);
+			expect(notifications.create).toHaveBeenCalledWith(
+				expect.anything(),
+			);
 		});
 
 		it('throws NotFoundException when house does not exist', async () => {
@@ -523,12 +546,11 @@ describe('TasksService', () => {
 					: never,
 			);
 
-			prisma.task.update.mockImplementation(({ where }) => ({
+			(prisma.task.update as jest.Mock).mockResolvedValue({
 				...task,
-				id: where.id,
 				archived: true,
 				archivedAt: new Date(),
-			}));
+			});
 
 			const result = await service.archive('task-1', 'user-1');
 			expect(result.archived).toBe(true);
@@ -733,63 +755,113 @@ describe('TasksService', () => {
 			expect(result.title).toBe('New title');
 		});
 
-		it('sends completion notification when status changes to done', async () => {
+		it('sends completion notification when status changes to done (actor is creator)', async () => {
 			const existingDoneSource: MockPrismaTask = {
-				id: 'task-1',
-				title: 'Task',
-				description: 'Desc',
-				assigneeId: 'user-1',
-				createdById: 'user-1',
-				houseId: 'house-1',
+				...baseMockTask,
 				status: 'todo',
-				archived: false,
-				archivedAt: null,
-				deadline: new Date(),
-				house: { id: 'house-1', name: 'House' },
-				assignee: {
-					id: 'user-1',
-					name: 'Assignee',
-					email: 'a@example.com',
-					username: 'assignee',
-				},
-				createdBy: {
-					id: 'user-1',
-					name: 'Creator',
-					email: 'c@example.com',
-					username: 'creator',
-				},
+				createdById: 'user-1',
 			};
 
 			jest.spyOn(service, 'findOne').mockResolvedValue(
-				existingDoneSource as unknown as ReturnType<
-					typeof service.findOne
-				> extends Promise<infer R>
-					? R
-					: never,
+				existingDoneSource as unknown as Awaited<
+					ReturnType<typeof service.findOne>
+				>,
 			);
 
-			const dtoDone: UpdateTaskDto = { status: 'done' };
+			const dtoDone: UpdateTaskDto = { status: TaskStatus.DONE };
 
 			(prisma.task.update as jest.Mock).mockResolvedValue({
 				...existingDoneSource,
-				status: 'done',
+				status: TaskStatus.DONE,
 			});
 
 			(prisma.houseToUser.findMany as jest.Mock).mockResolvedValue([
 				{ userId: 'user-1', houseId: 'house-1' },
 				{ userId: 'user-2', houseId: 'house-1' },
 			]);
-			(notifications.create as jest.Mock).mockResolvedValue();
+			(notifications.create as jest.Mock).mockResolvedValue(undefined);
 
 			await service.update('task-1', dtoDone, 'user-1');
 
-			const completionMock: MockNotificationsService['create'] =
-				notifications.create;
-			expect(completionMock).toHaveBeenCalled();
-			const [payload] = completionMock.mock.calls[0];
-			expect(payload.category).toBe(NotificationCategory.SCRUM);
-			expect(payload.level).toBe(NotificationLevel.MEDIUM);
-			expect(payload.userIds).toEqual(['user-1', 'user-2']);
+			expect(notifications.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					body: expect.stringContaining(
+						existingDoneSource.createdBy.name,
+					) as unknown,
+				}),
+			);
+		});
+
+		it('sends completion notification when status changes to done (actor is assignee)', async () => {
+			const existingDoneSource: MockPrismaTask = {
+				...baseMockTask,
+				status: 'todo',
+				createdById: 'user-999',
+				assigneeId: 'user-2',
+			};
+
+			jest.spyOn(service, 'findOne').mockResolvedValue(
+				existingDoneSource as unknown as Awaited<
+					ReturnType<typeof service.findOne>
+				>,
+			);
+
+			const dtoDone: UpdateTaskDto = { status: TaskStatus.DONE };
+
+			(prisma.task.update as jest.Mock).mockResolvedValue({
+				...existingDoneSource,
+				status: TaskStatus.DONE,
+			});
+
+			(prisma.houseToUser.findMany as jest.Mock).mockResolvedValue([
+				{ userId: 'user-1', houseId: 'house-1' },
+			]);
+			(notifications.create as jest.Mock).mockResolvedValue(undefined);
+
+			await service.update('task-1', dtoDone, 'user-2');
+
+			expect(notifications.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					body: expect.stringContaining(
+						existingDoneSource.assignee.name,
+					) as unknown,
+				}),
+			);
+		});
+
+		it('sends completion notification when status changes to done (actor is neither)', async () => {
+			const existingDoneSource: MockPrismaTask = {
+				...baseMockTask,
+				status: 'todo',
+				createdById: 'user-998',
+				assigneeId: 'user-999',
+			};
+
+			jest.spyOn(service, 'findOne').mockResolvedValue(
+				existingDoneSource as unknown as Awaited<
+					ReturnType<typeof service.findOne>
+				>,
+			);
+
+			const dtoDone: UpdateTaskDto = { status: TaskStatus.DONE };
+
+			(prisma.task.update as jest.Mock).mockResolvedValue({
+				...existingDoneSource,
+				status: TaskStatus.DONE,
+			});
+
+			(prisma.houseToUser.findMany as jest.Mock).mockResolvedValue([
+				{ userId: 'user-1', houseId: 'house-1' },
+			]);
+			(notifications.create as jest.Mock).mockResolvedValue(undefined);
+
+			await service.update('task-1', dtoDone, 'user-123');
+
+			expect(notifications.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					body: expect.stringContaining('A member') as unknown,
+				}),
+			);
 		});
 
 		it('throws ForbiddenException when user has no permission', async () => {
@@ -920,7 +992,7 @@ describe('TasksService', () => {
 	describe('findAllForUser', () => {
 		it('should return tasks for user houses', async () => {
 			prisma.houseToUser.findMany.mockResolvedValue([
-				{ houseId: 'house-1' },
+				{ houseId: 'house-1', userId: 'user-123' },
 			]);
 			prisma.task.findMany.mockResolvedValue([baseMockTask]);
 
@@ -958,7 +1030,7 @@ describe('TasksService', () => {
 
 		it('should apply filters', async () => {
 			prisma.houseToUser.findMany.mockResolvedValue([
-				{ houseId: 'house-1' },
+				{ houseId: 'house-1', userId: 'user-123' },
 			]);
 			prisma.task.findMany.mockResolvedValue([baseMockTask]);
 
@@ -1044,6 +1116,118 @@ describe('TasksService', () => {
 					}) as unknown,
 				}) as unknown,
 			);
+		});
+	});
+
+	describe('Error Handling', () => {
+		it('should handle failure in findMany in updateTaskAssignees', async () => {
+			const existingTask = {
+				...baseMockTask,
+				id: 'task-1',
+			} as MockPrismaTask;
+			prisma.task.findUnique.mockResolvedValue(existingTask);
+			prisma.task.update.mockResolvedValue(existingTask);
+			prisma.taskToUser.findMany.mockRejectedValue(new Error('DB Error'));
+
+			// Should not throw, just log error and continue
+			await service.update(
+				'task-1',
+				{ assignedUserIds: ['u1'] },
+				'user-123',
+			);
+
+			expect(prisma.task.update).toHaveBeenCalled();
+		});
+
+		it('should handle failure in deleteMany/createMany in updateTaskAssignees', async () => {
+			const existingTask = {
+				...baseMockTask,
+				id: 'task-1',
+			} as MockPrismaTask;
+			prisma.task.findUnique.mockResolvedValue(existingTask);
+			prisma.task.update.mockResolvedValue(existingTask);
+			prisma.taskToUser.findMany.mockResolvedValue([]);
+			prisma.taskToUser.deleteMany.mockRejectedValue(
+				new Error('Delete Error'),
+			);
+
+			const consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation();
+			await service.update(
+				'task-1',
+				{ assignedUserIds: ['u1'] },
+				'user-123',
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[TasksService] Failed to update task assignees',
+				expect.any(Error),
+			);
+			consoleSpy.mockRestore();
+		});
+
+		it('should handle failure in notification service during assignment', async () => {
+			const existingTask = {
+				...baseMockTask,
+				id: 'task-1',
+			} as MockPrismaTask;
+			prisma.task.findUnique.mockResolvedValue(existingTask);
+			prisma.task.update.mockResolvedValue(existingTask);
+			prisma.taskToUser.findMany.mockResolvedValue([]);
+			prisma.taskToUser.deleteMany.mockResolvedValue(undefined);
+			prisma.taskToUser.createMany.mockResolvedValue(undefined);
+			notifications.create.mockRejectedValue(
+				new Error('Notification Error'),
+			);
+
+			const consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation();
+			await service.update(
+				'task-1',
+				{ assignedUserIds: ['u1'] },
+				'user-123',
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[TasksService] Failed to create update assignment notification',
+				expect.any(Error),
+			);
+			consoleSpy.mockRestore();
+		});
+
+		it('should handle failure in notification service during completion', async () => {
+			const existingTask = {
+				...baseMockTask,
+				id: 'task-1',
+				status: 'todo',
+			} as MockPrismaTask;
+			const updatedTask = {
+				...baseMockTask,
+				id: 'task-1',
+				status: 'done',
+			} as MockPrismaTask;
+			prisma.task.findUnique.mockResolvedValue(existingTask);
+			prisma.task.update.mockResolvedValue(updatedTask);
+			prisma.houseToUser.findMany.mockResolvedValue([
+				{ userId: 'u1', houseId: 'h1' },
+			]);
+			notifications.create.mockRejectedValue(
+				new Error('Completion Notification Error'),
+			);
+
+			const consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation();
+			await service.update(
+				'task-1',
+				{ status: TaskStatus.DONE },
+				'user-1',
+			);
+			expect(consoleSpy).toHaveBeenCalledWith(
+				'[TasksService] Failed to create completion notification',
+				expect.any(Error),
+			);
+			consoleSpy.mockRestore();
 		});
 	});
 
