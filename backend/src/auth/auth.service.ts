@@ -38,7 +38,7 @@ export interface GoogleTokens {
 
 @Injectable()
 export class AuthService {
-	private oauthClient: OAuth2Client;
+	private readonly oauthClient: OAuth2Client;
 
 	constructor(
 		private readonly prisma: PrismaService,

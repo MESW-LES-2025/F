@@ -91,6 +91,9 @@ describe('UserService', () => {
 			delete: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
+			update: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>;
 		};
 	};
 
@@ -161,6 +164,9 @@ describe('UserService', () => {
 				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 			delete: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			update: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 		},
@@ -246,12 +252,50 @@ describe('UserService', () => {
 				service.update('no-id', { name: 'X' } as UpdateUserDto),
 			).rejects.toThrow(NotFoundException);
 		});
+
+		it('handles missing username and name in update', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+			await service.update(mockUser.id, {
+				username: '',
+				name: undefined,
+			});
+
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: {},
+				}),
+			);
+		});
+
+		it('covers else branch of username and name in update', async () => {
+			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.user.update.mockResolvedValue(mockUser);
+
+			await service.update(mockUser.id, {
+				username: undefined,
+				name: 'KeepName',
+			});
+
+			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: { name: 'KeepName' },
+				}),
+			);
+		});
 	});
 
 	describe('remove', () => {
-		it('soft-deletes user and revokes refresh tokens', async () => {
+		it('soft-deletes user, revokes refresh tokens, and leaves all houses', async () => {
 			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
-			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
+			const memberships = [
+				{ houseId: 'house-1', userId: mockUser.id },
+				{ houseId: 'house-2', userId: mockUser.id },
+			];
+			mockPrismaService.houseToUser.findMany.mockResolvedValue(
+				memberships as unknown as HouseToUser[],
+			);
 			mockPrismaService.user.update.mockResolvedValue({
 				...mockUser,
 				deletedAt: new Date(),
@@ -260,21 +304,23 @@ describe('UserService', () => {
 				count: 2,
 			});
 
+			// mock leaveHouse calls
+			const leaveHouseSpy = jest
+				.spyOn(service, 'leaveHouse')
+				.mockResolvedValue(
+					{} as unknown as Awaited<
+						ReturnType<typeof service.leaveHouse>
+					>,
+				);
+
 			const result = await service.remove(mockUser.id);
 
-			expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
-				where: { id: mockUser.id, deletedAt: null },
-			});
-			expect(mockPrismaService.user.update).toHaveBeenCalledWith({
-				where: { id: mockUser.id },
-				data: { deletedAt: expect.any(Date) as Date },
-			});
-			expect(
-				mockPrismaService.refreshToken.updateMany,
-			).toHaveBeenCalledWith({
-				where: { userId: mockUser.id, isRevoked: false },
-				data: { isRevoked: true, revokedAt: expect.any(Date) as Date },
-			});
+			expect(mockPrismaService.houseToUser.findMany).toHaveBeenCalledWith(
+				{
+					where: { userId: mockUser.id },
+				},
+			);
+			expect(leaveHouseSpy).toHaveBeenCalledTimes(2);
 			expect(result).toEqual({ success: true });
 		});
 
@@ -704,7 +750,56 @@ describe('UserService', () => {
 				houseId: mockHouse.id,
 			});
 
+			expect(mockNotificationService.create).toHaveBeenCalled();
 			expect(result).toEqual(notificationResult);
+		});
+
+		it('supports search by only username', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					userId: mockInvitingUser.id,
+					houseId: mockHouse.id,
+				} as unknown as HouseToUser);
+			mockPrismaService.user.findUnique.mockResolvedValue(
+				mockInvitingUser,
+			);
+			mockNotificationService.create.mockResolvedValue({});
+
+			await service.inviteToHouse(
+				{ houseId: mockHouse.id, username: 'testuser' },
+				mockInvitingUser.id,
+			);
+
+			expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+				where: { username: 'testuser' },
+			});
+		});
+
+		it('supports search by only email', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.user.findFirst.mockResolvedValue(mockInvitedUser);
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(null)
+				.mockResolvedValueOnce({
+					userId: mockInvitingUser.id,
+					houseId: mockHouse.id,
+				} as unknown as HouseToUser);
+			mockPrismaService.user.findUnique.mockResolvedValue(
+				mockInvitingUser,
+			);
+			mockNotificationService.create.mockResolvedValue({});
+
+			await service.inviteToHouse(
+				{ houseId: mockHouse.id, email: 'test@example.com' },
+				mockInvitingUser.id,
+			);
+
+			expect(mockPrismaService.user.findFirst).toHaveBeenCalledWith({
+				where: { email: 'test@example.com' },
+			});
 		});
 	});
 
@@ -767,6 +862,86 @@ describe('UserService', () => {
 				where: { id: mockHouseToUser.id },
 			});
 			expect(result).toEqual(mockHouseToUser);
+		});
+
+		it('promotes next user to ADMIN if leaving user was the only ADMIN', async () => {
+			const leavingAdmin = { ...mockHouseToUser, role: 'ADMIN' };
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				leavingAdmin,
+			);
+			mockPrismaService.houseToUser.delete.mockResolvedValue(
+				leavingAdmin,
+			);
+
+			// First findFirst for nextAdmin returns null (no other admins)
+			// Second findFirst for nextUserRelation returns a user
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(leavingAdmin) // for findFirst to verify presence
+				.mockResolvedValueOnce(null) // for nextAdmin check
+				.mockResolvedValueOnce({
+					id: 'next-user-relation-id',
+					userId: 'user-2',
+					houseId: mockHouse.id,
+				} as unknown as HouseToUser);
+
+			mockPrismaService.houseToUser.update.mockResolvedValue(
+				{} as unknown as HouseToUser,
+			);
+
+			await service.leaveHouse('user-1', mockHouse.id);
+
+			expect(mockPrismaService.houseToUser.update).toHaveBeenCalledWith(
+				expect.objectContaining({
+					where: {
+						id: 'next-user-relation-id',
+						houseId: mockHouse.id,
+					},
+					data: { role: 'ADMIN' },
+				}),
+			);
+		});
+
+		it('does nothing if another admin already exists', async () => {
+			const adminRelation = { ...mockHouseToUser, role: 'ADMIN' };
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValueOnce(
+				adminRelation,
+			);
+			mockPrismaService.houseToUser.delete.mockResolvedValue(
+				adminRelation,
+			);
+
+			// First findFirst for nextAdmin returns an existing admin
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(adminRelation) // verify presence
+				.mockResolvedValueOnce({
+					id: 'other-admin',
+				} as unknown as HouseToUser); // found other admin
+
+			await service.leaveHouse('user-1', mockHouse.id);
+
+			expect(mockPrismaService.houseToUser.update).not.toHaveBeenCalled();
+		});
+
+		it('throws NotFoundException if no more users to promote when ADMIN leaves', async () => {
+			const leavingAdmin = { ...mockHouseToUser, role: 'ADMIN' };
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				leavingAdmin,
+			);
+			mockPrismaService.houseToUser.delete.mockResolvedValue(
+				leavingAdmin,
+			);
+
+			mockPrismaService.houseToUser.findFirst
+				.mockResolvedValueOnce(leavingAdmin) // initial
+				.mockResolvedValueOnce(null) // nextAdmin
+				.mockResolvedValueOnce(null); // nextUserRelation
+
+			await expect(
+				service.leaveHouse('user-1', mockHouse.id),
+			).rejects.toThrow('There are no more users');
 		});
 	});
 

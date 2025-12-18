@@ -24,101 +24,22 @@ export class ExpenseService {
 		} = createExpenseDto;
 
 		// Verify payer exists and is not soft-deleted
-		const payer = await this.prisma.user.findUnique({
-			where: {
-				id: paidById,
-			},
-		});
-
-		if (payer?.deletedAt !== null) {
-			throw new NotFoundException('Payer user not found or is deleted');
-		}
+		await this.validatePayer(paidById);
 
 		// Verify house exists
-		const house = await this.prisma.house.findUnique({
-			where: { id: houseId },
-		});
-
-		if (!house) {
-			throw new NotFoundException('House not found');
-		}
+		await this.validateHouse(houseId);
 
 		// Verify all users in splitWith exist and are not soft-deleted
-		const usersToSplit = await this.prisma.user.findMany({
-			where: {
-				id: { in: splitWith },
-			},
-		});
-
-		// Filter out deleted users
-		const activeUsers = usersToSplit.filter((u) => u.deletedAt === null);
-
-		if (activeUsers.length !== splitWith.length) {
-			throw new BadRequestException(
-				'One or more users in splitWith do not exist or are deleted',
-			);
-		}
+		await this.validateSplitUsers(splitWith);
 
 		// Verify all users are members of the house
-		const houseMembers = await this.prisma.houseToUser.findMany({
-			where: {
-				houseId,
-				userId: { in: [...splitWith, paidById] },
-			},
-		});
+		await this.validateHouseMembers(houseId, [...splitWith, paidById]);
 
-		const memberIds = new Set(houseMembers.map((hm) => hm.userId));
-		const allUsersAreMemberss = [...splitWith, paidById].every((userId) =>
-			memberIds.has(userId),
+		// Validate splits if provided or default to equal split
+		const expenseSplits = this.calculateAndValidateSplits(
+			splitWith,
+			splits,
 		);
-
-		if (!allUsersAreMemberss) {
-			throw new BadRequestException(
-				'Payer or one or more users in splitWith are not members of this house',
-			);
-		}
-
-		// Validate splits if provided
-		let expenseSplits: { userId: string; percentage: number }[];
-		if (splits && splits.length > 0) {
-			// Validate that splits match splitWith users
-			const splitUserIds = splits.map((s) => s.userId);
-			const splitsSet = new Set(splitUserIds);
-
-			if (splitUserIds.length !== splitWith.length) {
-				throw new BadRequestException(
-					'Splits must match the users in splitWith',
-				);
-			}
-
-			for (const userId of splitWith) {
-				if (!splitsSet.has(userId)) {
-					throw new BadRequestException(
-						'Splits must include all users from splitWith',
-					);
-				}
-			}
-
-			// Validate that percentages sum to 100
-			const totalPercentage = splits.reduce(
-				(sum, split) => sum + split.percentage,
-				0,
-			);
-			if (Math.abs(totalPercentage - 100) > 0.01) {
-				throw new BadRequestException(
-					'Split percentages must sum to 100',
-				);
-			}
-
-			expenseSplits = splits;
-		} else {
-			// Default to equal split
-			const equalPercentage = 100 / splitWith.length;
-			expenseSplits = splitWith.map((userId) => ({
-				userId,
-				percentage: equalPercentage,
-			}));
-		}
 
 		// Create the expense with splits
 		const expense = await this.prisma.expense.create({
@@ -264,48 +185,17 @@ export class ExpenseService {
 
 		// If updating paidById, verify user exists
 		if (updateExpenseDto.paidById) {
-			const payer = await this.prisma.user.findUnique({
-				where: {
-					id: updateExpenseDto.paidById,
-				},
-			});
-
-			if (payer?.deletedAt !== null) {
-				throw new NotFoundException(
-					'Payer user not found or is deleted',
-				);
-			}
+			await this.validatePayer(updateExpenseDto.paidById);
 		}
 
 		// If updating houseId, verify house exists
 		if (updateExpenseDto.houseId) {
-			const house = await this.prisma.house.findUnique({
-				where: { id: updateExpenseDto.houseId },
-			});
-
-			if (!house) {
-				throw new NotFoundException('House not found');
-			}
+			await this.validateHouse(updateExpenseDto.houseId);
 		}
 
 		// If updating splitWith, verify all users exist
 		if (updateExpenseDto.splitWith) {
-			const usersToSplit = await this.prisma.user.findMany({
-				where: {
-					id: { in: updateExpenseDto.splitWith },
-				},
-			});
-
-			// Filter out deleted users
-			const activeUsers = usersToSplit.filter(
-				(u) => u.deletedAt === null,
-			);
-
-			if (activeUsers.length !== updateExpenseDto.splitWith.length) {
-				throw new BadRequestException(
-					'One or more users in splitWith do not exist or are deleted',
-				);
-			}
+			await this.validateSplitUsers(updateExpenseDto.splitWith);
 		}
 
 		// Validate splits if provided
@@ -314,43 +204,13 @@ export class ExpenseService {
 		let expenseSplits: { userId: string; percentage: number }[] | undefined;
 
 		if (updateExpenseDto.splits && updateExpenseDto.splits.length > 0) {
-			// Validate that splits match splitWith users
-			const splitUserIds = updateExpenseDto.splits.map((s) => s.userId);
-			const splitsSet = new Set(splitUserIds);
-
-			if (splitUserIds.length !== splitWith.length) {
-				throw new BadRequestException(
-					'Splits must match the users in splitWith',
-				);
-			}
-
-			for (const userId of splitWith) {
-				if (!splitsSet.has(userId)) {
-					throw new BadRequestException(
-						'Splits must include all users from splitWith',
-					);
-				}
-			}
-
-			// Validate that percentages sum to 100
-			const totalPercentage = updateExpenseDto.splits.reduce(
-				(sum, split) => sum + split.percentage,
-				0,
+			expenseSplits = this.calculateAndValidateSplits(
+				splitWith,
+				updateExpenseDto.splits,
 			);
-			if (Math.abs(totalPercentage - 100) > 0.01) {
-				throw new BadRequestException(
-					'Split percentages must sum to 100',
-				);
-			}
-
-			expenseSplits = updateExpenseDto.splits;
 		} else if (updateExpenseDto.splitWith) {
 			// If splitWith changed but no splits provided, recalculate equal split
-			const equalPercentage = 100 / splitWith.length;
-			expenseSplits = splitWith.map((userId) => ({
-				userId,
-				percentage: equalPercentage,
-			}));
+			expenseSplits = this.calculateAndValidateSplits(splitWith);
 		}
 
 		// Cast incoming DTO to a known partial type so we avoid `any` usage
@@ -911,5 +771,105 @@ export class ExpenseService {
 			categories,
 			totalSpending,
 		};
+	}
+
+	private async validatePayer(paidById: string) {
+		const payer = await this.prisma.user.findUnique({
+			where: {
+				id: paidById,
+			},
+		});
+
+		if (payer?.deletedAt !== null) {
+			throw new NotFoundException('Payer user not found or is deleted');
+		}
+	}
+
+	private async validateHouse(houseId: string) {
+		const house = await this.prisma.house.findUnique({
+			where: { id: houseId },
+		});
+
+		if (!house) {
+			throw new NotFoundException('House not found');
+		}
+	}
+
+	private async validateSplitUsers(splitWith: string[]) {
+		const usersToSplit = await this.prisma.user.findMany({
+			where: {
+				id: { in: splitWith },
+			},
+		});
+
+		const activeUsers = usersToSplit.filter((u) => u.deletedAt === null);
+
+		if (activeUsers.length !== splitWith.length) {
+			throw new BadRequestException(
+				'One or more users in splitWith do not exist or are deleted',
+			);
+		}
+	}
+
+	private async validateHouseMembers(houseId: string, userIds: string[]) {
+		const houseMembers = await this.prisma.houseToUser.findMany({
+			where: {
+				houseId,
+				userId: { in: userIds },
+			},
+		});
+
+		const memberIds = new Set(houseMembers.map((hm) => hm.userId));
+		const allUsersAreMemberss = userIds.every((userId) =>
+			memberIds.has(userId),
+		);
+
+		if (!allUsersAreMemberss) {
+			throw new BadRequestException(
+				'Payer or one or more users in splitWith are not members of this house',
+			);
+		}
+	}
+
+	private calculateAndValidateSplits(
+		splitWith: string[],
+		splits?: { userId: string; percentage: number }[],
+	): { userId: string; percentage: number }[] {
+		if (splits && splits.length > 0) {
+			const splitUserIds = splits.map((s) => s.userId);
+			const splitsSet = new Set(splitUserIds);
+
+			if (splitUserIds.length !== splitWith.length) {
+				throw new BadRequestException(
+					'Splits must match the users in splitWith',
+				);
+			}
+
+			for (const userId of splitWith) {
+				if (!splitsSet.has(userId)) {
+					throw new BadRequestException(
+						'Splits must include all users from splitWith',
+					);
+				}
+			}
+
+			const totalPercentage = splits.reduce(
+				(sum, split) => sum + split.percentage,
+				0,
+			);
+			if (Math.abs(totalPercentage - 100) > 0.01) {
+				throw new BadRequestException(
+					'Split percentages must sum to 100',
+				);
+			}
+
+			return splits;
+		}
+
+		const equalPercentage = 100 / splitWith.length;
+		return splitWith.map((userId) => ({
+			userId,
+			percentage: equalPercentage,
+		}));
 	}
 }
