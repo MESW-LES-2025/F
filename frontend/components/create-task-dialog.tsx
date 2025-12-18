@@ -48,10 +48,10 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
-  
+
   // Helper to get today's date in YYYY-MM-DD format
   const getTodayDate = () => new Date().toISOString().split("T")[0];
-  
+
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -142,10 +142,11 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
       if (formErrors.title) missingFields.push("Title");
       if (formErrors.assignee) missingFields.push("Assignee");
       if (formErrors.deadline) missingFields.push("Deadline");
-      if (formErrors.recurrencePattern) missingFields.push("Recurrence Pattern");
-      
+      if (formErrors.recurrencePattern)
+        missingFields.push("Recurrence Pattern");
+
       setError(
-        `Please fill in all required fields: ${missingFields.join(", ")}`
+        `Please fill in all required fields: ${missingFields.join(", ")}`,
       );
       return;
     }
@@ -167,12 +168,14 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         deadline: new Date(formData.deadline).toISOString(),
         houseId: selectedHouse.id,
         isRecurring: formData.isRecurring,
-        recurrencePattern: formData.isRecurring && formData.recurrencePattern 
-          ? (formData.recurrencePattern as RecurrencePattern)
-          : undefined,
-        recurrenceInterval: formData.isRecurring && formData.recurrenceInterval
-          ? formData.recurrenceInterval
-          : undefined,
+        recurrencePattern:
+          formData.isRecurring && formData.recurrencePattern
+            ? (formData.recurrencePattern as RecurrencePattern)
+            : undefined,
+        recurrenceInterval:
+          formData.isRecurring && formData.recurrenceInterval
+            ? formData.recurrenceInterval
+            : undefined,
       });
 
       // Call the callback with the new task
@@ -419,7 +422,8 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                 <div className="ml-6 space-y-3 animate-in fade-in-50 duration-200">
                   <div className="space-y-2">
                     <Label htmlFor="recurrencePattern">
-                      Recurrence Pattern <span className="text-destructive">*</span>
+                      Recurrence Pattern{" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <Select
                       value={formData.recurrencePattern}
@@ -429,11 +433,14 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                           recurrencePattern: v as RecurrencePattern,
                         }));
                         if (formErrors.recurrencePattern) {
-                          setFormErrors((prev) => ({ ...prev, recurrencePattern: false }));
+                          setFormErrors((prev) => ({
+                            ...prev,
+                            recurrencePattern: false,
+                          }));
                         }
                       }}
                     >
-                      <SelectTrigger 
+                      <SelectTrigger
                         className={`w-full ${formErrors.recurrencePattern ? "border-destructive" : ""}`}
                       >
                         <SelectValue placeholder="Select pattern" />
@@ -452,9 +459,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="recurrenceInterval">
-                      Repeat every
-                    </Label>
+                    <Label htmlFor="recurrenceInterval">Repeat every</Label>
                     <div className="flex items-center gap-2">
                       <Input
                         id="recurrenceInterval"
@@ -474,8 +479,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                       <span className="text-sm text-muted-foreground">
                         {formData.recurrencePattern === "DAILY" && "day(s)"}
                         {formData.recurrencePattern === "WEEKLY" && "week(s)"}
-                        {formData.recurrencePattern === "MONTHLY" &&
-                          "month(s)"}
+                        {formData.recurrencePattern === "MONTHLY" && "month(s)"}
                         {!formData.recurrencePattern && "unit(s)"}
                       </span>
                     </div>

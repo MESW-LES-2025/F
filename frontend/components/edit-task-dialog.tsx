@@ -231,7 +231,7 @@ export function EditTaskDialog({
     setIsStoppingRecurrence(true);
     try {
       const result = await stopRecurringTask(task.id);
-      
+
       toast({
         title: "Recurrence stopped",
         description: result.message,
@@ -279,11 +279,14 @@ export function EditTaskDialog({
                           ? ` (every ${task.recurrenceInterval})`
                           : ""}
                       </span>
-                      <span className="text-xs text-gray-500">• Recurring task</span>
+                      <span className="text-xs text-gray-500">
+                        • Recurring task
+                      </span>
                     </div>
                     {task.nextRecurrenceDate && (
                       <p className="text-xs text-gray-600 mt-0.5">
-                        Next occurrence: {new Date(task.nextRecurrenceDate).toLocaleDateString()}
+                        Next occurrence:{" "}
+                        {new Date(task.nextRecurrenceDate).toLocaleDateString()}
                       </p>
                     )}
                   </div>

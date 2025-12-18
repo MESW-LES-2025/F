@@ -3,7 +3,13 @@
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { GripVertical, Pencil, Trash2, ArchiveRestore, Repeat } from "lucide-react";
+import {
+  GripVertical,
+  Pencil,
+  Trash2,
+  ArchiveRestore,
+  Repeat,
+} from "lucide-react";
 import { archiveTask } from "@/lib/tasks-service";
 import { toast } from "@/hooks/use-toast";
 import type { Task } from "@/lib/types";
