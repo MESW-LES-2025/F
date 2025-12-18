@@ -53,6 +53,10 @@ describe('ExpenseService', () => {
 		splitWith: ['user-123', 'user-456'],
 		createdAt: new Date(),
 		updatedAt: new Date(),
+		splits: [
+			{ userId: 'user-123', percentage: 50, expenseId: 'expense-123' },
+			{ userId: 'user-456', percentage: 50, expenseId: 'expense-123' },
+		],
 		paidBy: {
 			id: 'user-123',
 			name: 'John Doe',
@@ -127,6 +131,12 @@ describe('ExpenseService', () => {
 					houseId: 'house-1',
 					splitWith: ['user-123', 'user-456'],
 					date: new Date('2025-11-15T00:00:00.000Z'),
+					splits: {
+						create: [
+							{ userId: 'user-123', percentage: 50 },
+							{ userId: 'user-456', percentage: 50 },
+						],
+					},
 				},
 				include: {
 					paidBy: {
@@ -144,6 +154,7 @@ describe('ExpenseService', () => {
 							name: true,
 						},
 					},
+					splits: true,
 				},
 			});
 		});
@@ -282,6 +293,7 @@ describe('ExpenseService', () => {
 							name: true,
 						},
 					},
+					splits: true,
 				},
 				orderBy: {
 					date: 'desc',
@@ -315,6 +327,7 @@ describe('ExpenseService', () => {
 							name: true,
 						},
 					},
+					splits: true,
 				},
 			});
 		});
@@ -361,6 +374,7 @@ describe('ExpenseService', () => {
 							name: true,
 						},
 					},
+					splits: true,
 				},
 				orderBy: {
 					date: 'desc',
@@ -419,6 +433,7 @@ describe('ExpenseService', () => {
 							name: true,
 						},
 					},
+					splits: true,
 				},
 			});
 		});
@@ -609,8 +624,8 @@ describe('ExpenseService', () => {
 				(b) => b.userId === 'user-456',
 			);
 
-			expect(payer?.balance).toBe(-50);
-			expect(receiver?.balance).toBe(50);
+			expect(payer?.balance).toBe(50);
+			expect(receiver?.balance).toBe(-50);
 		});
 
 		it('should throw NotFoundException if house not found', async () => {

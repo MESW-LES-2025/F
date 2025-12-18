@@ -83,7 +83,6 @@ export class ExpenseService {
 		if (splits && splits.length > 0) {
 			// Validate that splits match splitWith users
 			const splitUserIds = splits.map((s) => s.userId);
-			const splitWithSet = new Set(splitWith);
 			const splitsSet = new Set(splitUserIds);
 
 			if (splitUserIds.length !== splitWith.length) {
@@ -514,7 +513,8 @@ export class ExpenseService {
 			expense.splits.forEach((split) => {
 				const userData = perPersonData.get(split.userId);
 				if (userData) {
-					userData.totalOwed += (expense.amount * split.percentage) / 100;
+					userData.totalOwed +=
+						(expense.amount * split.percentage) / 100;
 				}
 			});
 		});
@@ -662,7 +662,8 @@ export class ExpenseService {
 				expense.splits.forEach((split) => {
 					const userData = balanceData.get(split.userId);
 					if (userData) {
-						userData.balance -= (expense.amount * split.percentage) / 100;
+						userData.balance -=
+							(expense.amount * split.percentage) / 100;
 					}
 				});
 			}
