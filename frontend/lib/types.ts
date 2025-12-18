@@ -7,6 +7,8 @@ export interface AuthResponse {
   };
 }
 
+export type RecurrencePattern = "DAILY" | "WEEKLY" | "MONTHLY";
+
 export interface Task {
   id: string;
   title: string;
@@ -22,6 +24,12 @@ export interface Task {
   archived: boolean;
   archivedAt?: Date | null;
   size?: "SMALL" | "MEDIUM" | "LARGE" | "XL";
+  isRecurring?: boolean;
+  recurrencePattern?: RecurrencePattern;
+  recurrenceInterval?: number;
+  nextRecurrenceDate?: Date | null;
+  lastRecurrenceDate?: Date | null;
+  parentRecurringTaskId?: string | null;
 }
 
 export interface House {

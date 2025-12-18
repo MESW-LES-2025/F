@@ -13,15 +13,15 @@ import {
 interface RecurringTaskWithRelations extends Task {
 	assignee: {
 		id: string;
-		name: string;
+		name: string | null;
 		email: string;
-		username: string;
+		username: string | null;
 	};
 	createdBy: {
 		id: string;
-		name: string;
+		name: string | null;
 		email: string;
-		username: string;
+		username: string | null;
 	};
 	house: {
 		id: string;
@@ -99,11 +99,19 @@ export class TaskRecurrenceService {
 	private async createRecurringTaskInstance(
 		task: RecurringTaskWithRelations,
 	) {
+		// Ensure nextRecurrenceDate exists
+		if (!task.nextRecurrenceDate) {
+			console.error(
+				`[TaskRecurrenceService] Task ${task.id} has no nextRecurrenceDate`,
+			);
+			return;
+		}
+
 		// Calculate the new deadline based on the recurrence pattern
 		const newDeadline = this.calculateNextRecurrence(
 			task.nextRecurrenceDate,
-			task.recurrencePattern,
-			task.recurrenceInterval,
+			task.recurrencePattern as RecurrencePattern,
+			task.recurrenceInterval as number,
 		);
 
 		// Create the new task instance
@@ -173,7 +181,7 @@ export class TaskRecurrenceService {
 					category: NotificationCategory.SCRUM,
 					level: NotificationLevel.LOW,
 					title: `Recurring task: ${newTask.title}`,
-					body: `A recurring task '${newTask.title}' has been created in house ${newTask.house.name}. Deadline: ${newTask.deadline.toLocaleDateString()}`,
+					body: `A recurring task '${newTask.title}' has been created in house ${task.house.name}. Deadline: ${newTask.deadline.toLocaleDateString()}`,
 					userIds: notifyUserIds,
 					actionUrl: '/activities',
 					houseId: newTask.houseId,
