@@ -7,7 +7,11 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
-import { CreateTaskDto, TaskSize, RecurrencePattern } from './dto/create-task.dto';
+import {
+	CreateTaskDto,
+	TaskSize,
+	RecurrencePattern,
+} from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 
 @Injectable()
@@ -86,7 +90,7 @@ export class TasksService {
 						deadlineDate,
 						recurrencePattern,
 						recurrenceInterval,
-				  )
+					)
 				: null;
 
 		const task = await this.prisma.task.create({
@@ -899,7 +903,7 @@ export class TasksService {
 			case RecurrencePattern.WEEKLY:
 				nextDate.setDate(nextDate.getDate() + interval * 7);
 				break;
-			case RecurrencePattern.MONTHLY:
+			case RecurrencePattern.MONTHLY: {
 				// Handle month-end edge cases (e.g., Jan 31 -> Feb 28/29)
 				const currentDay = nextDate.getDate();
 				nextDate.setMonth(nextDate.getMonth() + interval);
@@ -908,6 +912,7 @@ export class TasksService {
 					nextDate.setDate(0); // Sets to last day of previous month
 				}
 				break;
+			}
 			default:
 				throw new BadRequestException('Invalid recurrence pattern');
 		}

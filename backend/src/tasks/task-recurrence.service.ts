@@ -7,7 +7,6 @@ import {
 	NotificationLevel,
 	RecurrencePattern,
 	Task,
-	TaskSize,
 } from '@prisma/client';
 
 interface RecurringTaskWithRelations extends Task {
@@ -88,7 +87,8 @@ export class TaskRecurrenceService {
 		for (const task of recurringTasks) {
 			try {
 				await this.createRecurringTaskInstance(task);
-			} catch (err) {
+			} catch {
+				// Continue processing other tasks if one fails
 			}
 		}
 	}
@@ -168,9 +168,9 @@ export class TaskRecurrenceService {
 		});
 
 		// Notify assignees about the new recurring task
-		const assigneeIds =
-			task.assigneeLinks?.map((link: { userId: string }) => link.userId) ||
-			[task.assigneeId];
+		const assigneeIds = task.assigneeLinks?.map(
+			(link: { userId: string }) => link.userId,
+		) || [task.assigneeId];
 		const notifyUserIds = assigneeIds.filter(
 			(id: string) => id !== task.createdById,
 		);
@@ -186,7 +186,8 @@ export class TaskRecurrenceService {
 					actionUrl: '/activities',
 					houseId: newTask.houseId,
 				});
-			} catch (err) {
+			} catch {
+				/* Notification failure should not prevent task creation */
 			}
 		}
 	}
@@ -208,7 +209,7 @@ export class TaskRecurrenceService {
 			case RecurrencePattern.WEEKLY:
 				nextDate.setDate(nextDate.getDate() + interval * 7);
 				break;
-			case RecurrencePattern.MONTHLY:
+			case RecurrencePattern.MONTHLY: {
 				// Handle month-end edge cases (e.g., Jan 31 -> Feb 28/29)
 				const currentDay = nextDate.getDate();
 				nextDate.setMonth(nextDate.getMonth() + interval);
@@ -217,6 +218,7 @@ export class TaskRecurrenceService {
 					nextDate.setDate(0); // Sets to last day of previous month
 				}
 				break;
+			}
 			default:
 				nextDate.setDate(nextDate.getDate() + interval);
 				break;

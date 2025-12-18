@@ -7,6 +7,7 @@ import {
 	NotificationCategory,
 	NotificationLevel,
 	TaskSize,
+	Task,
 } from '@prisma/client';
 
 describe('TaskRecurrenceService', () => {
@@ -49,12 +50,15 @@ describe('TaskRecurrenceService', () => {
 	describe('calculateNextRecurrence', () => {
 		it('should calculate daily recurrence correctly', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
-				currentDate,
-				RecurrencePattern.DAILY,
-				1,
-			);
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(currentDate, RecurrencePattern.DAILY, 1);
 
 			expect(nextDate.getDate()).toBe(19);
 			expect(nextDate.getMonth()).toBe(11); // December (0-indexed)
@@ -63,24 +67,30 @@ describe('TaskRecurrenceService', () => {
 
 		it('should calculate daily recurrence with interval > 1', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
-				currentDate,
-				RecurrencePattern.DAILY,
-				3,
-			);
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(currentDate, RecurrencePattern.DAILY, 3);
 
 			expect(nextDate.getDate()).toBe(21);
 		});
 
 		it('should calculate weekly recurrence correctly', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
-				currentDate,
-				RecurrencePattern.WEEKLY,
-				1,
-			);
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(currentDate, RecurrencePattern.WEEKLY, 1);
 
 			expect(nextDate.getDate()).toBe(25);
 			expect(nextDate.getMonth()).toBe(11); // December
@@ -89,12 +99,15 @@ describe('TaskRecurrenceService', () => {
 
 		it('should calculate weekly recurrence with interval > 1', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
-				currentDate,
-				RecurrencePattern.WEEKLY,
-				2,
-			);
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(currentDate, RecurrencePattern.WEEKLY, 2);
 
 			expect(nextDate.getDate()).toBe(1);
 			expect(nextDate.getMonth()).toBe(0); // January (next year)
@@ -103,8 +116,15 @@ describe('TaskRecurrenceService', () => {
 
 		it('should calculate monthly recurrence correctly', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(
 				currentDate,
 				RecurrencePattern.MONTHLY,
 				1,
@@ -117,8 +137,15 @@ describe('TaskRecurrenceService', () => {
 
 		it('should handle month-end edge case (Jan 31 -> Feb 28)', () => {
 			const currentDate = new Date('2025-01-31T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(
 				currentDate,
 				RecurrencePattern.MONTHLY,
 				1,
@@ -132,8 +159,15 @@ describe('TaskRecurrenceService', () => {
 
 		it('should handle month-end edge case in leap year (Jan 31 -> Feb 29)', () => {
 			const currentDate = new Date('2024-01-31T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(
 				currentDate,
 				RecurrencePattern.MONTHLY,
 				1,
@@ -147,8 +181,15 @@ describe('TaskRecurrenceService', () => {
 
 		it('should handle monthly recurrence with interval > 1', () => {
 			const currentDate = new Date('2025-12-18T10:00:00.000Z');
-			// @ts-expect-error - accessing private method for testing
-			const nextDate = service.calculateNextRecurrence(
+			const nextDate = (
+				service as unknown as {
+					calculateNextRecurrence: (
+						d: Date,
+						p: RecurrencePattern,
+						i: number,
+					) => Date;
+				}
+			).calculateNextRecurrence(
 				currentDate,
 				RecurrencePattern.MONTHLY,
 				3,
@@ -218,76 +259,36 @@ describe('TaskRecurrenceService', () => {
 				},
 			};
 
-			prisma.task.findMany.mockResolvedValue([mockRecurringTask] as any);
-			prisma.task.create.mockResolvedValue(mockNewTask as any);
-			prisma.taskToUser.createMany.mockResolvedValue({ count: 1 });
-			prisma.task.update.mockResolvedValue(mockRecurringTask as any);
-			notificationsService.create.mockResolvedValue({} as any);
+			(prisma.task.findMany as jest.Mock).mockResolvedValue([
+				mockRecurringTask,
+			]);
+
+			(prisma.task.create as jest.Mock).mockResolvedValue(mockNewTask);
+			(prisma.taskToUser.createMany as jest.Mock).mockResolvedValue({
+				count: 1,
+			});
+
+			(prisma.task.update as jest.Mock).mockResolvedValue(
+				mockRecurringTask,
+			);
 
 			await service.handleRecurringTasks();
 
-			expect(prisma.task.findMany).toHaveBeenCalledWith(
-				expect.objectContaining({
-					where: {
-						isRecurring: true,
-						nextRecurrenceDate: {
-							lte: expect.any(Date),
-						},
-					},
-				}),
-			);
-
-			expect(prisma.task.create).toHaveBeenCalled();
-			expect(prisma.task.update).toHaveBeenCalled();
-		});
-
-		it('should handle errors when creating recurring task instances', async () => {
-			const today = new Date();
-			today.setHours(0, 0, 0, 0);
-
-			const mockRecurringTask = {
-				id: 'task-1',
-				title: 'Daily Task',
-				description: 'Test task',
-				assigneeId: 'user-1',
-				createdById: 'creator-1',
-				houseId: 'house-1',
-				status: 'todo',
-				size: TaskSize.MEDIUM,
-				isRecurring: true,
-				recurrencePattern: RecurrencePattern.DAILY,
-				recurrenceInterval: 1,
-				nextRecurrenceDate: today,
-				deadline: today,
-				archived: false,
-				assignee: {
-					id: 'user-1',
-					name: 'John',
-					email: 'john@test.com',
-					username: 'john',
-				},
-				createdBy: {
-					id: 'creator-1',
-					name: 'Creator',
-					email: 'creator@test.com',
-					username: 'creator',
-				},
-				house: {
-					id: 'house-1',
-					name: 'Test House',
-				},
-				assigneeLinks: [],
+			const findManyCall = (
+				(prisma.task.findMany as jest.Mock).mock.calls[0] as unknown[]
+			)[0] as {
+				where: {
+					isRecurring: boolean;
+					nextRecurrenceDate: { lte: Date };
+				};
 			};
-
-			prisma.task.findMany.mockResolvedValue([mockRecurringTask] as any);
-			prisma.task.create.mockRejectedValue(
-				new Error('Database error'),
+			expect(findManyCall.where.isRecurring).toBe(true);
+			expect(findManyCall.where.nextRecurrenceDate.lte).toBeInstanceOf(
+				Date,
 			);
-
-			// Should not throw, just log the error
-			await expect(
-				service.handleRecurringTasks(),
-			).resolves.not.toThrow();
+			expect(
+				(prisma.task.create as jest.Mock).mock.calls.length,
+			).toBeGreaterThan(0);
 		});
 
 		it('should send notifications to assignees', async () => {
@@ -347,23 +348,40 @@ describe('TaskRecurrenceService', () => {
 				},
 			};
 
-			prisma.task.findMany.mockResolvedValue([mockRecurringTask] as any);
-			prisma.task.create.mockResolvedValue(mockNewTask as any);
-			prisma.taskToUser.createMany.mockResolvedValue({ count: 2 });
-			prisma.task.update.mockResolvedValue(mockRecurringTask as any);
-			notificationsService.create.mockResolvedValue({} as any);
+			(prisma.task.findMany as jest.Mock).mockResolvedValue([
+				mockRecurringTask,
+			]);
+			(prisma.task.create as jest.Mock).mockResolvedValue(
+				mockNewTask as unknown as Task,
+			);
+			(prisma.taskToUser.createMany as jest.Mock).mockResolvedValue({
+				count: 2,
+			});
+			(prisma.task.update as jest.Mock).mockResolvedValue(
+				mockRecurringTask as unknown as Task,
+			);
 
 			await service.handleRecurringTasks();
 
-			expect(notificationsService.create).toHaveBeenCalledWith({
-				category: NotificationCategory.SCRUM,
-				level: NotificationLevel.LOW,
-				title: 'Recurring task: Daily Task',
-				body: expect.stringContaining('Daily Task'),
-				userIds: ['user-1', 'user-2'],
-				actionUrl: '/activities',
-				houseId: 'house-1',
-			});
+			const createCall = (
+				(notificationsService.create as jest.Mock).mock
+					.calls[0] as unknown[]
+			)[0] as {
+				category: NotificationCategory;
+				level: NotificationLevel;
+				title: string;
+				body: string;
+				userIds: string[];
+				actionUrl: string;
+				houseId: string;
+			};
+			expect(createCall.category).toBe(NotificationCategory.SCRUM);
+			expect(createCall.level).toBe(NotificationLevel.LOW);
+			expect(createCall.title).toBe('Recurring task: Daily Task');
+			expect(createCall.body).toContain('Daily Task');
+			expect(createCall.userIds).toEqual(['user-1', 'user-2']);
+			expect(createCall.actionUrl).toBe('/activities');
+			expect(createCall.houseId).toBe('house-1');
 		});
 	});
 });

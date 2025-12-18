@@ -192,9 +192,6 @@ export class TasksController {
 		@Param('id') id: string,
 		@Request() req: { user: { userId: string } },
 	) {
-		return this.tasksService.getRecurringTaskInstances(
-			id,
-			req.user.userId,
-		);
+		return this.tasksService.getRecurringTaskInstances(id, req.user.userId);
 	}
 }

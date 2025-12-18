@@ -22,6 +22,7 @@ export default function ActivitiesPage() {
   const [timeframe, setTimeframe] = useState<string>("all");
   const [assigneeFilter, setAssigneeFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [sizeFilter, setSizeFilter] = useState<"all" | "SMALL" | "MEDIUM" | "LARGE" | "XL">("all");
 
   // Load tasks when selectedHouse changes
   useEffect(() => {
@@ -155,6 +156,7 @@ export default function ActivitiesPage() {
   const filteredTasks = tasks.filter((t) => {
     if (statusFilter !== "all" && t.status !== statusFilter) return false;
     if (assigneeFilter !== "all" && t.assignee !== assigneeFilter) return false;
+    if (sizeFilter !== "all" && "size" in t && t.size !== sizeFilter) return false;
     if (!inTimeframe(t.deadline, timeframe)) return false;
     return true;
   });
@@ -215,10 +217,12 @@ export default function ActivitiesPage() {
         timeframe={timeframe}
         assignee={assigneeFilter}
         status={statusFilter}
+        size={sizeFilter}
         assignees={assignees}
         onTimeframeChange={(v) => setTimeframe(v)}
         onAssigneeChange={(v) => setAssigneeFilter(v)}
         onStatusChange={(v) => setStatusFilter(v)}
+        onSizeChange={(v) => setSizeFilter(v)}
       />
 
       <div className="p-4 md:p-6 lg:p-8 space-y-6">

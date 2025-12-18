@@ -101,7 +101,8 @@ export class CreateTaskDto {
 
 	@ApiPropertyOptional({
 		example: 1,
-		description: 'Recurrence interval (e.g., every 1, 2, 3... days/weeks/months)',
+		description:
+			'Recurrence interval (e.g., every 1, 2, 3... days/weeks/months)',
 		default: 1,
 	})
 	@IsOptional()

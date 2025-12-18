@@ -7,7 +7,11 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
+import {
+	CreateTaskDto,
+	TaskSize,
+	RecurrencePattern,
+} from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
@@ -1094,7 +1098,7 @@ describe('TasksService', () => {
 					houseId: 'house-1',
 					size: TaskSize.SMALL,
 					isRecurring: true,
-					recurrencePattern: 'DAILY' as any,
+					recurrencePattern: RecurrencePattern.DAILY,
 					recurrenceInterval: 1,
 				};
 
@@ -1111,17 +1115,13 @@ describe('TasksService', () => {
 				};
 
 				prisma.house.findUnique.mockResolvedValue(mockHouse);
-				prisma.houseToUser.findFirst.mockResolvedValue(
-					mockHouseToUser,
-				);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
 				prisma.user.findUnique.mockResolvedValue(mockUser);
 
 				const expectedDeadline = new Date('2025-12-20T10:00:00.000Z');
-				const expectedNextRecurrence = new Date(
-					'2025-12-21T10:00:00.000Z',
-				);
+				// Next recurrence will be computed in service; we assert flags
 
-				const mockTask = {
+				const mockTask: MockPrismaTask = {
 					id: 'task-1',
 					title: createTaskDto.title,
 					description: createTaskDto.description,
@@ -1137,23 +1137,26 @@ describe('TasksService', () => {
 					createdBy: mockUser,
 				};
 
-				prisma.task.create.mockResolvedValue(mockTask as any);
-				prisma.taskToUser.createMany.mockResolvedValue({ count: 1 });
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
 
-				const result = await service.create(
-					createTaskDto,
-					'creator-1',
+				await service.create(createTaskDto, 'creator-1');
+
+				const createCall = prisma.task.create.mock.calls[0][0] as {
+					data: {
+						isRecurring: boolean;
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+						lastRecurrenceDate: Date;
+					};
+				};
+				expect(createCall.data.isRecurring).toBe(true);
+				expect(createCall.data.recurrencePattern).toBe(
+					RecurrencePattern.DAILY,
 				);
-
-				expect(prisma.task.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						data: expect.objectContaining({
-							isRecurring: true,
-							recurrencePattern: 'DAILY',
-							recurrenceInterval: 1,
-							lastRecurrenceDate: expectedDeadline,
-						}),
-					}),
+				expect(createCall.data.recurrenceInterval).toBe(1);
+				expect(createCall.data.lastRecurrenceDate).toEqual(
+					expectedDeadline,
 				);
 			});
 
@@ -1166,7 +1169,7 @@ describe('TasksService', () => {
 					houseId: 'house-1',
 					size: TaskSize.MEDIUM,
 					isRecurring: true,
-					recurrencePattern: 'WEEKLY' as any,
+					recurrencePattern: RecurrencePattern.WEEKLY,
 					recurrenceInterval: 1,
 				};
 
@@ -1183,12 +1186,10 @@ describe('TasksService', () => {
 				};
 
 				prisma.house.findUnique.mockResolvedValue(mockHouse);
-				prisma.houseToUser.findFirst.mockResolvedValue(
-					mockHouseToUser,
-				);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
 				prisma.user.findUnique.mockResolvedValue(mockUser);
 
-				const mockTask = {
+				const mockTask: MockPrismaTask = {
 					id: 'task-1',
 					title: createTaskDto.title,
 					description: createTaskDto.description,
@@ -1204,22 +1205,25 @@ describe('TasksService', () => {
 					createdBy: mockUser,
 				};
 
-				prisma.task.create.mockResolvedValue(mockTask as any);
-				prisma.taskToUser.createMany.mockResolvedValue({ count: 1 });
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
 
 				await service.create(createTaskDto, 'creator-1');
 
-				expect(prisma.task.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						data: expect.objectContaining({
-							recurrencePattern: 'WEEKLY',
-							recurrenceInterval: 1,
-						}),
-					}),
+				const createCallWeekly = prisma.task.create.mock
+					.calls[0][0] as {
+					data: {
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+					};
+				};
+				expect(createCallWeekly.data.recurrencePattern).toBe(
+					RecurrencePattern.WEEKLY,
 				);
+				expect(createCallWeekly.data.recurrenceInterval).toBe(1);
 			});
 
-			it('should create a monthly recurring task', async () => {
+			it('should create a monthly recurring task with correct parameters', async () => {
 				const createTaskDto: CreateTaskDto = {
 					title: 'Monthly Report',
 					description: 'Generate monthly report',
@@ -1228,7 +1232,7 @@ describe('TasksService', () => {
 					houseId: 'house-1',
 					size: TaskSize.LARGE,
 					isRecurring: true,
-					recurrencePattern: 'MONTHLY' as any,
+					recurrencePattern: RecurrencePattern.MONTHLY,
 					recurrenceInterval: 1,
 				};
 
@@ -1243,12 +1247,6 @@ describe('TasksService', () => {
 					userId: 'user-1',
 					houseId: 'house-1',
 				};
-
-				prisma.house.findUnique.mockResolvedValue(mockHouse);
-				prisma.houseToUser.findFirst.mockResolvedValue(
-					mockHouseToUser,
-				);
-				prisma.user.findUnique.mockResolvedValue(mockUser);
 
 				const mockTask = {
 					id: 'task-1',
@@ -1266,28 +1264,34 @@ describe('TasksService', () => {
 					createdBy: mockUser,
 				};
 
-				prisma.task.create.mockResolvedValue(mockTask as any);
-				prisma.taskToUser.createMany.mockResolvedValue({ count: 1 });
+				prisma.house.findUnique.mockResolvedValue(mockHouse);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
+				prisma.user.findUnique.mockResolvedValue(mockUser);
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
 
 				await service.create(createTaskDto, 'creator-1');
 
-				expect(prisma.task.create).toHaveBeenCalledWith(
-					expect.objectContaining({
-						data: expect.objectContaining({
-							recurrencePattern: 'MONTHLY',
-							recurrenceInterval: 1,
-						}),
-					}),
+				const createCallMonthly = prisma.task.create.mock
+					.calls[0][0] as {
+					data: {
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+					};
+				};
+				expect(createCallMonthly.data.recurrencePattern).toBe(
+					RecurrencePattern.MONTHLY,
 				);
+				expect(createCallMonthly.data.recurrenceInterval).toBe(1);
 			});
 		});
 
 		describe('stopRecurrence', () => {
 			it('should stop a recurring task', async () => {
-				const mockTask = {
+				const mockTask: MockPrismaTask = {
 					id: 'task-1',
-					title: 'Recurring Task',
-					description: 'Test',
+					title: 'Test Task',
+					description: 'Test Description',
 					assigneeId: 'user-1',
 					createdById: 'creator-1',
 					houseId: 'house-1',
@@ -1316,8 +1320,10 @@ describe('TasksService', () => {
 					isRecurring: false,
 				};
 
-				prisma.task.findUnique.mockResolvedValue(mockTask as any);
-				prisma.task.update.mockResolvedValue(updatedTask as any);
+				prisma.task.findUnique.mockResolvedValue(mockTask);
+				prisma.task.update.mockResolvedValue(
+					updatedTask as unknown as MockPrismaTask,
+				);
 
 				const result = await service.stopRecurrence(
 					'task-1',
@@ -1330,7 +1336,22 @@ describe('TasksService', () => {
 						isRecurring: false,
 						nextRecurrenceDate: null,
 					},
-					include: expect.any(Object),
+					include: {
+						assignee: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								username: true,
+							},
+						},
+						house: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
 				});
 				expect(result.message).toBe(
 					'Recurring task stopped successfully',
@@ -1338,7 +1359,7 @@ describe('TasksService', () => {
 			});
 
 			it('should throw ForbiddenException if user is not creator', async () => {
-				const mockTask = {
+				const mockTask: MockPrismaTask = {
 					id: 'task-1',
 					title: 'Recurring Task',
 					description: 'Test',
@@ -1365,7 +1386,7 @@ describe('TasksService', () => {
 					},
 				};
 
-				prisma.task.findUnique.mockResolvedValue(mockTask as any);
+				prisma.task.findUnique.mockResolvedValue(mockTask);
 
 				await expect(
 					service.stopRecurrence('task-1', 'other-user'),
@@ -1373,7 +1394,7 @@ describe('TasksService', () => {
 			});
 
 			it('should throw BadRequestException if task is not recurring', async () => {
-				const mockTask = {
+				const mockTask: MockPrismaTask = {
 					id: 'task-1',
 					title: 'Non-Recurring Task',
 					description: 'Test',
@@ -1400,7 +1421,7 @@ describe('TasksService', () => {
 					},
 				};
 
-				prisma.task.findUnique.mockResolvedValue(mockTask as any);
+				prisma.task.findUnique.mockResolvedValue(mockTask);
 
 				await expect(
 					service.stopRecurrence('task-1', 'creator-1'),
@@ -1472,13 +1493,15 @@ describe('TasksService', () => {
 				];
 
 				prisma.task.findUnique.mockResolvedValue(
-					mockTemplate as any,
+					mockTemplate as unknown as MockPrismaTask,
 				);
 				prisma.houseToUser.findFirst.mockResolvedValue({
 					userId: 'user-1',
 					houseId: 'house-1',
 				});
-				prisma.task.findMany.mockResolvedValue(mockInstances as any);
+				prisma.task.findMany.mockResolvedValue(
+					mockInstances as unknown as MockPrismaTask[],
+				);
 
 				const result = await service.getRecurringTaskInstances(
 					'task-1',
@@ -1487,11 +1510,13 @@ describe('TasksService', () => {
 
 				expect(result.template).toEqual(mockTemplate);
 				expect(result.instances).toHaveLength(1);
-				expect(prisma.task.findMany).toHaveBeenCalledWith({
-					where: { parentRecurringTaskId: 'task-1' },
-					include: expect.any(Object),
-					orderBy: { deadline: 'desc' },
-				});
+
+				const findManyCall = prisma.task.findMany.mock.calls[0][0] as {
+					where: { parentRecurringTaskId: string };
+					orderBy: { deadline: string };
+				};
+				expect(findManyCall.where.parentRecurringTaskId).toBe('task-1');
+				expect(findManyCall.orderBy.deadline).toBe('desc');
 			});
 
 			it('should throw ForbiddenException if user not in house', async () => {
@@ -1522,7 +1547,9 @@ describe('TasksService', () => {
 					},
 				};
 
-				prisma.task.findUnique.mockResolvedValue(mockTask as any);
+				prisma.task.findUnique.mockResolvedValue(
+					mockTask as unknown as MockPrismaTask,
+				);
 				prisma.houseToUser.findFirst.mockResolvedValue(null);
 
 				await expect(
@@ -1558,7 +1585,9 @@ describe('TasksService', () => {
 					},
 				};
 
-				prisma.task.findUnique.mockResolvedValue(mockTask as any);
+				prisma.task.findUnique.mockResolvedValue(
+					mockTask as unknown as MockPrismaTask,
+				);
 				prisma.houseToUser.findFirst.mockResolvedValue({
 					userId: 'user-1',
 					houseId: 'house-1',
