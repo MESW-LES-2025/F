@@ -6,7 +6,31 @@ import {
 	NotificationCategory,
 	NotificationLevel,
 	RecurrencePattern,
+	Task,
+	TaskSize,
 } from '@prisma/client';
+
+interface RecurringTaskWithRelations extends Task {
+	assignee: {
+		id: string;
+		name: string;
+		email: string;
+		username: string;
+	};
+	createdBy: {
+		id: string;
+		name: string;
+		email: string;
+		username: string;
+	};
+	house: {
+		id: string;
+		name: string;
+	};
+	assigneeLinks: {
+		userId: string;
+	}[];
+}
 
 @Injectable()
 export class TaskRecurrenceService {
@@ -20,7 +44,6 @@ export class TaskRecurrenceService {
 	 */
 	@Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
 	async handleRecurringTasks() {
-		console.log('[TaskRecurrenceService] Starting recurring tasks check...');
 		const today = new Date();
 		today.setHours(0, 0, 0, 0);
 
@@ -62,29 +85,20 @@ export class TaskRecurrenceService {
 				},
 			},
 		});
-
-		console.log(
-			`[TaskRecurrenceService] Found ${recurringTasks.length} recurring tasks to process`,
-		);
-
 		for (const task of recurringTasks) {
 			try {
 				await this.createRecurringTaskInstance(task);
 			} catch (err) {
-				console.error(
-					`[TaskRecurrenceService] Failed to create recurring instance for task ${task.id}:`,
-					err,
-				);
 			}
 		}
-
-		console.log('[TaskRecurrenceService] Recurring tasks check completed');
 	}
 
 	/**
 	 * Creates a new instance of a recurring task
 	 */
-	private async createRecurringTaskInstance(task: any) {
+	private async createRecurringTaskInstance(
+		task: RecurringTaskWithRelations,
+	) {
 		// Calculate the new deadline based on the recurrence pattern
 		const newDeadline = this.calculateNextRecurrence(
 			task.nextRecurrenceDate,
@@ -165,16 +179,8 @@ export class TaskRecurrenceService {
 					houseId: newTask.houseId,
 				});
 			} catch (err) {
-				console.error(
-					'[TaskRecurrenceService] Failed to send notification for recurring task',
-					err,
-				);
 			}
 		}
-
-		console.log(
-			`[TaskRecurrenceService] Created recurring task instance: ${newTask.id} from template ${task.id}`,
-		);
 	}
 
 	/**
@@ -204,10 +210,6 @@ export class TaskRecurrenceService {
 				}
 				break;
 			default:
-				console.error(
-					`[TaskRecurrenceService] Invalid recurrence pattern: ${pattern}`,
-				);
-				// Fallback: add interval days
 				nextDate.setDate(nextDate.getDate() + interval);
 				break;
 		}
