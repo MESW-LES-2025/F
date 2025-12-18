@@ -62,12 +62,28 @@ describe('UserService', () => {
 				(...args: any[]) => Promise<House | null>
 			>;
 		};
+		task: {
+			count: jest.MockedFunction<(...args: any[]) => Promise<number>>;
+			findMany: jest.MockedFunction<(...args: any[]) => Promise<any[]>>;
+		};
+		expense: {
+			findMany: jest.MockedFunction<(...args: any[]) => Promise<any[]>>;
+		};
+		pantryItem: {
+			count: jest.MockedFunction<(...args: any[]) => Promise<number>>;
+		};
+		pantryToItem: {
+			findMany: jest.MockedFunction<(...args: any[]) => Promise<any[]>>;
+		};
 		houseToUser: {
 			findFirst: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>;
 			findUnique: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
+			>;
+			findMany: jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser[]>
 			>;
 			create: jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
@@ -108,12 +124,38 @@ describe('UserService', () => {
 				(...args: any[]) => Promise<House | null>
 			>,
 		},
+		task: {
+			count: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<number>
+			>,
+			findMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<any[]>
+			>,
+		},
+		expense: {
+			findMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<any[]>
+			>,
+		},
+		pantryItem: {
+			count: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<number>
+			>,
+		},
+		pantryToItem: {
+			findMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<any[]>
+			>,
+		},
 		houseToUser: {
 			findFirst: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
 			>,
 			findUnique: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
+			>,
+			findMany: jest.fn() as jest.MockedFunction<
+				(...args: any[]) => Promise<HouseToUser[]>
 			>,
 			create: jest.fn() as jest.MockedFunction<
 				(...args: any[]) => Promise<HouseToUser | null>
@@ -209,6 +251,7 @@ describe('UserService', () => {
 	describe('remove', () => {
 		it('soft-deletes user and revokes refresh tokens', async () => {
 			mockPrismaService.user.findFirst.mockResolvedValue(mockUser);
+			mockPrismaService.houseToUser.findMany.mockResolvedValue([]);
 			mockPrismaService.user.update.mockResolvedValue({
 				...mockUser,
 				deletedAt: new Date(),
@@ -724,6 +767,138 @@ describe('UserService', () => {
 				where: { id: mockHouseToUser.id },
 			});
 			expect(result).toEqual(mockHouseToUser);
+		});
+	});
+
+	describe('getUserDashboard', () => {
+		it('returns zero stats and empty activity when user has no data', async () => {
+			mockPrismaService.task.count
+				.mockResolvedValueOnce(0) // completed
+				.mockResolvedValueOnce(0); // total assigned
+			mockPrismaService.expense.findMany
+				.mockResolvedValueOnce([]) // total expenses
+				.mockResolvedValueOnce([]); // recent expenses
+			mockPrismaService.pantryItem.count.mockResolvedValue(0);
+			mockPrismaService.task.findMany.mockResolvedValue([]);
+			mockPrismaService.pantryToItem.findMany.mockResolvedValue([]);
+
+			const result = await service.getUserDashboard(mockUser.id);
+
+			expect(result).toEqual({
+				stats: {
+					tasksCompleted: 0,
+					totalExpenses: 0,
+					itemsAdded: 0,
+					contribution: 0,
+				},
+				recentActivity: [],
+			});
+		});
+
+		it('calculates stats and merges activity correctly', async () => {
+			const now = new Date();
+			const yesterday = new Date(now.getTime() - 86400000);
+			const twoDaysAgo = new Date(now.getTime() - 172800000);
+
+			mockPrismaService.task.count
+				.mockResolvedValueOnce(5) // completed
+				.mockResolvedValueOnce(10); // total assigned (50% contribution)
+
+			mockPrismaService.expense.findMany
+				.mockResolvedValueOnce([{ amount: 50 }, { amount: 150 }]) // total 200
+				.mockResolvedValueOnce([
+					{
+						id: 'e1',
+						description: 'Groceries',
+						amount: 50,
+						createdAt: now,
+					},
+				]); // recent expense
+
+			mockPrismaService.pantryItem.count.mockResolvedValue(3);
+
+			mockPrismaService.task.findMany.mockResolvedValue([
+				{
+					id: 't1',
+					title: 'Task 1',
+					status: 'done',
+					updatedAt: yesterday,
+					houseId: 'h1',
+				},
+			]);
+
+			mockPrismaService.pantryToItem.findMany.mockResolvedValue([
+				{
+					item: { name: 'Milk' },
+					updatedAt: twoDaysAgo,
+				},
+			]);
+
+			const result = await service.getUserDashboard(mockUser.id);
+
+			expect(result.stats).toEqual({
+				tasksCompleted: 5,
+				totalExpenses: 200,
+				itemsAdded: 3,
+				contribution: 50,
+			});
+
+			expect(result.recentActivity).toHaveLength(3);
+			// Sorted by date desc: Expense (now), Task (yesterday), Pantry (2days ago)
+			expect(result.recentActivity[0].type).toBe('expense');
+			expect(result.recentActivity[1].type).toBe('task');
+			expect(result.recentActivity[2].type).toBe('pantry');
+		});
+
+		it('handles contribution calculation with 0 assigned tasks', async () => {
+			mockPrismaService.task.count.mockResolvedValue(0);
+			mockPrismaService.expense.findMany.mockResolvedValue([]);
+			mockPrismaService.pantryItem.count.mockResolvedValue(0);
+			mockPrismaService.task.findMany.mockResolvedValue([]);
+			mockPrismaService.pantryToItem.findMany.mockResolvedValue([]);
+
+			const result = await service.getUserDashboard(mockUser.id);
+
+			expect(result.stats.contribution).toBe(0);
+		});
+
+		it('limits recent activity to 5 items', async () => {
+			// Mock returning 5 items for EACH type (15 total raw), expect top 5 sorted
+			mockPrismaService.task.count.mockResolvedValue(0);
+			mockPrismaService.expense.findMany.mockResolvedValue([]);
+			mockPrismaService.pantryItem.count.mockResolvedValue(0);
+
+			const dateBase = new Date().getTime();
+			const tasks = Array(3)
+				.fill(null)
+				.map((_, i) => ({
+					id: `t${i}`,
+					title: `T${i}`,
+					status: 'todo',
+					updatedAt: new Date(dateBase - i * 1000), // t0=now, t1=now-1s...
+					houseId: 'h1',
+				}));
+			const expenses = Array(3)
+				.fill(null)
+				.map((_, i) => ({
+					id: `e${i}`,
+					description: `E${i}`,
+					amount: 10,
+					createdAt: new Date(dateBase - (i + 3) * 1000), // e0=now-3s...
+				}));
+
+			mockPrismaService.task.findMany.mockResolvedValue(tasks);
+			mockPrismaService.expense.findMany // calls 1 (stats) and 2 (activity)
+				.mockResolvedValueOnce([])
+				.mockResolvedValueOnce(expenses);
+			mockPrismaService.pantryToItem.findMany.mockResolvedValue([]);
+
+			const result = await service.getUserDashboard(mockUser.id);
+
+			// Should have tasks 0,1,2 then expenses 0,1. Total 5.
+			expect(result.recentActivity).toHaveLength(5);
+			expect(result.recentActivity[0].detail).toContain('T0');
+			expect(result.recentActivity[4].detail).toContain('E1');
 		});
 	});
 });

@@ -2,7 +2,16 @@
 
 import { useState } from "react";
 import { format } from "date-fns";
-import { MoreVertical, Trash2, Edit2, Check, X, Reply, Info, CheckCheck } from "lucide-react";
+import {
+  MoreVertical,
+  Trash2,
+  Edit2,
+  Check,
+  X,
+  Reply,
+  Info,
+  CheckCheck,
+} from "lucide-react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
   Dialog,
@@ -71,7 +80,7 @@ export function ChatMessage({
       id={`message-${message.id}`}
       className={cn(
         "flex gap-3 max-w-[80%] group scroll-mt-20",
-        isOwnMessage ? "ml-auto flex-row-reverse" : ""
+        isOwnMessage ? "ml-auto flex-row-reverse" : "",
       )}
     >
       <Avatar className="w-8 h-8 mt-1 shrink-0">
@@ -85,18 +94,20 @@ export function ChatMessage({
             "relative px-4 py-2 rounded-2xl text-sm shadow-sm",
             isOwnMessage
               ? "bg-primary text-primary-foreground rounded-tr-none"
-              : "bg-white text-gray-900 rounded-tl-none border border-gray-100"
+              : "bg-white text-gray-900 rounded-tl-none border border-gray-100",
           )}
         >
           {/* Parent Message Display */}
           {message.parent && (
-            <div 
-              onClick={() => message.parentId && onReplyClick?.(message.parentId)}
+            <div
+              onClick={() =>
+                message.parentId && onReplyClick?.(message.parentId)
+              }
               className={cn(
                 "mb-2 p-2 rounded text-xs border-l-2 cursor-pointer opacity-90 hover:opacity-100 transition-opacity",
-                isOwnMessage 
-                  ? "bg-primary-foreground/10 border-primary-foreground/50" 
-                  : "bg-gray-100 border-primary"
+                isOwnMessage
+                  ? "bg-primary-foreground/10 border-primary-foreground/50"
+                  : "bg-gray-100 border-primary",
               )}
             >
               <p className="font-semibold mb-0.5">
@@ -143,7 +154,7 @@ export function ChatMessage({
               </Button>
             </div>
           ) : (
-            <p className="whitespace-pre-wrap break-words leading-relaxed">
+            <p className="whitespace-pre-wrap break-all leading-relaxed">
               {message.content}
             </p>
           )}
@@ -151,23 +162,30 @@ export function ChatMessage({
           <div
             className={cn(
               "flex items-center gap-1 mt-1 text-[10px] opacity-70",
-              isOwnMessage ? "justify-end text-primary-foreground/80" : "text-gray-400"
+              isOwnMessage
+                ? "justify-end text-primary-foreground/80"
+                : "text-gray-400",
             )}
           >
             <span>{format(new Date(message.createdAt), "HH:mm")}</span>
             {message.updatedAt !== message.createdAt && <span>(edited)</span>}
             {isOwnMessage && (
-              <span className={cn("ml-1", isRead ? "text-blue-300" : "text-primary-foreground/60")}>
+              <span
+                className={cn(
+                  "ml-1",
+                  isRead ? "text-blue-300" : "text-primary-foreground/60",
+                )}
+              >
                 <CheckCheck className="w-3 h-3" />
               </span>
             )}
           </div>
 
           {!isEditing && (
-            <div 
+            <div
               className={cn(
                 "absolute top-0 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center gap-1",
-                isOwnMessage ? "right-full mr-2" : "left-full ml-2"
+                isOwnMessage ? "right-full mr-2" : "left-full ml-2",
               )}
             >
               <Button
@@ -178,7 +196,7 @@ export function ChatMessage({
               >
                 <Reply className="w-4 h-4" />
               </Button>
-              
+
               {isOwnMessage && (
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
@@ -227,15 +245,20 @@ export function ChatMessage({
                 Sent {format(new Date(message.createdAt), "PP p")}
               </p>
             </div>
-            
+
             <div>
               <h4 className="text-sm font-medium mb-2">Read by</h4>
               {message.readLogs && message.readLogs.length > 0 ? (
                 <div className="space-y-2">
                   {message.readLogs.map((log) => (
-                    <div key={log.userId} className="flex items-center gap-2 text-sm">
+                    <div
+                      key={log.userId}
+                      className="flex items-center gap-2 text-sm"
+                    >
                       <Avatar className="w-6 h-6">
-                        <AvatarFallback>{log.user.name.charAt(0)}</AvatarFallback>
+                        <AvatarFallback>
+                          {log.user.name.charAt(0)}
+                        </AvatarFallback>
                       </Avatar>
                       <div className="flex-1">
                         <span className="font-medium">{log.user.name}</span>

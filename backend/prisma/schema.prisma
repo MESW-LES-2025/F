@@ -299,6 +299,7 @@ enum NotificationCategory {
   PANTRY 
   EXPENSES 
   SCRUM
+  CHAT
   OTHER
 }
 

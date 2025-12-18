@@ -5,11 +5,21 @@ import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../shared/email/email.service';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
+
+// Mock google-auth-library
+jest.mock('google-auth-library');
 
 // Mock bcrypt module
 jest.mock('bcrypt', () => ({
 	hash: jest.fn().mockResolvedValue('hashedpassword'),
 	compare: jest.fn().mockResolvedValue(true),
+}));
+
+// Mock OAuth2Client
+const mockVerifyIdToken = jest.fn();
+(OAuth2Client as unknown as jest.Mock).mockImplementation(() => ({
+	verifyIdToken: mockVerifyIdToken,
 }));
 
 describe('AuthService', () => {
@@ -227,6 +237,20 @@ describe('AuthService', () => {
 				}),
 			).rejects.toThrow(ConflictException);
 		});
+		it('should throw ConflictException if user already exists (P2002)', async () => {
+			mockPrismaService.user.findUnique.mockResolvedValue(null);
+			mockPrismaService.user.create.mockRejectedValue({
+				code: 'P2002',
+			});
+
+			await expect(
+				service.register({
+					email: 'test@example.com',
+					username: 'testuser',
+					password: 'password123',
+				}),
+			).rejects.toThrow(ConflictException);
+		});
 	});
 
 	describe('login', () => {
@@ -255,6 +279,7 @@ describe('AuthService', () => {
 			expect(result).toHaveProperty('access_token');
 			expect(result).toHaveProperty('refresh_token');
 			expect(result).toHaveProperty('expires_in', 900);
+			expect(result.user).toHaveProperty('houses');
 			expect(mockPrismaService.refreshToken.create).toHaveBeenCalled();
 		});
 
@@ -669,6 +694,96 @@ describe('AuthService', () => {
 		});
 	});
 
+	describe('loginWithGoogleIdToken', () => {
+		const token = 'valid-google-id-token';
+		const googlePayload = {
+			email: 'test@example.com',
+			given_name: 'Test',
+			family_name: 'User',
+			picture: 'pic',
+			sub: 'google-id',
+		};
+
+		let consoleSpy: jest.SpyInstance;
+
+		beforeEach(() => {
+			consoleSpy = jest
+				.spyOn(console, 'error')
+				.mockImplementation(() => {});
+		});
+
+		afterEach(() => {
+			consoleSpy.mockRestore();
+		});
+
+		it('should verify token and return user', async () => {
+			mockVerifyIdToken.mockResolvedValue({
+				getPayload: () => googlePayload,
+			});
+
+			// Mock validateGoogleUser response
+			const expectedResult = {
+				access_token: 'access',
+				refresh_token: 'refresh',
+				expires_in: 900,
+				user: { ...mockUser, houses: [] },
+			};
+
+			// Spy on validateGoogleUser
+			const validateSpy = jest
+				.spyOn(service, 'validateGoogleUser')
+				// eslint-disable-next-line @typescript-eslint/no-unsafe-argument
+				.mockResolvedValue(expectedResult as unknown as any);
+
+			const result = await service.loginWithGoogleIdToken(token);
+
+			expect(mockVerifyIdToken).toHaveBeenCalledWith({
+				idToken: token,
+				audience: process.env.GOOGLE_CLIENT_ID,
+			});
+			expect(validateSpy).toHaveBeenCalledWith({
+				email: googlePayload.email,
+				firstName: googlePayload.given_name,
+				lastName: googlePayload.family_name,
+				picture: googlePayload.picture,
+				googleId: googlePayload.sub,
+				accessToken: token,
+			});
+			expect(result).toBe(expectedResult);
+		});
+
+		it('should throw UnauthorizedException if token verification fails', async () => {
+			mockVerifyIdToken.mockRejectedValue(new Error('Invalid token'));
+
+			await expect(
+				service.loginWithGoogleIdToken('invalid'),
+			).rejects.toThrow(UnauthorizedException);
+			expect(consoleSpy).toHaveBeenCalled();
+		});
+
+		it('should throw UnauthorizedException if payload is missing', async () => {
+			mockVerifyIdToken.mockResolvedValue({
+				getPayload: () => null,
+			});
+
+			await expect(service.loginWithGoogleIdToken(token)).rejects.toThrow(
+				UnauthorizedException,
+			);
+			expect(consoleSpy).toHaveBeenCalled();
+		});
+
+		it('should throw UnauthorizedException if email is missing', async () => {
+			mockVerifyIdToken.mockResolvedValue({
+				getPayload: () => ({ ...googlePayload, email: undefined }),
+			});
+
+			await expect(service.loginWithGoogleIdToken(token)).rejects.toThrow(
+				UnauthorizedException,
+			);
+			expect(consoleSpy).toHaveBeenCalled();
+		});
+	});
+
 	describe('validateGoogleUser', () => {
 		const googleUser = {
 			email: 'test@example.com',
@@ -689,6 +804,7 @@ describe('AuthService', () => {
 			const result = await service.validateGoogleUser(googleUser);
 
 			expect(result.user.id).toBe(user.id);
+			expect(result.user).toHaveProperty('houses');
 		});
 
 		it('should link existing email user to google', async () => {
@@ -708,6 +824,7 @@ describe('AuthService', () => {
 			const result = await service.validateGoogleUser(googleUser);
 
 			expect(result.user.googleId).toBe('google-id');
+			expect(result.user).toHaveProperty('houses');
 			expect(mockPrismaService.user.update).toHaveBeenCalledWith(
 				expect.objectContaining({
 					where: { id: mockUser.id },
@@ -757,6 +874,7 @@ describe('AuthService', () => {
 			const result = await service.validateGoogleUser(googleUser);
 
 			expect(result.user.googleId).toBe('google-id');
+			expect(result.user).toHaveProperty('houses');
 			expect(mockPrismaService.user.create).toHaveBeenCalled();
 		});
 	});

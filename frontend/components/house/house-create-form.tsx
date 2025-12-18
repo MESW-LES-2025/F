@@ -37,7 +37,7 @@ export function CreateHouseForm({ isRegister = false }: CreateHouseFormProps) {
 
       if (response) {
         setSuccessMessageCreate(
-          `House created successfully! Use the code ${response.invitationCode} to invite others.`
+          `House created successfully! Use the code ${response.invitationCode} to invite others.`,
         );
         if (isRegister) {
           router.push(`/?houseId=${response.id}`);
@@ -47,7 +47,7 @@ export function CreateHouseForm({ isRegister = false }: CreateHouseFormProps) {
       }
     } catch (err) {
       setErrorCreate(
-        err instanceof Error ? err.message : "Failed to create house"
+        err instanceof Error ? err.message : "Failed to create house",
       );
     } finally {
       setIsSaving(false);
@@ -73,13 +73,19 @@ export function CreateHouseForm({ isRegister = false }: CreateHouseFormProps) {
           />
         </div>
 
-        <Button id="create-house-btn" onClick={handleCreateHouse} disabled={isSaving}>
+        <Button
+          id="create-house-btn"
+          onClick={handleCreateHouse}
+          disabled={isSaving}
+        >
           {isSaving ? "Saving..." : "Save Changes"}
         </Button>
 
         {successMessageCreate && (
           <Alert>
-            <AlertDescription id="create-house-success">{successMessageCreate}</AlertDescription>
+            <AlertDescription id="create-house-success">
+              {successMessageCreate}
+            </AlertDescription>
           </Alert>
         )}
 

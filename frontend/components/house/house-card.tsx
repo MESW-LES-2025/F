@@ -94,7 +94,7 @@ export function HouseCard({ house, from }: HouseCardProps) {
           }
         }}
       />
-      
+
       <SuccessActionModal
         open={openSuccessModal}
         onOpenChange={(open) => {

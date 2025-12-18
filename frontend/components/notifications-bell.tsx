@@ -1,11 +1,25 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Bell, CheckCheck, Loader2, Home, ChefHat, Wallet, Info, ArrowLeft } from "lucide-react";
+import {
+  Bell,
+  CheckCheck,
+  Loader2,
+  Home,
+  ChefHat,
+  Wallet,
+  Info,
+  ArrowLeft,
+  MessageCircle,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { notificationService } from "@/lib/notification-service";
 import { UserNotification } from "@/lib/types";
@@ -30,7 +44,10 @@ export function NotificationsBell({ className }: { className?: string }) {
   const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
   const [items, setItems] = useState<UserNotification[]>([]);
-  const unreadCount = useMemo(() => items.filter((n) => !n.isRead).length, [items]);
+  const unreadCount = useMemo(
+    () => items.filter((n) => !n.isRead).length,
+    [items],
+  );
   const [showCenter, setShowCenter] = useState(false);
   const [activeCategory, setActiveCategory] = useState<string>("ALL");
   const [showUnreadOnly, setShowUnreadOnly] = useState(false);
@@ -39,7 +56,11 @@ export function NotificationsBell({ className }: { className?: string }) {
   const displayed = useMemo(() => items.filter((n) => !n.isRead), [items]);
   const centerItems = useMemo(() => {
     return items.filter((n) => {
-      if (activeCategory !== "ALL" && n.notification.category !== activeCategory) return false;
+      if (
+        activeCategory !== "ALL" &&
+        n.notification.category !== activeCategory
+      )
+        return false;
       if (showUnreadOnly && n.isRead) return false;
       return true;
     });
@@ -51,10 +72,12 @@ export function NotificationsBell({ className }: { className?: string }) {
       // Fetch both read and unread
       const all = await notificationService.list();
       const sorted = [...all].sort(
-        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
       setItems(sorted.slice(0, 30));
-    } catch {} finally {
+    } catch {
+    } finally {
       if (!silent) setLoading(false);
     }
   };
@@ -74,8 +97,10 @@ export function NotificationsBell({ className }: { className?: string }) {
       await notificationService.markAsRead(id);
       setItems((prev) =>
         prev.map((n) =>
-          n.notification.id === id ? { ...n, isRead: true, readAt: new Date().toISOString() } : n
-        )
+          n.notification.id === id
+            ? { ...n, isRead: true, readAt: new Date().toISOString() }
+            : n,
+        ),
       );
     } catch {}
   };
@@ -83,24 +108,32 @@ export function NotificationsBell({ className }: { className?: string }) {
   const markAll = async () => {
     try {
       await notificationService.markAllAsRead();
-      setItems((prev) => prev.map((n) => ({ ...n, isRead: true, readAt: new Date().toISOString() })));
+      setItems((prev) =>
+        prev.map((n) => ({
+          ...n,
+          isRead: true,
+          readAt: new Date().toISOString(),
+        })),
+      );
     } catch {}
   };
 
   const dismissOne = async (id: string) => {
     try {
       await notificationService.dismiss(id);
-      setItems((prev) => prev.filter((n) => !(n.id === id || n.notification.id === id)));
+      setItems((prev) =>
+        prev.filter((n) => !(n.id === id || n.notification.id === id)),
+      );
     } catch {}
   };
 
   const handleOpen = async (n: UserNotification, url?: string | null) => {
     try {
       await markOne(n.id || n.notification.id);
-      
+
       // Context switch if houseId != NULL
       if (n.notification.houseId) {
-        const targetHouse = houses.find(h => h.id === n.notification.houseId);
+        const targetHouse = houses.find((h) => h.id === n.notification.houseId);
         if (targetHouse) {
           setSelectedHouse(targetHouse);
         }
@@ -125,6 +158,8 @@ export function NotificationsBell({ className }: { className?: string }) {
         return <Wallet className="h-4 w-4 text-amber-600" />;
       case "SCRUM":
         return <CheckCheck className="h-4 w-4 text-purple-600" />;
+      case "CHAT":
+        return <MessageCircle className="h-4 w-4 text-indigo-600" />;
       default:
         return <Info className="h-4 w-4 text-gray-500" />;
     }
@@ -132,20 +167,38 @@ export function NotificationsBell({ className }: { className?: string }) {
 
   const getLevelColor = (level: string | null | undefined) => {
     switch (level) {
-      case "URGENT": return "border-l-red-500";
-      case "HIGH": return "border-l-orange-500";
-      case "MEDIUM": return "border-l-yellow-500";
-      case "LOW": return "border-l-blue-500";
-      default: return "border-l-transparent";
+      case "URGENT":
+        return "border-l-red-500";
+      case "HIGH":
+        return "border-l-orange-500";
+      case "MEDIUM":
+        return "border-l-yellow-500";
+      case "LOW":
+        return "border-l-blue-500";
+      default:
+        return "border-l-transparent";
     }
   };
 
-  const categories = ["ALL", "HOUSE", "PANTRY", "EXPENSES", "SCRUM", "OTHER"];
+  const categories = [
+    "ALL",
+    "HOUSE",
+    "PANTRY",
+    "EXPENSES",
+    "SCRUM",
+    "CHAT",
+    "OTHER",
+  ];
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="ghost" size="icon" className={cn("relative", className)} aria-label="Notifications">
+        <Button
+          variant="ghost"
+          size="icon"
+          className={cn("relative", className)}
+          aria-label="Notifications"
+        >
           <Bell className="h-5 w-5" />
           {unreadCount > 0 && (
             <Badge
@@ -172,11 +225,18 @@ export function NotificationsBell({ className }: { className?: string }) {
               </Button>
             )}
             <span className="text-sm font-medium">Notifications</span>
-            {loading && <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />}
+            {loading && (
+              <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+            )}
           </div>
           <div className="flex items-center gap-2">
             {unreadCount > 0 && (
-              <Button variant="ghost" size="sm" className="h-7 px-2 text-xs" onClick={markAll}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-7 px-2 text-xs"
+                onClick={markAll}
+              >
                 <CheckCheck className="h-4 w-4 mr-1" />
                 Mark all
               </Button>
@@ -185,10 +245,12 @@ export function NotificationsBell({ className }: { className?: string }) {
         </div>
         {!showCenter ? (
           displayed.length === 0 ? (
-          <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
-            <Bell className="h-8 w-8 text-muted-foreground/40" />
-            <p className="text-sm text-muted-foreground">No unread notifications.</p>
-          </div>
+            <div className="flex flex-col items-center justify-center gap-2 p-6 text-center">
+              <Bell className="h-8 w-8 text-muted-foreground/40" />
+              <p className="text-sm text-muted-foreground">
+                No unread notifications.
+              </p>
+            </div>
           ) : (
             <ScrollArea className="max-h-96">
               <ul className="divide-y">
@@ -196,24 +258,38 @@ export function NotificationsBell({ className }: { className?: string }) {
                   const category = n.notification.category || null;
                   const rawUrl = n.notification.actionUrl;
                   // Force house invite notifications to use /invite (ignore any legacy UUID form)
-                  const safeUrl = rawUrl && n.notification.category === 'HOUSE' ? '/invite' : rawUrl;
+                  const safeUrl =
+                    rawUrl && n.notification.category === "HOUSE"
+                      ? "/invite"
+                      : rawUrl;
                   return (
                     <li
                       key={n.notification.id}
                       className={cn(
                         "px-4 py-3 flex gap-3 transition-colors border-l-2",
                         getLevelColor(n.notification.level),
-                        !n.isRead ? "bg-background hover:bg-muted/60" : "hover:bg-muted/40"
+                        !n.isRead
+                          ? "bg-background hover:bg-muted/60"
+                          : "hover:bg-muted/40",
                       )}
                     >
                       <div className="mt-0.5">{categoryIcon(category)}</div>
                       <div className="flex-1 min-w-0 space-y-1">
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex flex-col gap-1 min-w-0">
-                            <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
+                            <p
+                              className={cn(
+                                "text-sm font-medium",
+                                !n.isRead && "text-foreground",
+                              )}
+                            >
+                              {n.notification.title}
+                            </p>
                           </div>
                           <div className="flex flex-col items-end gap-1 shrink-0">
-                            <span className="text-[11px] text-muted-foreground">{timeAgo(n.createdAt)}</span>
+                            <span className="text-[11px] text-muted-foreground">
+                              {timeAgo(n.createdAt)}
+                            </span>
                           </div>
                         </div>
                         <div className="flex items-center gap-1 pt-1">
@@ -240,7 +316,9 @@ export function NotificationsBell({ className }: { className?: string }) {
                           <Button
                             variant="ghost"
                             size="sm"
-                            onClick={() => dismissOne(n.id || n.notification.id)}
+                            onClick={() =>
+                              dismissOne(n.id || n.notification.id)
+                            }
                             className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                           >
                             Dismiss
@@ -256,53 +334,92 @@ export function NotificationsBell({ className }: { className?: string }) {
         ) : (
           <div className="flex flex-col">
             <div className="px-4 py-2 border-b flex flex-wrap gap-2">
-              {categories.map(cat => {
+              {categories.map((cat) => {
                 const active = activeCategory === cat;
                 return (
                   <button
                     key={cat}
                     onClick={() => setActiveCategory(cat)}
-                    className={cn("px-3 py-1.5 text-xs rounded-md border transition-colors", active ? "bg-primary text-primary-foreground border-primary" : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent")}
+                    className={cn(
+                      "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                      active
+                        ? "bg-primary text-primary-foreground border-primary"
+                        : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent",
+                    )}
                   >
-                    {cat === "ALL" ? "All" : cat.charAt(0) + cat.slice(1).toLowerCase()}
+                    {cat === "ALL"
+                      ? "All"
+                      : cat.charAt(0) + cat.slice(1).toLowerCase()}
                   </button>
                 );
               })}
               <button
-                onClick={() => setShowUnreadOnly(v => !v)}
-                className={cn("px-3 py-1.5 text-xs rounded-md border transition-colors", showUnreadOnly ? "bg-secondary text-secondary-foreground" : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent")}
+                onClick={() => setShowUnreadOnly((v) => !v)}
+                className={cn(
+                  "px-3 py-1.5 text-xs rounded-md border transition-colors",
+                  showUnreadOnly
+                    ? "bg-secondary text-secondary-foreground"
+                    : "bg-muted hover:bg-muted/70 text-muted-foreground border-transparent",
+                )}
               >
                 {showUnreadOnly ? "Unread" : "All status"}
               </button>
             </div>
             {centerItems.length === 0 ? (
-              <div className="p-6 text-sm text-muted-foreground text-center">No notifications match.</div>
+              <div className="p-6 text-sm text-muted-foreground text-center">
+                No notifications match.
+              </div>
             ) : (
               <ScrollArea className="max-h-[420px]">
                 <ul className="divide-y">
-                  {centerItems.map(n => {
+                  {centerItems.map((n) => {
                     const category = n.notification.category || null;
                     const rawUrl = n.notification.actionUrl;
-                    const safeUrl = rawUrl && n.notification.category === 'HOUSE' ? '/invite' : rawUrl;
+                    const safeUrl =
+                      rawUrl && n.notification.category === "HOUSE"
+                        ? "/invite"
+                        : rawUrl;
                     return (
-                      <li key={n.notification.id} className={cn("px-4 py-3 flex gap-3 transition-colors border-l-2", getLevelColor(n.notification.level), !n.isRead ? "bg-background hover:bg-accent/40" : "hover:bg-muted/50")}>
+                      <li
+                        key={n.notification.id}
+                        className={cn(
+                          "px-4 py-3 flex gap-3 transition-colors border-l-2",
+                          getLevelColor(n.notification.level),
+                          !n.isRead
+                            ? "bg-background hover:bg-accent/40"
+                            : "hover:bg-muted/50",
+                        )}
+                      >
                         <div className="mt-0.5">{categoryIcon(category)}</div>
                         <div className="flex-1 min-w-0 space-y-1">
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex flex-col gap-1 min-w-0">
-                              <p className={cn("text-sm font-medium", !n.isRead && "text-foreground")}>{n.notification.title}</p>
+                              <p
+                                className={cn(
+                                  "text-sm font-medium",
+                                  !n.isRead && "text-foreground",
+                                )}
+                              >
+                                {n.notification.title}
+                              </p>
                               {n.notification.body && (
-                                <p className="text-xs text-muted-foreground whitespace-pre-line">{n.notification.body}</p>
+                                <p className="text-xs text-muted-foreground whitespace-pre-line">
+                                  {n.notification.body}
+                                </p>
                               )}
                             </div>
-                            <span className="text-[11px] text-muted-foreground shrink-0">{timeAgo(n.createdAt)}</span>
+                            <span className="text-[11px] text-muted-foreground shrink-0">
+                              {timeAgo(n.createdAt)}
+                            </span>
                           </div>
                           <div className="flex items-center gap-1 pt-1">
                             {!n.isRead && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => markOne(n.id || n.notification.id)}
+                                onClick={() =>
+                                  markOne(n.id || n.notification.id)
+                                }
                                 className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
                               >
                                 Mark
@@ -321,7 +438,9 @@ export function NotificationsBell({ className }: { className?: string }) {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => dismissOne(n.id || n.notification.id)}
+                              onClick={() =>
+                                dismissOne(n.id || n.notification.id)
+                              }
                               className="h-7 px-2 text-xs text-muted-foreground hover:text-destructive"
                             >
                               Dismiss
@@ -341,10 +460,7 @@ export function NotificationsBell({ className }: { className?: string }) {
           <span>{unreadCount} unread</span>
           <div className="flex items-center gap-3">
             {!showCenter && (
-              <a
-                href="/notifications"
-                className="underline hover:no-underline"
-              >
+              <a href="/notifications" className="underline hover:no-underline">
                 View all
               </a>
             )}

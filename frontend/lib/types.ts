@@ -21,7 +21,7 @@ export interface Task {
   houseName: string;
   archived: boolean;
   archivedAt?: Date | null;
-  size?: 'SMALL' | 'MEDIUM' | 'LARGE' | 'XL';
+  size?: "SMALL" | "MEDIUM" | "LARGE" | "XL";
 }
 
 export interface House {
@@ -36,7 +36,7 @@ export interface House {
       name: string | null;
       username: string | null;
       imageUrl: string | null;
-    }
+    };
   }[];
 }
 
@@ -53,7 +53,7 @@ export interface HouseDetails {
     name: string;
     email: string;
     username: string;
-    imagePublicId: string | null;
+    imageUrl?: string;
     houses: {
       role: string;
     }[];
@@ -126,6 +126,7 @@ export type NotificationCategory =
   | "PANTRY"
   | "EXPENSES"
   | "SCRUM"
+  | "CHAT"
   | "OTHER";
 
 export type NotificationLevel = "LOW" | "MEDIUM" | "HIGH" | "URGENT";

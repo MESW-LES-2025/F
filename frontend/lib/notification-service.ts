@@ -1,5 +1,9 @@
 import { apiGet, apiPatch } from "./api-client";
-import { NotificationCategory, NotificationLevel, UserNotification } from "./types";
+import {
+  NotificationCategory,
+  NotificationLevel,
+  UserNotification,
+} from "./types";
 
 export interface NotificationFilters {
   category?: NotificationCategory;
@@ -21,7 +25,11 @@ class NotificationService {
   }
 
   async markAsRead(notificationId: string): Promise<void> {
-    await apiPatch(`/notifications/${notificationId}`, {}, { requiresAuth: true });
+    await apiPatch(
+      `/notifications/${notificationId}`,
+      {},
+      { requiresAuth: true },
+    );
   }
 
   async markAllAsRead(): Promise<void> {
@@ -29,7 +37,11 @@ class NotificationService {
   }
 
   async dismiss(notificationId: string): Promise<void> {
-    await apiPatch(`/notifications/${notificationId}/dismiss`, {}, { requiresAuth: true });
+    await apiPatch(
+      `/notifications/${notificationId}/dismiss`,
+      {},
+      { requiresAuth: true },
+    );
   }
 }
 

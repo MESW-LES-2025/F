@@ -9,7 +9,7 @@ import { UpdateExpenseDto } from './dto/update-expense.dto';
 
 @Injectable()
 export class ExpenseService {
-	constructor(private prisma: PrismaService) {}
+	constructor(private readonly prisma: PrismaService) {}
 
 	async create(createExpenseDto: CreateExpenseDto): Promise<unknown> {
 		const {
@@ -29,7 +29,7 @@ export class ExpenseService {
 			},
 		});
 
-		if (!payer || payer.deletedAt !== null) {
+		if (payer?.deletedAt !== null) {
 			throw new NotFoundException('Payer user not found or is deleted');
 		}
 
@@ -66,9 +66,9 @@ export class ExpenseService {
 			},
 		});
 
-		const memberIds = houseMembers.map((hm) => hm.userId);
+		const memberIds = new Set(houseMembers.map((hm) => hm.userId));
 		const allUsersAreMemberss = [...splitWith, paidById].every((userId) =>
-			memberIds.includes(userId),
+			memberIds.has(userId),
 		);
 
 		if (!allUsersAreMemberss) {
@@ -220,7 +220,7 @@ export class ExpenseService {
 				},
 			});
 
-			if (!payer || payer.deletedAt !== null) {
+			if (payer?.deletedAt !== null) {
 				throw new NotFoundException(
 					'Payer user not found or is deleted',
 				);
@@ -722,7 +722,7 @@ export class ExpenseService {
 			}
 
 			const existing = groupedData.get(key);
-			if (!data.find((d) => d.date === key)) {
+			if (!data.some((d) => d.date === key)) {
 				data.push({
 					date: key,
 					total: existing?.total || 0,
@@ -731,8 +731,10 @@ export class ExpenseService {
 			}
 		}
 
+		data.sort((a, b) => a.date.localeCompare(b.date));
+
 		return {
-			data: data.sort((a, b) => a.date.localeCompare(b.date)),
+			data,
 			period,
 			totalDays: days,
 		};

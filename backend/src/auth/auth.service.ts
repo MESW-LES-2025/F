@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { OAuth2Client } from 'google-auth-library';
 import { PrismaService } from '../prisma/prisma.service';
 import { LoginDto } from './dto/login.dto';
 import { RegisterDto } from './dto/register.dto';
@@ -13,6 +14,7 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { EmailService } from '../shared/email/email.service';
 import { v4 as uuidv4 } from 'uuid';
+import { randomInt } from 'node:crypto';
 
 interface JwtPayload {
 	sub: string;
@@ -36,11 +38,18 @@ export interface GoogleTokens {
 
 @Injectable()
 export class AuthService {
+	private oauthClient: OAuth2Client;
+
 	constructor(
-		private prisma: PrismaService,
-		private jwtService: JwtService,
-		private emailService: EmailService,
-	) {}
+		private readonly prisma: PrismaService,
+		private readonly jwtService: JwtService,
+		private readonly emailService: EmailService,
+	) {
+		this.oauthClient = new OAuth2Client(
+			process.env.GOOGLE_CLIENT_ID,
+			process.env.GOOGLE_CLIENT_SECRET,
+		);
+	}
 
 	async storeGoogleTokens(tokens: GoogleTokens): Promise<string> {
 		const code = uuidv4();
@@ -120,22 +129,32 @@ export class AuthService {
 					password: hashedPassword,
 					name,
 					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
+					isEmailVerified: isDev,
 					deletedAt: null,
 				},
 			});
 		} else {
 			// Create user
-			user = await this.prisma.user.create({
-				data: {
-					email,
-					username,
-					password: hashedPassword,
-					name,
-					verificationToken: null,
-					isEmailVerified: isDev ? true : false,
-				},
-			});
+			try {
+				user = await this.prisma.user.create({
+					data: {
+						email,
+						username,
+						password: hashedPassword,
+						name,
+						verificationToken: null,
+						isEmailVerified: isDev,
+					},
+				});
+			} catch (error) {
+				const prismaError = error as { code?: string };
+				if (prismaError.code === 'P2002') {
+					throw new ConflictException(
+						'User with this email already exists',
+					);
+				}
+				throw error;
+			}
 		}
 
 		// Generate tokens with DB storage
@@ -280,18 +299,72 @@ export class AuthService {
 		};
 	}
 
+	async loginWithGoogleIdToken(token: string) {
+		try {
+			const ticket = await this.oauthClient.verifyIdToken({
+				idToken: token,
+				audience: process.env.GOOGLE_CLIENT_ID,
+			});
+			const payload = ticket.getPayload();
+			if (!payload) {
+				throw new UnauthorizedException('Invalid Google token');
+			}
+
+			const {
+				email,
+				given_name,
+				family_name,
+				picture,
+				sub: googleId,
+			} = payload;
+
+			if (!email) {
+				throw new UnauthorizedException(
+					'Email not found in Google token',
+				);
+			}
+
+			const googleUser: GoogleUser = {
+				email,
+				firstName: given_name || '',
+				lastName: family_name || '',
+				picture: picture || '',
+				googleId,
+				accessToken: token, // Using ID token as access token for internal interface
+			};
+
+			return this.validateGoogleUser(googleUser);
+		} catch (error) {
+			console.error('Google One Tap login error:', error);
+			const errorMessage = (error as Error).message || 'Unknown error';
+			throw new UnauthorizedException(
+				'Invalid Google token: ' + errorMessage,
+			);
+		}
+	}
+
 	async validateGoogleUser(googleUser: GoogleUser) {
 		const { email, firstName, lastName, picture, googleId } = googleUser;
 
 		// 1. Try to find user by googleId first
 		let user = await this.prisma.user.findUnique({
 			where: { googleId },
+			include: {
+				houses: {
+					select: { houseId: true },
+				},
+			},
 		});
 
 		// 2. If not found by googleId, try to find by email
 		if (!user) {
 			user = await this.prisma.user.findFirst({
 				where: { email },
+				include: {
+					houses: {
+						select: { houseId: true },
+					},
+				},
 			});
 
 			if (user) {
@@ -304,6 +377,11 @@ export class AuthService {
 							imageUrl: user.imageUrl || picture,
 							deletedAt: null, // Restore user if deleted
 						},
+						include: {
+							houses: {
+								select: { houseId: true },
+							},
+						},
 					});
 				}
 			}
@@ -312,6 +390,11 @@ export class AuthService {
 			user = await this.prisma.user.update({
 				where: { id: user.id },
 				data: { deletedAt: null },
+				include: {
+					houses: {
+						select: { houseId: true },
+					},
+				},
 			});
 		}
 
@@ -330,6 +413,7 @@ export class AuthService {
 					username: user.username,
 					name: user.name,
 					imageUrl: user.imageUrl,
+					houses: user.houses,
 					googleId: user.googleId,
 				},
 			};
@@ -338,7 +422,7 @@ export class AuthService {
 		// 3. Create new user if not found by googleId or email
 		const password = uuidv4(); // Generate random password
 		const hashedPassword = await bcrypt.hash(password, 10);
-		const username = email.split('@')[0] + Math.floor(Math.random() * 1000);
+		const username = email.split('@')[0] + randomInt(1000);
 
 		const newUser = await this.prisma.user.create({
 			data: {
@@ -365,6 +449,7 @@ export class AuthService {
 				username: newUser.username,
 				name: newUser.name,
 				imageUrl: newUser.imageUrl,
+				houses: [],
 				googleId: newUser.googleId,
 			},
 		};

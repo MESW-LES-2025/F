@@ -35,6 +35,14 @@ export class UserController {
 
 	@UseGuards(JwtAuthGuard)
 	@ApiBearerAuth('JWT-auth')
+	@ApiOperation({ summary: 'Get user dashboard stats and activity' })
+	@Get('dashboard')
+	async getDashboard(@Request() req: UserRequest) {
+		return await this.userService.getUserDashboard(req.user.userId);
+	}
+
+	@UseGuards(JwtAuthGuard)
+	@ApiBearerAuth('JWT-auth')
 	@ApiOperation({ summary: 'Update current authenticated user' })
 	@Patch()
 	async updateCurrent(

@@ -33,6 +33,9 @@ describe('ChatService', () => {
 		user: {
 			findUnique: jest.fn(),
 		},
+		notification: {
+			create: jest.fn(),
+		},
 	};
 
 	const mockWebsocketService = {
@@ -45,9 +48,11 @@ describe('ChatService', () => {
 		userId: 'user1',
 		houseId: 'house1',
 	};
+	// Valid UUID for testing
+	const validUuid = '123e4567-e89b-12d3-a456-426614174000';
 	const mockUser = { id: 'user1', name: 'User One' };
 	const mockMessage = {
-		id: 'msg1',
+		id: validUuid,
 		content: 'Hello',
 		userId: 'user1',
 		houseId: 'house1',
@@ -175,6 +180,46 @@ describe('ChatService', () => {
 			);
 			expect(result.parentId).toBe('parent');
 		});
+
+		it('should create a notification when replying to another user', async () => {
+			mockPrismaService.house.findUnique.mockResolvedValue(mockHouse);
+			mockPrismaService.houseToUser.findFirst.mockResolvedValue(
+				mockMembership,
+			);
+			mockPrismaService.chatMessage.findUnique.mockResolvedValue({
+				id: 'parent',
+				houseId: 'house1',
+				userId: 'otherUser',
+			});
+			mockPrismaService.chatMessage.create.mockResolvedValue({
+				...mockMessage,
+				parentId: 'parent',
+				parent: {
+					userId: 'otherUser',
+				},
+			});
+
+			const dto: CreateChatMessageDto = {
+				content: 'Reply',
+				parentId: 'parent',
+			} as CreateChatMessageDto;
+			await service.create(dto, 'user1', 'house1');
+
+			expect(mockPrismaService.notification.create).toHaveBeenCalledWith(
+				expect.objectContaining({
+					data: expect.objectContaining({
+						category: 'CHAT',
+						level: 'MEDIUM',
+						houseId: 'house1',
+						deliveredTo: {
+							create: {
+								userId: 'otherUser',
+							},
+						},
+					}) as object,
+				}),
+			);
+		});
 		it('should throw BadRequestException if content is missing or not string', async () => {
 			const dtoMissing = {} as CreateChatMessageDto;
 			await expect(
@@ -204,9 +249,9 @@ describe('ChatService', () => {
 			const updateDto: UpdateChatMessageDto = {
 				content: 'Updated',
 			} as UpdateChatMessageDto;
-			const result = await service.update('msg1', updateDto, 'user1');
+			const result = await service.update(validUuid, updateDto, 'user1');
 			expect(mockPrismaService.chatMessage.update).toHaveBeenCalledWith(
-				expect.objectContaining({ where: { id: 'msg1' } }),
+				expect.objectContaining({ where: { id: validUuid } }),
 			);
 			expect(result.content).toBe('Updated');
 		});
@@ -216,8 +261,11 @@ describe('ChatService', () => {
 			const badUpdateDto: UpdateChatMessageDto = {
 				content: 'x',
 			} as UpdateChatMessageDto;
+			// For update we haven't added validation yet in the service, but let's use validUuid to be safe/consistent
+			// or stick to 'bad' if we didn't change update.
+			// The user only showed errors in remove, but I should probably update 'update' tests too if I change mockMessage.id
 			await expect(
-				service.update('bad', badUpdateDto, 'user1'),
+				service.update(validUuid, badUpdateDto, 'user1'),
 			).rejects.toThrow(NotFoundException);
 		});
 
@@ -230,7 +278,7 @@ describe('ChatService', () => {
 				content: 'x',
 			} as UpdateChatMessageDto;
 			await expect(
-				service.update('msg1', notAuthorUpdateDto, 'user1'),
+				service.update(validUuid, notAuthorUpdateDto, 'user1'),
 			).rejects.toThrow(ForbiddenException);
 		});
 		it('should throw BadRequestException if content is missing or not string', async () => {
@@ -239,7 +287,7 @@ describe('ChatService', () => {
 			);
 			const dtoMissing = {} as UpdateChatMessageDto;
 			await expect(
-				service.update('msg1', dtoMissing, 'user1'),
+				service.update(validUuid, dtoMissing, 'user1'),
 			).rejects.toThrow(BadRequestException);
 		});
 
@@ -251,7 +299,7 @@ describe('ChatService', () => {
 				content: '   ',
 			} as UpdateChatMessageDto;
 			await expect(
-				service.update('msg1', dtoEmpty, 'user1'),
+				service.update(validUuid, dtoEmpty, 'user1'),
 			).rejects.toThrow(BadRequestException);
 		});
 	});
@@ -262,16 +310,17 @@ describe('ChatService', () => {
 				mockMessage,
 			);
 			mockPrismaService.chatMessage.delete.mockResolvedValue(mockMessage);
-			const result = await service.remove('msg1', 'user1');
+			const result = await service.remove(validUuid, 'user1');
 			expect(mockPrismaService.chatMessage.delete).toHaveBeenCalledWith({
-				where: { id: 'msg1' },
+				where: { id: validUuid },
 			});
-			expect(result).toEqual({ id: 'msg1' });
+			expect(result).toEqual({ id: validUuid });
 		});
 
 		it('should throw NotFoundException if message not found', async () => {
 			mockPrismaService.chatMessage.findFirst.mockResolvedValue(null);
-			await expect(service.remove('bad', 'user1')).rejects.toThrow(
+			// Use validUuid here to ensure it passes validation but fails DB lookup
+			await expect(service.remove(validUuid, 'user1')).rejects.toThrow(
 				NotFoundException,
 			);
 		});
@@ -281,7 +330,7 @@ describe('ChatService', () => {
 				...mockMessage,
 				userId: 'otherUser',
 			});
-			await expect(service.remove('msg1', 'user1')).rejects.toThrow(
+			await expect(service.remove(validUuid, 'user1')).rejects.toThrow(
 				ForbiddenException,
 			);
 		});

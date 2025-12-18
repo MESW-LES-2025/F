@@ -2,14 +2,13 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import {
   LayoutDashboard,
   Zap,
   Users,
   Calendar,
   Lightbulb,
-  Settings,
   UserPlus,
   Menu,
   X,
@@ -33,19 +32,15 @@ const navigation = [
 ];
 
 const support = [
-  { name: "Get Started", href: "#", icon: Lightbulb },
-  { name: "Settings", href: "/settings", icon: Settings },
+  { name: "Get Started", href: "/get-started", icon: Lightbulb },
   { name: "Invite People", href: "#", icon: UserPlus },
 ];
 
 export function AppSidebar() {
-  const searchParams = useSearchParams();
   const pathname = usePathname();
   const router = useRouter();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { user } = useAuth();
-
-  const houseId = searchParams.get("houseId");
 
   return (
     <>
@@ -77,7 +72,7 @@ export function AppSidebar() {
           "fixed left-0 top-0 h-screen w-64 lg:w-40 bg-white border-r border-gray-200 flex flex-col z-50 transition-transform duration-300",
           isMobileMenuOpen
             ? "translate-x-0"
-            : "-translate-x-full lg:translate-x-0"
+            : "-translate-x-full lg:translate-x-0",
         )}
       >
         {/* Logo */}
@@ -89,7 +84,6 @@ export function AppSidebar() {
               className="w-full h-full object-contain"
             />
           </div>
-          <span className="text-xs text-gray-600 font-medium">Concordia</span>
         </div>
 
         {/* Navigation */}
@@ -105,7 +99,7 @@ export function AppSidebar() {
                   "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
                   isActive
                     ? "bg-green-50 text-gray-900 font-medium"
-                    : "text-gray-600 hover:bg-gray-50"
+                    : "text-gray-600 hover:bg-gray-50",
                 )}
               >
                 <item.icon className="w-4 h-4" />
@@ -133,7 +127,7 @@ export function AppSidebar() {
                       "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
                       isActive
                         ? "bg-green-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
+                        : "text-gray-600 hover:bg-gray-50",
                     )}
                   >
                     <item.icon className="w-4 h-4" />
@@ -142,34 +136,22 @@ export function AppSidebar() {
                 );
               }
 
-              const isActive =
-                item.href === "/settings" && pathname === "/settings";
-              if (item.href === "/settings") {
-                return (
-                  <Link
-                    key={item.name}
-                    href={item.href}
-                    onClick={() => setIsMobileMenuOpen(false)}
-                    className={cn(
-                      "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
-                      isActive
-                        ? "bg-green-50 text-gray-900 font-medium"
-                        : "text-gray-600 hover:bg-gray-50"
-                    )}
-                  >
-                    <item.icon className="w-4 h-4" />
-                    <span>{item.name}</span>
-                  </Link>
-                );
-              }
+              const isActive = pathname === item.href;
               return (
-                <button
+                <Link
                   key={item.name}
-                  className="w-full flex items-center gap-3 px-3 py-2 text-sm text-gray-600 hover:bg-gray-50 rounded-md transition-colors"
+                  href={item.href}
+                  onClick={() => setIsMobileMenuOpen(false)}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-3 py-2 text-sm rounded-md transition-colors",
+                    isActive
+                      ? "bg-green-50 text-gray-900 font-medium"
+                      : "text-gray-600 hover:bg-gray-50",
+                  )}
                 >
                   <item.icon className="w-4 h-4" />
                   <span>{item.name}</span>
-                </button>
+                </Link>
               );
             })}
           </div>
@@ -183,7 +165,7 @@ export function AppSidebar() {
             className="flex items-center gap-2 hover:bg-gray-50 p-2 rounded-md transition-colors"
           >
             <Avatar className="w-8 h-8">
-              <AvatarImage src={user?.imageUrl || "/placeholder-user.jpg"} />
+              <AvatarImage src={user?.imageUrl} />
               <AvatarFallback>{user?.name?.charAt(0) || "U"}</AvatarFallback>
             </Avatar>
             <div className="flex-1 min-w-0">

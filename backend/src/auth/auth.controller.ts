@@ -6,6 +6,8 @@ import {
 	Request,
 	Get,
 	Res,
+	UsePipes,
+	ValidationPipe,
 } from '@nestjs/common';
 import { Request as ExpressRequest, Response } from 'express';
 import { AuthGuard } from '@nestjs/passport';
@@ -24,10 +26,12 @@ import { ForgotPasswordDto } from './dto/forgot-password.dto';
 import { ResetPasswordDto } from './dto/reset-password.dto';
 import { VerifyEmailDto } from './dto/verify-email.dto';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { GoogleAuthGuard } from './guards/google-auth.guard';
 import { UserRequest } from '../shared/types/user_request';
 
 @ApiTags('auth')
 @Controller('auth')
+@UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
 export class AuthController {
 	constructor(private readonly authService: AuthService) {}
 
@@ -126,7 +130,7 @@ export class AuthController {
 	}
 
 	@Get('google/callback')
-	@UseGuards(AuthGuard('google'))
+	@UseGuards(GoogleAuthGuard)
 	@ApiOperation({ summary: 'Google login callback' })
 	async googleAuthRedirect(
 		@Request()
@@ -135,6 +139,12 @@ export class AuthController {
 		},
 		@Res() res: Response,
 	) {
+		if (!req.user) {
+			return res.redirect(
+				`${process.env.CORS_ORIGIN || 'http://localhost:8080'}/?error=access_denied`,
+			);
+		}
+
 		const { access_token, refresh_token } = req.user;
 
 		// Store tokens and get a temporary code
@@ -158,5 +168,13 @@ export class AuthController {
 	@ApiResponse({ status: 401, description: 'Invalid or expired code' })
 	async exchangeGoogleCode(@Body('code') code: string) {
 		return this.authService.exchangeGoogleTokens(code);
+	}
+
+	@Post('google/verify')
+	@ApiOperation({ summary: 'Verify Google One Tap credential' })
+	@ApiResponse({ status: 200, description: 'User successfully logged in' })
+	@ApiResponse({ status: 401, description: 'Invalid credential' })
+	async verifyGoogleToken(@Body('credential') credential: string) {
+		return this.authService.loginWithGoogleIdToken(credential);
 	}
 }

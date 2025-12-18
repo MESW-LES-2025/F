@@ -14,8 +14,8 @@ import { WebsocketService } from '../shared/websockets/websocket.service';
 @Injectable()
 export class ChatService {
 	constructor(
-		private prisma: PrismaService,
-		private websocketService: WebsocketService,
+		private readonly prisma: PrismaService,
+		private readonly websocketService: WebsocketService,
 	) {}
 
 	async create(
@@ -101,6 +101,25 @@ export class ChatService {
 			message,
 		);
 
+		// Create notification for reply
+		if (message.parent && message.parent.userId !== userId) {
+			await this.prisma.notification.create({
+				data: {
+					category: 'CHAT',
+					level: 'MEDIUM',
+					title: `${message.user.name} replied to your message`,
+					body: message.content,
+					actionUrl: `/chat?houseId=${houseId}&messageId=${message.id}`,
+					houseId,
+					deliveredTo: {
+						create: {
+							userId: message.parent.userId,
+						},
+					},
+				},
+			});
+		}
+
 		return message;
 	}
 
@@ -169,6 +188,13 @@ export class ChatService {
 	}
 
 	async remove(id: string, userId: string) {
+		// Validate uuid to prevent P2023 (Prisma crash on invalid uuid)
+		const uuidRegex =
+			/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+		if (!uuidRegex.test(id)) {
+			throw new NotFoundException('Message not found (invalid id)');
+		}
+
 		const message = await this.prisma.chatMessage.findFirst({
 			where: { id },
 		});
@@ -264,7 +290,7 @@ export class ChatService {
 		let nextCursor: string | null = null;
 		if (messages.length > take) {
 			messages.pop();
-			nextCursor = messages[messages.length - 1].id;
+			nextCursor = messages.at(-1)!.id;
 		}
 
 		return {
