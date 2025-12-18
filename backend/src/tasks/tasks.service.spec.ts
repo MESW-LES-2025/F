@@ -10,6 +10,7 @@ import { NotificationsService } from '../notifications/notifications.service';
 import {
 	CreateTaskDto,
 	TaskSize,
+	TaskStatus,
 	RecurrencePattern,
 } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
