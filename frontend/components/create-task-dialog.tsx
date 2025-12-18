@@ -63,6 +63,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
     title: false,
     assignee: false,
     deadline: false,
+    recurrencePattern: false,
   });
 
   const handleChange = (
@@ -92,6 +93,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         !(formData as any).assignedUserIds ||
         (formData as any).assignedUserIds.length === 0,
       deadline: !formData.deadline,
+      recurrencePattern: formData.isRecurring && !formData.recurrencePattern,
     };
 
     setFormErrors(errors);
@@ -132,8 +134,14 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
 
     // Validate required fields
     if (!validateForm()) {
+      const missingFields = [];
+      if (formErrors.title) missingFields.push("Title");
+      if (formErrors.assignee) missingFields.push("Assignee");
+      if (formErrors.deadline) missingFields.push("Deadline");
+      if (formErrors.recurrencePattern) missingFields.push("Recurrence Pattern");
+      
       setError(
-        "Please fill in all required fields (Title, Assignee, and Deadline).",
+        `Please fill in all required fields: ${missingFields.join(", ")}`
       );
       return;
     }
@@ -181,6 +189,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         title: false,
         assignee: false,
         deadline: false,
+        recurrencePattern: false,
       });
       setOpen(false);
     } catch (err) {
@@ -211,6 +220,7 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
         title: false,
         assignee: false,
         deadline: false,
+        recurrencePattern: false,
       });
       setError(null);
     }
@@ -405,18 +415,23 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                 <div className="ml-6 space-y-3 animate-in fade-in-50 duration-200">
                   <div className="space-y-2">
                     <Label htmlFor="recurrencePattern">
-                      Recurrence Pattern
+                      Recurrence Pattern <span className="text-destructive">*</span>
                     </Label>
                     <Select
                       value={formData.recurrencePattern}
-                      onValueChange={(v) =>
+                      onValueChange={(v) => {
                         setFormData((prev) => ({
                           ...prev,
                           recurrencePattern: v as RecurrencePattern,
-                        }))
-                      }
+                        }));
+                        if (formErrors.recurrencePattern) {
+                          setFormErrors((prev) => ({ ...prev, recurrencePattern: false }));
+                        }
+                      }}
                     >
-                      <SelectTrigger className="w-full">
+                      <SelectTrigger 
+                        className={`w-full ${formErrors.recurrencePattern ? "border-destructive" : ""}`}
+                      >
                         <SelectValue placeholder="Select pattern" />
                       </SelectTrigger>
                       <SelectContent>
@@ -425,6 +440,11 @@ export function CreateTaskDialog({ onTaskCreated }: CreateTaskDialogProps) {
                         <SelectItem value="MONTHLY">Monthly</SelectItem>
                       </SelectContent>
                     </Select>
+                    {formErrors.recurrencePattern && (
+                      <p className="text-sm text-destructive">
+                        Recurrence pattern is required when task is recurring
+                      </p>
+                    )}
                   </div>
 
                   <div className="space-y-2">
