@@ -153,10 +153,22 @@ model Task {
   updatedAt   DateTime @updatedAt
   assigneeLinks TaskToUser[]
 
+  isRecurring          Boolean            @default(false)
+  recurrencePattern    RecurrencePattern?
+  recurrenceInterval   Int?               
+  lastRecurrenceDate   DateTime?
+  nextRecurrenceDate   DateTime?
+  parentRecurringTaskId String?           @db.Uuid
+  parentRecurringTask   Task?             @relation("RecurringTaskInstances", fields: [parentRecurringTaskId], references: [id], onDelete: SetNull)
+  recurringInstances    Task[]            @relation("RecurringTaskInstances")
+
   @@index([assigneeId])
   @@index([createdById])
   @@index([houseId])
   @@index([status])
+  @@index([isRecurring])
+  @@index([nextRecurrenceDate])
+  @@index([parentRecurringTaskId])
 }
 
 model TaskToUser {
@@ -302,4 +314,10 @@ enum TaskSize {
   MEDIUM
   LARGE
   XL
+}
+
+enum RecurrencePattern {
+  DAILY
+  WEEKLY
+  MONTHLY
 }
