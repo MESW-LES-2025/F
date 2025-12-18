@@ -133,4 +133,53 @@ describe('NotificationsController', () => {
 
 		await expect(controller.create(dto)).rejects.toThrow('Service Error');
 	});
+	it('findAllByUser should propagate error', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		mockNotificationsService.findAllByUser.mockRejectedValue(
+			new Error('Error'),
+		);
+		await expect(
+			controller.findAllByUser(req, {} as FindAllNotificationsByUserDto),
+		).rejects.toThrow('Error');
+	});
+
+	it('findOneByUser should propagate error', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		mockNotificationsService.findOneByUser.mockRejectedValue(
+			new Error('Error'),
+		);
+		await expect(controller.findOneByUser('id', req)).rejects.toThrow(
+			'Error',
+		);
+	});
+
+	it('markOneAsReadByUser should propagate error', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		mockNotificationsService.markOneAsReadByUser.mockRejectedValue(
+			new Error('Error'),
+		);
+		await expect(controller.markOneAsReadByUser('id', req)).rejects.toThrow(
+			'Error',
+		);
+	});
+
+	it('markAllAsReadByUser should propagate error', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		mockNotificationsService.markAllAsReadByUser.mockRejectedValue(
+			new Error('Error'),
+		);
+		await expect(controller.markAllAsReadByUser(req)).rejects.toThrow(
+			'Error',
+		);
+	});
+
+	it('dismissOneByUser should propagate error', async () => {
+		const req = { user: { userId: mockUserId } } as UserRequest;
+		mockNotificationsService.dismissOneByUser.mockRejectedValue(
+			new Error('Error'),
+		);
+		await expect(controller.dismissOneByUser('id', req)).rejects.toThrow(
+			'Error',
+		);
+	});
 });

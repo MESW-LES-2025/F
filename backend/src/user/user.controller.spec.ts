@@ -28,6 +28,7 @@ describe('UserController', () => {
 		inviteToHouse: jest.fn().mockResolvedValue({ id: 'notification-id-1' }),
 		leaveHouse: jest.fn().mockResolvedValue({ houseId: 'house-id-1' }),
 		uploadImage: jest.fn().mockResolvedValue({ imageUrl: 'url' }),
+		getUserDashboard: jest.fn().mockResolvedValue({ stats: {} }),
 	};
 
 	const mockHouseService = {
@@ -62,6 +63,18 @@ describe('UserController', () => {
 		expect(controller).toBeDefined();
 	});
 
+	it('getDashboard should return dashboard data', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		const mockDashboard = { stats: {} };
+		mockUserService.getUserDashboard.mockResolvedValue(mockDashboard);
+
+		const result = await controller.getDashboard(req);
+		expect(mockUserService.getUserDashboard).toHaveBeenCalledWith(
+			mockUser.id,
+		);
+		expect(result).toEqual(mockDashboard);
+	});
+
 	it('getCurrent should return the current user', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
 		const result = await controller.getCurrent(req);
@@ -77,11 +90,28 @@ describe('UserController', () => {
 		expect(result).toEqual({ ...mockUser, name: 'Updated' });
 	});
 
+	it('updateCurrent should propagate error', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		const dto: UpdateUserDto = { name: 'Updated' };
+		mockUserService.update.mockRejectedValue(new Error('Update Error'));
+		await expect(controller.updateCurrent(req, dto)).rejects.toThrow(
+			'Update Error',
+		);
+	});
+
 	it('removeCurrent should soft-delete and return success', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
 		const result = await controller.removeCurrent(req);
 		expect(mockUserService.remove).toHaveBeenCalledWith(mockUser.id);
 		expect(result).toEqual({ success: true });
+	});
+
+	it('removeCurrent should propagate error', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		mockUserService.remove.mockRejectedValue(new Error('Remove Error'));
+		await expect(controller.removeCurrent(req)).rejects.toThrow(
+			'Remove Error',
+		);
 	});
 
 	it('joinHouse should join a house and return the house id', async () => {
@@ -101,6 +131,16 @@ describe('UserController', () => {
 			{ inviteCode },
 		);
 		expect(result).toEqual({ houseId: 'house-id-1' });
+	});
+
+	it('joinHouse should propagate error', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		mockUserService.joinHouseWithCode.mockRejectedValue(
+			new Error('Join Error'),
+		);
+		await expect(
+			controller.joinHouse(req, { inviteCode: 'CODE' }),
+		).rejects.toThrow('Join Error');
 	});
 
 	it('inviteUser should call userService.inviteToHouse with correct params', async () => {
@@ -129,6 +169,19 @@ describe('UserController', () => {
 		expect(result).toEqual(mockNotificationResult);
 	});
 
+	it('inviteUserToHouse should propagate error', async () => {
+		const req = {
+			user: { userId: mockUser.id },
+		} as unknown as UserRequest;
+		const dto = { houseId: 'h1', email: 'e@test.com' };
+		mockUserService.inviteToHouse.mockRejectedValue(
+			new Error('Invite Error'),
+		);
+		await expect(controller.inviteUserToHouse(dto, req)).rejects.toThrow(
+			'Invite Error',
+		);
+	});
+
 	it('leaveHouse should call userService.leaveHouse and return success', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
 		const dto = { houseId: 'house-id-1' };
@@ -147,6 +200,14 @@ describe('UserController', () => {
 		expect(result).toEqual(mockLeaveResult);
 	});
 
+	it('leaveHouse should propagate error', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		mockUserService.leaveHouse.mockRejectedValue(new Error('Leave Error'));
+		await expect(
+			controller.leaveHouse(req, { houseId: 'h1' }),
+		).rejects.toThrow('Leave Error');
+	});
+
 	it('uploadImage should call userService.uploadImage', async () => {
 		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
 		const file = { buffer: Buffer.from('test') } as Express.Multer.File;
@@ -157,6 +218,17 @@ describe('UserController', () => {
 			file,
 		);
 		expect(result).toEqual({ imageUrl: 'url' });
+	});
+
+	it('uploadImage should propagate error', async () => {
+		const req = { user: { userId: mockUser.id } } as unknown as UserRequest;
+		const file = { buffer: Buffer.from('') } as Express.Multer.File;
+		mockUserService.uploadImage.mockRejectedValue(
+			new Error('Upload Error'),
+		);
+		await expect(controller.uploadImage(req, file)).rejects.toThrow(
+			'Upload Error',
+		);
 	});
 
 	it('should propagate errors from service', async () => {

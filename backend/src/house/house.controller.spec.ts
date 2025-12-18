@@ -36,7 +36,6 @@ describe('HouseController', () => {
 		}).compile();
 
 		controller = module.get<HouseController>(HouseController);
-		controller = module.get<HouseController>(HouseController);
 	});
 
 	it('should be defined', () => {
@@ -57,6 +56,15 @@ describe('HouseController', () => {
 				req.user.userId,
 			);
 		});
+
+		it('should propagate error', async () => {
+			const createHouseDto: CreateHouseDto = { name: 'Test House' };
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			mockHouseService.create.mockRejectedValue(new Error('Test Error'));
+			await expect(
+				controller.create(createHouseDto, req),
+			).rejects.toThrow('Test Error');
+		});
 	});
 
 	describe('findAll', () => {
@@ -66,6 +74,11 @@ describe('HouseController', () => {
 
 			expect(await controller.findAll()).toBe(result);
 			expect(mockHouseService.findAll).toHaveBeenCalled();
+		});
+
+		it('should propagate error', async () => {
+			mockHouseService.findAll.mockRejectedValue(new Error('Test Error'));
+			await expect(controller.findAll()).rejects.toThrow('Test Error');
 		});
 	});
 
@@ -80,6 +93,16 @@ describe('HouseController', () => {
 				req.user.userId,
 			);
 		});
+
+		it('should propagate error', async () => {
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			mockHouseService.findAllUserHouses.mockRejectedValue(
+				new Error('Test Error'),
+			);
+			await expect(controller.findAllUserHouses(req)).rejects.toThrow(
+				'Test Error',
+			);
+		});
 	});
 
 	describe('findOne', () => {
@@ -90,6 +113,13 @@ describe('HouseController', () => {
 
 			expect(await controller.findOne(id)).toBe(result);
 			expect(mockHouseService.findOne).toHaveBeenCalledWith(id);
+		});
+
+		it('should propagate error', async () => {
+			mockHouseService.findOne.mockRejectedValue(new Error('Test Error'));
+			await expect(controller.findOne('house-id')).rejects.toThrow(
+				'Test Error',
+			);
 		});
 	});
 
@@ -106,6 +136,16 @@ describe('HouseController', () => {
 				req.user.userId,
 			);
 		});
+
+		it('should propagate error', async () => {
+			const req = { user: { userId: 'user-id' } } as UserRequest;
+			mockHouseService.getUsersByHouse.mockRejectedValue(
+				new Error('Test Error'),
+			);
+			await expect(
+				controller.getUsersByHouse('house-id', req),
+			).rejects.toThrow('Test Error');
+		});
 	});
 
 	describe('findHouseDetails', () => {
@@ -126,6 +166,16 @@ describe('HouseController', () => {
 				'house1',
 				'user123',
 			);
+		});
+
+		it('should propagate error', async () => {
+			const req = { user: { userId: 'user123' } } as UserRequest;
+			mockHouseService.findHouseDetails.mockRejectedValue(
+				new Error('Test Error'),
+			);
+			await expect(
+				controller.findHouseDetails('house1', req),
+			).rejects.toThrow('Test Error');
 		});
 	});
 
@@ -150,69 +200,17 @@ describe('HouseController', () => {
 				userId: 'user123',
 			});
 		});
-	});
 
-	describe('remove', () => {
-		it('should delete a house', async () => {
-			const houseId = 'house1';
-			const mockResult = { success: true };
-
-			mockHouseService.remove = jest.fn().mockResolvedValue(mockResult);
-
-			const result = await controller.remove(
-				houseId,
-				mockReq as unknown as UserRequest,
-			);
-
-			expect(result).toEqual(mockResult);
-			expect(mockHouseService.remove).toHaveBeenCalledWith({
-				houseId,
-				userId: 'user123',
-			});
-		});
-	});
-
-	describe('findHouseDetails', () => {
-		it('should return house details for the given id and user', async () => {
-			const houseDetails = { id: 'house1', name: 'Casa 1' };
-
-			mockHouseService.findHouseDetails = jest
-				.fn()
-				.mockResolvedValue(houseDetails);
-
-			const result = await controller.findHouseDetails(
-				'house1',
-				mockReq as UserRequest,
-			);
-
-			expect(result).toEqual(houseDetails);
-			expect(mockHouseService.findHouseDetails).toHaveBeenCalledWith(
-				'house1',
-				'user123',
-			);
-		});
-	});
-
-	describe('update', () => {
-		it('should update a house', async () => {
+		it('should propagate error', async () => {
 			const houseId = 'house1';
 			const updateHouseDto = { name: 'Updated House' };
-			const mockResult = { id: houseId, name: 'Updated House' };
+			const req = { user: { userId: 'user123' } } as UserRequest;
 
-			mockHouseService.update = jest.fn().mockResolvedValue(mockResult);
+			mockHouseService.update.mockRejectedValue(new Error('Test Error'));
 
-			const result = await controller.update(
-				houseId,
-				updateHouseDto,
-				mockReq as unknown as UserRequest,
-			);
-
-			expect(result).toEqual(mockResult);
-			expect(mockHouseService.update).toHaveBeenCalledWith({
-				houseId,
-				dto: updateHouseDto,
-				userId: 'user123',
-			});
+			await expect(
+				controller.update(houseId, updateHouseDto, req),
+			).rejects.toThrow('Test Error');
 		});
 	});
 
@@ -233,6 +231,17 @@ describe('HouseController', () => {
 				houseId,
 				userId: 'user123',
 			});
+		});
+
+		it('should propagate error', async () => {
+			const houseId = 'house1';
+			const req = { user: { userId: 'user123' } } as UserRequest;
+
+			mockHouseService.remove.mockRejectedValue(new Error('Test Error'));
+
+			await expect(controller.remove(houseId, req)).rejects.toThrow(
+				'Test Error',
+			);
 		});
 	});
 });
