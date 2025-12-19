@@ -29,9 +29,12 @@ import {
 } from "@/components/ui/select";
 // Removed unused Select import
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { updateTask } from "@/lib/tasks-service";
+import { Badge } from "@/components/ui/badge";
+import { updateTask, stopRecurringTask } from "@/lib/tasks-service";
 import { apiGet } from "@/lib/api-client";
 import type { Task, User } from "@/lib/types";
+import { Repeat, X } from "lucide-react";
+import { toast } from "@/hooks/use-toast";
 
 interface EditTaskDialogProps {
   task: Task;
@@ -47,6 +50,7 @@ export function EditTaskDialog({
   onTaskUpdated,
 }: EditTaskDialogProps) {
   const [isLoading, setIsLoading] = useState(false);
+  const [isStoppingRecurrence, setIsStoppingRecurrence] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [formData, setFormData] = useState({
@@ -221,9 +225,35 @@ export function EditTaskDialog({
     }
   };
 
+  const handleStopRecurrence = async () => {
+    if (!task.isRecurring) return;
+
+    setIsStoppingRecurrence(true);
+    try {
+      const result = await stopRecurringTask(task.id);
+
+      toast({
+        title: "Recurrence stopped",
+        description: result.message,
+      });
+
+      // Update the task with the new data
+      onTaskUpdated?.(result.task);
+      onOpenChange(false);
+    } catch (err) {
+      toast({
+        title: "Failed to stop recurrence",
+        description: err instanceof Error ? err.message : "Please try again.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsStoppingRecurrence(false);
+    }
+  };
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[525px]">
+      <DialogContent className="sm:max-w-[525px] max-h-[90vh] overflow-y-auto">
         <form onSubmit={handleSubmit}>
           <DialogHeader>
             <DialogTitle>Edit Task</DialogTitle>
@@ -231,6 +261,49 @@ export function EditTaskDialog({
               Update the task details. Fields marked with * are required.
             </DialogDescription>
           </DialogHeader>
+
+          {task.isRecurring && (
+            <div className="mt-4 rounded-lg border border-purple-200 bg-gradient-to-r from-purple-50 to-purple-50/30 p-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="rounded-full bg-purple-600 p-2">
+                    <Repeat className="w-4 h-4 text-white" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium text-gray-900">
+                        {task.recurrencePattern === "DAILY" && "Daily"}
+                        {task.recurrencePattern === "WEEKLY" && "Weekly"}
+                        {task.recurrencePattern === "MONTHLY" && "Monthly"}
+                        {task.recurrenceInterval && task.recurrenceInterval > 1
+                          ? ` (every ${task.recurrenceInterval})`
+                          : ""}
+                      </span>
+                      <span className="text-xs text-gray-500">
+                        • Recurring task
+                      </span>
+                    </div>
+                    {task.nextRecurrenceDate && (
+                      <p className="text-xs text-gray-600 mt-0.5">
+                        Next occurrence:{" "}
+                        {new Date(task.nextRecurrenceDate).toLocaleDateString()}
+                      </p>
+                    )}
+                  </div>
+                </div>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={handleStopRecurrence}
+                  disabled={isStoppingRecurrence}
+                  className="bg-white border-purple-300 text-purple-700 hover:bg-purple-50 hover:text-purple-900 text-xs"
+                >
+                  {isStoppingRecurrence ? "Stopping..." : "Stop recurrence"}
+                </Button>
+              </div>
+            </div>
+          )}
 
           {error && (
             <Alert variant="destructive" className="mt-4">

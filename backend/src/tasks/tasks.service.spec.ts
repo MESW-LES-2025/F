@@ -7,7 +7,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { CreateTaskDto, TaskSize, TaskStatus } from './dto/create-task.dto';
+import {
+	CreateTaskDto,
+	TaskSize,
+	TaskStatus,
+	RecurrencePattern,
+} from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
@@ -1264,6 +1269,519 @@ describe('TasksService', () => {
 					}) as unknown,
 				}) as unknown,
 			);
+		});
+	});
+
+	describe('Recurring Tasks', () => {
+		describe('create with recurrence', () => {
+			it('should create a daily recurring task', async () => {
+				const createTaskDto: CreateTaskDto = {
+					title: 'Daily Standup',
+					description: 'Team standup meeting',
+					assigneeId: 'user-1',
+					deadline: '2025-12-20T10:00:00.000Z',
+					houseId: 'house-1',
+					size: TaskSize.SMALL,
+					isRecurring: true,
+					recurrencePattern: RecurrencePattern.DAILY,
+					recurrenceInterval: 1,
+				};
+
+				const mockHouse = { id: 'house-1', name: 'Test House' };
+				const mockUser = {
+					id: 'user-1',
+					name: 'John',
+					email: 'john@test.com',
+					username: 'john',
+				};
+				const mockHouseToUser = {
+					userId: 'user-1',
+					houseId: 'house-1',
+				};
+
+				prisma.house.findUnique.mockResolvedValue(mockHouse);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
+				prisma.user.findUnique.mockResolvedValue(mockUser);
+
+				const expectedDeadline = new Date('2025-12-20T10:00:00.000Z');
+				// Next recurrence will be computed in service; we assert flags
+
+				const mockTask: MockPrismaTask = {
+					id: 'task-1',
+					title: createTaskDto.title,
+					description: createTaskDto.description,
+					assigneeId: createTaskDto.assigneeId,
+					deadline: expectedDeadline,
+					createdById: 'creator-1',
+					houseId: createTaskDto.houseId,
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					house: mockHouse,
+					assignee: mockUser,
+					createdBy: mockUser,
+				};
+
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
+
+				await service.create(createTaskDto, 'creator-1');
+
+				const createCall = prisma.task.create.mock.calls[0][0] as {
+					data: {
+						isRecurring: boolean;
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+						lastRecurrenceDate: Date;
+					};
+				};
+				expect(createCall.data.isRecurring).toBe(true);
+				expect(createCall.data.recurrencePattern).toBe(
+					RecurrencePattern.DAILY,
+				);
+				expect(createCall.data.recurrenceInterval).toBe(1);
+				expect(createCall.data.lastRecurrenceDate).toEqual(
+					expectedDeadline,
+				);
+			});
+
+			it('should create a weekly recurring task', async () => {
+				const createTaskDto: CreateTaskDto = {
+					title: 'Weekly Review',
+					description: 'Review tasks',
+					assigneeId: 'user-1',
+					deadline: '2025-12-20T10:00:00.000Z',
+					houseId: 'house-1',
+					size: TaskSize.MEDIUM,
+					isRecurring: true,
+					recurrencePattern: RecurrencePattern.WEEKLY,
+					recurrenceInterval: 1,
+				};
+
+				const mockHouse = { id: 'house-1', name: 'Test House' };
+				const mockUser = {
+					id: 'user-1',
+					name: 'John',
+					email: 'john@test.com',
+					username: 'john',
+				};
+				const mockHouseToUser = {
+					userId: 'user-1',
+					houseId: 'house-1',
+				};
+
+				prisma.house.findUnique.mockResolvedValue(mockHouse);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
+				prisma.user.findUnique.mockResolvedValue(mockUser);
+
+				const mockTask: MockPrismaTask = {
+					id: 'task-1',
+					title: createTaskDto.title,
+					description: createTaskDto.description,
+					assigneeId: createTaskDto.assigneeId,
+					deadline: new Date(createTaskDto.deadline),
+					createdById: 'creator-1',
+					houseId: createTaskDto.houseId,
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					house: mockHouse,
+					assignee: mockUser,
+					createdBy: mockUser,
+				};
+
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
+
+				await service.create(createTaskDto, 'creator-1');
+
+				const createCallWeekly = prisma.task.create.mock
+					.calls[0][0] as {
+					data: {
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+					};
+				};
+				expect(createCallWeekly.data.recurrencePattern).toBe(
+					RecurrencePattern.WEEKLY,
+				);
+				expect(createCallWeekly.data.recurrenceInterval).toBe(1);
+			});
+
+			it('should create a monthly recurring task with correct parameters', async () => {
+				const createTaskDto: CreateTaskDto = {
+					title: 'Monthly Report',
+					description: 'Generate monthly report',
+					assigneeId: 'user-1',
+					deadline: '2025-12-31T10:00:00.000Z',
+					houseId: 'house-1',
+					size: TaskSize.LARGE,
+					isRecurring: true,
+					recurrencePattern: RecurrencePattern.MONTHLY,
+					recurrenceInterval: 1,
+				};
+
+				const mockHouse = { id: 'house-1', name: 'Test House' };
+				const mockUser = {
+					id: 'user-1',
+					name: 'John',
+					email: 'john@test.com',
+					username: 'john',
+				};
+				const mockHouseToUser = {
+					userId: 'user-1',
+					houseId: 'house-1',
+				};
+
+				const mockTask = {
+					id: 'task-1',
+					title: createTaskDto.title,
+					description: createTaskDto.description,
+					assigneeId: createTaskDto.assigneeId,
+					deadline: new Date(createTaskDto.deadline),
+					createdById: 'creator-1',
+					houseId: createTaskDto.houseId,
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					house: mockHouse,
+					assignee: mockUser,
+					createdBy: mockUser,
+				};
+
+				prisma.house.findUnique.mockResolvedValue(mockHouse);
+				prisma.houseToUser.findFirst.mockResolvedValue(mockHouseToUser);
+				prisma.user.findUnique.mockResolvedValue(mockUser);
+				prisma.task.create.mockResolvedValue(mockTask);
+				prisma.taskToUser.createMany.mockResolvedValue(undefined);
+
+				await service.create(createTaskDto, 'creator-1');
+
+				const createCallMonthly = prisma.task.create.mock
+					.calls[0][0] as {
+					data: {
+						recurrencePattern: RecurrencePattern;
+						recurrenceInterval: number;
+					};
+				};
+				expect(createCallMonthly.data.recurrencePattern).toBe(
+					RecurrencePattern.MONTHLY,
+				);
+				expect(createCallMonthly.data.recurrenceInterval).toBe(1);
+			});
+		});
+
+		describe('stopRecurrence', () => {
+			it('should stop a recurring task', async () => {
+				const mockTask: MockPrismaTask = {
+					id: 'task-1',
+					title: 'Test Task',
+					description: 'Test Description',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: true,
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				const updatedTask = {
+					...mockTask,
+					isRecurring: false,
+				};
+
+				prisma.task.findUnique.mockResolvedValue(mockTask);
+				prisma.task.update.mockResolvedValue(
+					updatedTask as unknown as MockPrismaTask,
+				);
+
+				const result = await service.stopRecurrence(
+					'task-1',
+					'creator-1',
+				);
+
+				expect(prisma.task.update).toHaveBeenCalledWith({
+					where: { id: 'task-1' },
+					data: {
+						isRecurring: false,
+						nextRecurrenceDate: null,
+					},
+					include: {
+						assignee: {
+							select: {
+								id: true,
+								name: true,
+								email: true,
+								username: true,
+							},
+						},
+						house: {
+							select: {
+								id: true,
+								name: true,
+							},
+						},
+					},
+				});
+				expect(result.message).toBe(
+					'Recurring task stopped successfully',
+				);
+			});
+
+			it('should throw ForbiddenException if user is not creator', async () => {
+				const mockTask: MockPrismaTask = {
+					id: 'task-1',
+					title: 'Recurring Task',
+					description: 'Test',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: true,
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				prisma.task.findUnique.mockResolvedValue(mockTask);
+
+				await expect(
+					service.stopRecurrence('task-1', 'other-user'),
+				).rejects.toThrow(ForbiddenException);
+			});
+
+			it('should throw BadRequestException if task is not recurring', async () => {
+				const mockTask: MockPrismaTask = {
+					id: 'task-1',
+					title: 'Non-Recurring Task',
+					description: 'Test',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: false,
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				prisma.task.findUnique.mockResolvedValue(mockTask);
+
+				await expect(
+					service.stopRecurrence('task-1', 'creator-1'),
+				).rejects.toThrow(BadRequestException);
+			});
+		});
+
+		describe('getRecurringTaskInstances', () => {
+			it('should return template and all instances', async () => {
+				const mockTemplate = {
+					id: 'task-1',
+					title: 'Recurring Task',
+					description: 'Test',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: true,
+					assignedUsers: [],
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				const mockInstances = [
+					{
+						id: 'task-2',
+						title: 'Recurring Task',
+						description: 'Test',
+						assigneeId: 'user-1',
+						createdById: 'creator-1',
+						houseId: 'house-1',
+						status: 'done' as const,
+						archived: false,
+						archivedAt: null,
+						deadline: new Date('2025-12-19'),
+						isRecurring: false,
+						parentRecurringTaskId: 'task-1',
+						house: { id: 'house-1', name: 'Test House' },
+						assignee: {
+							id: 'user-1',
+							name: 'John',
+							email: 'john@test.com',
+							username: 'john',
+							imageUrl: null,
+						},
+						createdBy: {
+							id: 'creator-1',
+							name: 'Creator',
+							email: 'creator@test.com',
+							username: 'creator',
+							imageUrl: null,
+						},
+						assigneeLinks: [],
+					},
+				];
+
+				prisma.task.findUnique.mockResolvedValue(
+					mockTemplate as unknown as MockPrismaTask,
+				);
+				prisma.houseToUser.findFirst.mockResolvedValue({
+					userId: 'user-1',
+					houseId: 'house-1',
+				});
+				prisma.task.findMany.mockResolvedValue(
+					mockInstances as unknown as MockPrismaTask[],
+				);
+
+				const result = await service.getRecurringTaskInstances(
+					'task-1',
+					'user-1',
+				);
+
+				expect(result.template).toEqual(mockTemplate);
+				expect(result.instances).toHaveLength(1);
+
+				const findManyCall = prisma.task.findMany.mock.calls[0][0] as {
+					where: { parentRecurringTaskId: string };
+					orderBy: { deadline: string };
+				};
+				expect(findManyCall.where.parentRecurringTaskId).toBe('task-1');
+				expect(findManyCall.orderBy.deadline).toBe('desc');
+			});
+
+			it('should throw ForbiddenException if user not in house', async () => {
+				const mockTask = {
+					id: 'task-1',
+					title: 'Recurring Task',
+					description: 'Test',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: true,
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				prisma.task.findUnique.mockResolvedValue(
+					mockTask as unknown as MockPrismaTask,
+				);
+				prisma.houseToUser.findFirst.mockResolvedValue(null);
+
+				await expect(
+					service.getRecurringTaskInstances('task-1', 'other-user'),
+				).rejects.toThrow(ForbiddenException);
+			});
+
+			it('should throw BadRequestException if task is not recurring', async () => {
+				const mockTask = {
+					id: 'task-1',
+					title: 'Non-Recurring Task',
+					description: 'Test',
+					assigneeId: 'user-1',
+					createdById: 'creator-1',
+					houseId: 'house-1',
+					status: 'todo' as const,
+					archived: false,
+					archivedAt: null,
+					deadline: new Date(),
+					isRecurring: false,
+					house: { id: 'house-1', name: 'Test House' },
+					assignee: {
+						id: 'user-1',
+						name: 'John',
+						email: 'john@test.com',
+						username: 'john',
+					},
+					createdBy: {
+						id: 'creator-1',
+						name: 'Creator',
+						email: 'creator@test.com',
+						username: 'creator',
+					},
+				};
+
+				prisma.task.findUnique.mockResolvedValue(
+					mockTask as unknown as MockPrismaTask,
+				);
+				prisma.houseToUser.findFirst.mockResolvedValue({
+					userId: 'user-1',
+					houseId: 'house-1',
+				});
+
+				await expect(
+					service.getRecurringTaskInstances('task-1', 'user-1'),
+				).rejects.toThrow(BadRequestException);
+			});
 		});
 	});
 });
