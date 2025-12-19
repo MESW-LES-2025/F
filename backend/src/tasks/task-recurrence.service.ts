@@ -8,6 +8,8 @@ import {
 	RecurrencePattern,
 	Task,
 } from '@prisma/client';
+import { calculateNextRecurrence } from './utils/recurrence.util'; // Updated path
+import { PRISMA_TASK_INCLUDE } from './utils/task-selects'; // Updated path
 
 interface RecurringTaskWithRelations extends Task {
 	assignee: {
@@ -54,35 +56,7 @@ export class TaskRecurrenceService {
 					lte: today,
 				},
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-				assigneeLinks: {
-					select: {
-						userId: true,
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 		for (const task of recurringTasks) {
 			try {
@@ -108,7 +82,7 @@ export class TaskRecurrenceService {
 		}
 
 		// Calculate the new deadline based on the recurrence pattern
-		const newDeadline = this.calculateNextRecurrence(
+		const newDeadline = calculateNextRecurrence(
 			task.nextRecurrenceDate,
 			task.recurrencePattern as RecurrencePattern,
 			task.recurrenceInterval as number,
@@ -190,40 +164,5 @@ export class TaskRecurrenceService {
 				/* Notification failure should not prevent task creation */
 			}
 		}
-	}
-
-	/**
-	 * Calculate the next recurrence date based on a given date, pattern, and interval
-	 */
-	private calculateNextRecurrence(
-		currentDate: Date,
-		pattern: RecurrencePattern,
-		interval: number,
-	): Date {
-		const nextDate = new Date(currentDate);
-
-		switch (pattern) {
-			case RecurrencePattern.DAILY:
-				nextDate.setDate(nextDate.getDate() + interval);
-				break;
-			case RecurrencePattern.WEEKLY:
-				nextDate.setDate(nextDate.getDate() + interval * 7);
-				break;
-			case RecurrencePattern.MONTHLY: {
-				// Handle month-end edge cases (e.g., Jan 31 -> Feb 28/29)
-				const currentDay = nextDate.getDate();
-				nextDate.setMonth(nextDate.getMonth() + interval);
-				// If the day changed (e.g., from 31 to 1-3), set to last day of previous month
-				if (nextDate.getDate() !== currentDay) {
-					nextDate.setDate(0); // Sets to last day of previous month
-				}
-				break;
-			}
-			default:
-				nextDate.setDate(nextDate.getDate() + interval);
-				break;
-		}
-
-		return nextDate;
 	}
 }
