@@ -47,8 +47,6 @@ describe('TaskRecurrenceService', () => {
 		notificationsService = module.get(NotificationsService);
 	});
 
-
-
 	describe('handleRecurringTasks', () => {
 		it('should process recurring tasks due today', async () => {
 			const today = new Date();
