@@ -10,7 +10,8 @@ import {
 	IsInt,
 	Min,
 } from 'class-validator';
-import { TaskStatus, TaskSize, RecurrencePattern } from './create-task.dto';
+import { RecurrencePattern } from '@prisma/client';
+import { TaskStatus, TaskSize } from './create-task.dto';
 
 export class UpdateTaskDto {
 	@ApiPropertyOptional({

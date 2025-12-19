@@ -7,18 +7,19 @@ import {
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
 import { NotificationCategory, NotificationLevel } from '@prisma/client';
-import {
-	CreateTaskDto,
-	TaskSize,
-	RecurrencePattern,
-} from './dto/create-task.dto';
+import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
+import { calculateNextRecurrence } from './utils/recurrence.util';
+import { PRISMA_TASK_INCLUDE } from './utils/task-selects';
+import { Task } from '@prisma/client';
+
+import { TaskWithRelations } from './types/task-with-relations.type';
 
 @Injectable()
 export class TasksService {
 	constructor(
-		private prisma: PrismaService,
-		private notificationsService: NotificationsService,
+		private readonly prisma: PrismaService,
+		private readonly notificationsService: NotificationsService,
 	) {}
 
 	async create(createTaskDto: CreateTaskDto, createdById: string) {
@@ -35,58 +36,19 @@ export class TasksService {
 			recurrenceInterval,
 		} = createTaskDto;
 
-		// Verify house exists
-		const house = await this.prisma.house.findUnique({
-			where: { id: houseId },
-		});
+		await this.validateCreateContext(houseId, createdById);
 
-		if (!house) {
-			throw new NotFoundException('House not found');
-		}
+		const assignees = assignedUserIds?.length
+			? assignedUserIds
+			: [assigneeId];
 
-		// Verify creator belongs to the house
-		const creatorInHouse = await this.prisma.houseToUser.findFirst({
-			where: {
-				userId: createdById,
-				houseId: houseId,
-			},
-		});
-
-		if (!creatorInHouse) {
-			throw new ForbiddenException('You do not belong to this house');
-		}
-
-		const assignees =
-			assignedUserIds && assignedUserIds.length
-				? assignedUserIds
-				: [assigneeId];
-
-		// Validate each assignee exists and is in the house
-		for (const aid of assignees) {
-			const user = await this.prisma.user.findUnique({
-				where: { id: aid },
-			});
-			if (!user) {
-				throw new NotFoundException('Assignee user not found');
-			}
-
-			const inHouse = await this.prisma.houseToUser.findFirst({
-				where: { userId: aid, houseId },
-			});
-			if (!inHouse) {
-				throw new BadRequestException(
-					'Cannot assign task to user not in this house',
-				);
-			}
-		}
+		await this.validateAssignees(assignees, houseId);
 
 		const primaryAssignee = assignees[0];
-
-		// Calculate next recurrence date if task is recurring
 		const deadlineDate = new Date(deadline);
 		const nextRecurrenceDate =
 			isRecurring && recurrencePattern && recurrenceInterval
-				? this.calculateNextRecurrence(
+				? calculateNextRecurrence(
 						deadlineDate,
 						recurrencePattern,
 						recurrenceInterval,
@@ -109,109 +71,92 @@ export class TasksService {
 				nextRecurrenceDate: nextRecurrenceDate,
 				lastRecurrenceDate: isRecurring ? deadlineDate : null,
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 
-		if (assignees && assignees.length) {
-			try {
-				await this.prisma.taskToUser.createMany({
-					data: assignees.map((u) => ({
-						taskId: task.id,
-						userId: u,
-					})),
-					skipDuplicates: true,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to persist task assignees',
-					err,
-				);
-			}
-		}
-
-		const notifyUserIds = (assignees || []).filter(
-			(u) => u !== createdById,
-		);
-		if (notifyUserIds.length) {
-			try {
-				await this.notificationsService.create({
-					category: NotificationCategory.SCRUM,
-					level: NotificationLevel.LOW,
-					title: `Task assigned: ${task.title}`,
-					body: `You were assigned '${task.title}' in house ${task.house.name}. Deadline: ${task.deadline.toLocaleDateString()}`,
-					userIds: notifyUserIds,
-					actionUrl: '/activities',
-					houseId: task.houseId,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to create assignment notification',
-					err,
-				);
-			}
-		}
+		await this.persistTaskAssignees(task.id, assignees);
+		await this.notifyTaskAssignment(task, assignees, createdById);
 
 		return task;
 	}
 
+	private async validateCreateContext(houseId: string, createdById: string) {
+		const house = await this.prisma.house.findUnique({
+			where: { id: houseId },
+		});
+		if (!house) throw new NotFoundException('House not found');
+
+		const creatorInHouse = await this.prisma.houseToUser.findFirst({
+			where: { userId: createdById, houseId },
+		});
+		if (!creatorInHouse)
+			throw new ForbiddenException('You do not belong to this house');
+	}
+
+	private async validateAssignees(assigneeIds: string[], houseId: string) {
+		for (const aid of assigneeIds) {
+			const user = await this.prisma.user.findUnique({
+				where: { id: aid },
+			});
+			if (!user) throw new NotFoundException('Assignee user not found');
+
+			const inHouse = await this.prisma.houseToUser.findFirst({
+				where: { userId: aid, houseId },
+			});
+			if (!inHouse) {
+				throw new BadRequestException(
+					'Cannot assign task to user not in this house',
+				);
+			}
+		}
+	}
+
+	private async persistTaskAssignees(taskId: string, assignees: string[]) {
+		if (!assignees?.length) return;
+		try {
+			await this.prisma.taskToUser.createMany({
+				data: assignees.map((u) => ({ taskId, userId: u })),
+				skipDuplicates: true,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to persist task assignees',
+				err,
+			);
+		}
+	}
+
+	private async notifyTaskAssignment(
+		task: TaskWithRelations,
+		assignees: string[],
+		createdById: string,
+	) {
+		const notifyUserIds = (assignees || []).filter(
+			(u) => u !== createdById,
+		);
+		if (!notifyUserIds.length) return;
+
+		try {
+			await this.notificationsService.create({
+				category: NotificationCategory.SCRUM,
+				level: NotificationLevel.LOW,
+				title: `Task assigned: ${task.title}`,
+				body: `You were assigned '${task.title}' in house ${task.house.name}. Deadline: ${task.deadline.toLocaleDateString()}`,
+				userIds: notifyUserIds,
+				actionUrl: '/activities',
+				houseId: task.houseId,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to create assignment notification',
+				err,
+			);
+		}
+	}
+
 	async findAll() {
 		const tasks = await this.prisma.task.findMany({
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { createdAt: 'desc' },
 		});
 
@@ -236,39 +181,7 @@ export class TasksService {
 	async findOne(id: string) {
 		const task = await this.prisma.task.findUnique({
 			where: { id },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 
 		if (!task) {
@@ -310,51 +223,21 @@ export class TasksService {
 			return [];
 		}
 
+		let archived: boolean | undefined;
+		if (filters?.archived === 'true') {
+			archived = true;
+		} else if (filters?.archived === 'false') {
+			archived = false;
+		}
+
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId: { in: houseIds },
 				assigneeId: filters?.assigneeId || undefined,
 				status: filters?.status ?? undefined,
-				archived:
-					filters?.archived === 'true'
-						? true
-						: filters?.archived === 'false'
-							? false
-							: undefined,
+				archived,
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { createdAt: 'desc' },
 		});
 
@@ -400,25 +283,7 @@ export class TasksService {
 		return this.prisma.task.update({
 			where: { id },
 			data: { archived: true, archivedAt: new Date() },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 	}
 
@@ -440,116 +305,25 @@ export class TasksService {
 		return this.prisma.task.update({
 			where: { id },
 			data: { archived: false, archivedAt: null },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 	}
 
 	async update(id: string, updateTaskDto: UpdateTaskDto, userId: string) {
 		const task = await this.findOne(id);
-
-		// Verify user has permission (creator, assignee), or shares a house with creator/assignee
-		if (task.createdById !== userId && task.assigneeId !== userId) {
-			// get house memberships for acting user
-			const userHouses = await this.prisma.houseToUser.findMany({
-				where: { userId },
-				select: { houseId: true },
-			});
-			const userHouseIds = new Set(userHouses.map((h) => h.houseId));
-
-			const creatorHouses = await this.prisma.houseToUser.findMany({
-				where: { userId: task.createdById },
-				select: { houseId: true },
-			});
-			const sharesWithCreator = creatorHouses.some((ch) =>
-				userHouseIds.has(ch.houseId),
-			);
-
-			let sharesWithAssignee = false;
-			if (task.assigneeId && task.assigneeId !== task.createdById) {
-				const assigneeHouses = await this.prisma.houseToUser.findMany({
-					where: { userId: task.assigneeId },
-					select: { houseId: true },
-				});
-				sharesWithAssignee = assigneeHouses.some((ah) =>
-					userHouseIds.has(ah.houseId),
-				);
-			}
-
-			if (!sharesWithCreator && !sharesWithAssignee) {
-				throw new ForbiddenException(
-					'You do not have permission to update this task',
-				);
-			}
-		}
+		await this.validateUpdatePermissions(task, userId);
 
 		const assignedUserIds = updateTaskDto.assignedUserIds;
 
-		if (assignedUserIds && assignedUserIds.length) {
-			for (const aid of assignedUserIds) {
-				const assignee = await this.prisma.user.findUnique({
-					where: { id: aid },
-				});
-				if (!assignee) {
-					throw new NotFoundException('Assignee user not found');
-				}
-
-				const assigneeInHouse = await this.prisma.houseToUser.findFirst(
-					{
-						where: {
-							userId: aid,
-							houseId: task.houseId,
-						},
-					},
-				);
-
-				if (!assigneeInHouse) {
-					throw new BadRequestException(
-						'Cannot assign task to user not in this house',
-					);
-				}
-			}
+		if (assignedUserIds?.length) {
+			await this.validateAssignees(assignedUserIds, task.houseId);
 		}
 
 		if (!assignedUserIds && updateTaskDto.assigneeId) {
-			const assignee = await this.prisma.user.findUnique({
-				where: { id: updateTaskDto.assigneeId },
-			});
-
-			if (!assignee) {
-				throw new NotFoundException('Assignee user not found');
-			}
-
-			// Verify the new assignee belongs to the task's house
-			const assigneeInHouse = await this.prisma.houseToUser.findFirst({
-				where: {
-					userId: updateTaskDto.assigneeId,
-					houseId: task.houseId,
-				},
-			});
-
-			if (!assigneeInHouse) {
-				throw new BadRequestException(
-					'Cannot assign task to user not in this house',
-				);
-			}
+			await this.validateAssignees(
+				[updateTaskDto.assigneeId],
+				task.houseId,
+			);
 		}
 
 		type UpdateData = Omit<UpdateTaskDto, 'deadline'> & { deadline?: Date };
@@ -557,14 +331,14 @@ export class TasksService {
 			...updateTaskDto,
 		} as Partial<UpdateData>;
 		delete dataToUpdate.assignedUserIds;
+
 		if (dataToUpdate.deadline) {
 			dataToUpdate.deadline = new Date(dataToUpdate.deadline);
 		} else if (dataToUpdate.deadline === undefined) {
-			// leave undefined so Prisma won't change it
 			delete dataToUpdate.deadline;
 		}
 
-		if (assignedUserIds && assignedUserIds.length) {
+		if (assignedUserIds?.length) {
 			dataToUpdate.assigneeId = assignedUserIds[0];
 		}
 
@@ -575,121 +349,150 @@ export class TasksService {
 		const updatedTask = await this.prisma.task.update({
 			where: { id },
 			data: dataToUpdate,
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 		});
 
-		if (assignedUserIds && assignedUserIds.length) {
-			// Determine newly added assignees compared to current links
-			let previousAssigneeIds: string[] = [];
-			try {
-				const existingLinks = await this.prisma.taskToUser.findMany({
-					where: { taskId: id },
-					select: { userId: true },
-				});
-				previousAssigneeIds = existingLinks.map((l) => l.userId);
-			} catch {
-				previousAssigneeIds = [];
-			}
-
-			const prevSet = new Set(previousAssigneeIds);
-			const addedAssigneeIds = assignedUserIds.filter(
-				(uid) => !prevSet.has(uid),
-			);
-
-			try {
-				await this.prisma.taskToUser.deleteMany({
-					where: { taskId: id },
-				});
-				await this.prisma.taskToUser.createMany({
-					data: assignedUserIds.map((u) => ({
-						taskId: id,
-						userId: u,
-					})),
-					skipDuplicates: true,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to update task assignees',
-					err,
-				);
-			}
-
-			// Notify only newly added assignees
-			if (addedAssigneeIds.length) {
-				try {
-					await this.notificationsService.create({
-						category: NotificationCategory.SCRUM,
-						level: NotificationLevel.LOW,
-						title: `Task updated: ${updatedTask.title}`,
-						body: `You were assigned to '${updatedTask.title}' in house ${updatedTask.house.name}.`,
-						userIds: addedAssigneeIds,
-						actionUrl: '/activities',
-						houseId: updatedTask.houseId,
-					});
-				} catch (err) {
-					console.error(
-						'[TasksService] Failed to create update assignment notification',
-						err,
-					);
-				}
-			}
+		if (assignedUserIds?.length) {
+			await this.updateTaskAssignees(id, assignedUserIds, updatedTask);
 		}
 
 		if (task.status !== 'done' && updatedTask.status === 'done') {
-			try {
-				const memberships = await this.prisma.houseToUser.findMany({
-					where: { houseId: updatedTask.houseId },
-					select: { userId: true },
-				});
-				const userIds = memberships.map((m) => m.userId);
-				const actorUser =
-					updatedTask.createdById === userId
-						? updatedTask.createdBy
-						: updatedTask.assigneeId === userId
-							? updatedTask.assignee
-							: null;
-				const actorName = actorUser?.name || 'A member';
-				await this.notificationsService.create({
-					category: NotificationCategory.SCRUM,
-					level: NotificationLevel.MEDIUM,
-					title: `Task completed: ${updatedTask.title}`,
-					body: `${actorName} marked '${updatedTask.title}' as done in house ${updatedTask.house.name}.`,
-					userIds,
-					actionUrl: '/activities',
-					houseId: updatedTask.houseId,
-				});
-			} catch (err) {
-				console.error(
-					'[TasksService] Failed to create completion notification',
-					err,
-				);
-			}
+			await this.notifyTaskCompletion(updatedTask, userId);
 		}
 
 		return updatedTask;
+	}
+
+	private async validateUpdatePermissions(task: Task, userId: string) {
+		if (task.createdById === userId || task.assigneeId === userId) return;
+
+		const userHouses = await this.prisma.houseToUser.findMany({
+			where: { userId },
+			select: { houseId: true },
+		});
+		const userHouseIds = new Set(userHouses.map((h) => h.houseId));
+
+		const creatorHouses = await this.prisma.houseToUser.findMany({
+			where: { userId: task.createdById },
+			select: { houseId: true },
+		});
+		const sharesWithCreator = creatorHouses.some((ch) =>
+			userHouseIds.has(ch.houseId),
+		);
+
+		let sharesWithAssignee = false;
+		if (task.assigneeId && task.assigneeId !== task.createdById) {
+			const assigneeHouses = await this.prisma.houseToUser.findMany({
+				where: { userId: task.assigneeId },
+				select: { houseId: true },
+			});
+			sharesWithAssignee = assigneeHouses.some((ah) =>
+				userHouseIds.has(ah.houseId),
+			);
+		}
+
+		if (!sharesWithCreator && !sharesWithAssignee) {
+			throw new ForbiddenException(
+				'You do not have permission to update this task',
+			);
+		}
+	}
+
+	private async updateTaskAssignees(
+		taskId: string,
+		assignedUserIds: string[],
+		updatedTask: TaskWithRelations,
+	) {
+		let previousAssigneeIds: string[] = [];
+		try {
+			// Get existing links to diff
+			const existingLinks = await this.prisma.taskToUser.findMany({
+				where: { taskId },
+				select: { userId: true },
+			});
+			previousAssigneeIds = existingLinks.map((l) => l.userId);
+		} catch {
+			previousAssigneeIds = [];
+		}
+
+		// Re-create links
+		try {
+			await this.prisma.taskToUser.deleteMany({ where: { taskId } });
+			await this.prisma.taskToUser.createMany({
+				data: assignedUserIds.map((u) => ({ taskId, userId: u })),
+				skipDuplicates: true,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to update task assignees',
+				err,
+			);
+		}
+
+		// Notification for new assignees
+		const prevSet = new Set(previousAssigneeIds);
+		const addedAssigneeIds = assignedUserIds.filter(
+			(uid) => !prevSet.has(uid),
+		);
+		if (addedAssigneeIds.length) {
+			await this.createUpdateNotification(updatedTask, addedAssigneeIds);
+		}
+	}
+
+	private async createUpdateNotification(
+		updatedTask: TaskWithRelations,
+		userIds: string[],
+	) {
+		try {
+			await this.notificationsService.create({
+				category: NotificationCategory.SCRUM,
+				level: NotificationLevel.LOW,
+				title: `Task updated: ${updatedTask.title}`,
+				body: `You were assigned to '${updatedTask.title}' in house ${updatedTask.house.name}.`,
+				userIds,
+				actionUrl: '/activities',
+				houseId: updatedTask.houseId,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to create update assignment notification',
+				err,
+			);
+		}
+	}
+
+	private async notifyTaskCompletion(
+		updatedTask: TaskWithRelations,
+		userId: string,
+	) {
+		try {
+			const memberships = await this.prisma.houseToUser.findMany({
+				where: { houseId: updatedTask.houseId },
+				select: { userId: true },
+			});
+			const userIds = memberships.map((m) => m.userId);
+			let actorUser = null;
+			if (updatedTask.createdById === userId) {
+				actorUser = updatedTask.createdBy;
+			} else if (updatedTask.assigneeId === userId) {
+				actorUser = updatedTask.assignee;
+			}
+			const actorName = actorUser?.name || 'A member';
+			await this.notificationsService.create({
+				category: NotificationCategory.SCRUM,
+				level: NotificationLevel.MEDIUM,
+				title: `Task completed: ${updatedTask.title}`,
+				body: `${actorName} marked '${updatedTask.title}' as done in house ${updatedTask.house.name}.`,
+				userIds,
+				actionUrl: '/activities',
+				houseId: updatedTask.houseId,
+			});
+		} catch (err) {
+			console.error(
+				'[TasksService] Failed to create completion notification',
+				err,
+			);
+		}
 	}
 
 	async remove(id: string, userId: string) {
@@ -712,39 +515,7 @@ export class TasksService {
 	async findByAssignee(assigneeId: string) {
 		const tasks = await this.prisma.task.findMany({
 			where: { assigneeId },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { createdAt: 'desc' },
 		});
 
@@ -766,50 +537,22 @@ export class TasksService {
 	}
 
 	async findByHouse(houseId: string, archived?: string) {
+		let archivedQuery = {};
+		if (archived === 'true') {
+			archivedQuery = { archived: true };
+		} else if (archived === 'false') {
+			archivedQuery = { archived: false };
+		}
+
 		const tasks = await this.prisma.task.findMany({
 			where: {
 				houseId,
-				...(archived === 'true'
-					? { archived: true }
-					: archived === 'false'
-						? { archived: false }
-						: {}),
+				...archivedQuery,
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { createdAt: 'desc' },
 		});
+
 		type AssigneeLink = {
 			user: {
 				id: string;
@@ -830,39 +573,7 @@ export class TasksService {
 	async findByStatus(status: string) {
 		const tasks = await this.prisma.task.findMany({
 			where: { status },
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: { select: { id: true, name: true } },
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { createdAt: 'desc' },
 		});
 		type AssigneeLink = {
@@ -880,44 +591,6 @@ export class TasksService {
 					(l) => l.user,
 				) ?? [],
 		}));
-	}
-
-	/**
-	 * Calculate the next recurrence date based on a given date, pattern, and interval
-	 * @param currentDate - The current/base date to calculate from
-	 * @param pattern - The recurrence pattern (DAILY, WEEKLY, MONTHLY)
-	 * @param interval - The interval (e.g., every 1, 2, 3... units)
-	 * @returns The next recurrence date
-	 */
-	private calculateNextRecurrence(
-		currentDate: Date,
-		pattern: RecurrencePattern,
-		interval: number,
-	): Date {
-		const nextDate = new Date(currentDate);
-
-		switch (pattern) {
-			case RecurrencePattern.DAILY:
-				nextDate.setDate(nextDate.getDate() + interval);
-				break;
-			case RecurrencePattern.WEEKLY:
-				nextDate.setDate(nextDate.getDate() + interval * 7);
-				break;
-			case RecurrencePattern.MONTHLY: {
-				// Handle month-end edge cases (e.g., Jan 31 -> Feb 28/29)
-				const currentDay = nextDate.getDate();
-				nextDate.setMonth(nextDate.getMonth() + interval);
-				// If the day changed (e.g., from 31 to 1-3), set to last day of previous month
-				if (nextDate.getDate() !== currentDay) {
-					nextDate.setDate(0); // Sets to last day of previous month
-				}
-				break;
-			}
-			default:
-				throw new BadRequestException('Invalid recurrence pattern');
-		}
-
-		return nextDate;
 	}
 
 	/**
@@ -995,44 +668,7 @@ export class TasksService {
 			where: {
 				parentRecurringTaskId: id,
 			},
-			include: {
-				assignee: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				createdBy: {
-					select: {
-						id: true,
-						name: true,
-						email: true,
-						username: true,
-						imageUrl: true,
-					},
-				},
-				house: {
-					select: {
-						id: true,
-						name: true,
-					},
-				},
-				assigneeLinks: {
-					include: {
-						user: {
-							select: {
-								id: true,
-								name: true,
-								imageUrl: true,
-								username: true,
-							},
-						},
-					},
-				},
-			},
+			include: PRISMA_TASK_INCLUDE,
 			orderBy: { deadline: 'desc' },
 		});
 
