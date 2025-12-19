@@ -6,12 +6,11 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import { NotificationCategory, NotificationLevel } from '@prisma/client';
+import { NotificationCategory, NotificationLevel, Task } from '@prisma/client';
 import { CreateTaskDto, TaskSize } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { calculateNextRecurrence } from './utils/recurrence.util';
 import { PRISMA_TASK_INCLUDE } from './utils/task-selects';
-import { Task } from '@prisma/client';
 
 import { TaskWithRelations } from './types/task-with-relations.type';
 
