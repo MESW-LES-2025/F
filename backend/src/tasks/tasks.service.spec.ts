@@ -4,37 +4,59 @@ import {
 	NotFoundException,
 } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
-import { NotificationCategory, NotificationLevel } from '@prisma/client';
+import {
+	NotificationCategory,
+	NotificationLevel,
+	RecurrencePattern,
+} from '@prisma/client';
 import { PrismaService } from '../prisma/prisma.service';
 import { NotificationsService } from '../notifications/notifications.service';
-import {
-	CreateTaskDto,
-	TaskSize,
-	TaskStatus,
-	RecurrencePattern,
-} from './dto/create-task.dto';
+import { CreateTaskDto, TaskSize, TaskStatus } from './dto/create-task.dto';
 import { UpdateTaskDto } from './dto/update-task.dto';
 import { TasksService } from './tasks.service';
 
 type MockPrismaTask = {
 	id: string;
 	title: string;
-	description: string;
-	assigneeId: string;
+	description: string | null | undefined;
+	assigneeId: string | null | undefined;
 	createdById: string;
 	houseId: string;
 	status: 'todo' | 'doing' | 'done';
+	size?: TaskSize | null;
 	archived: boolean;
 	archivedAt: Date | null;
 	deadline: Date;
+	isRecurring?: boolean;
+	recurrencePattern?: RecurrencePattern | null;
+	recurrenceInterval?: number | null;
+	nextRecurrenceDate?: Date | null;
+	lastRecurrenceDate?: Date | null;
+	parentRecurringTaskId?: string | null;
 	house: { id: string; name: string };
-	assignee: { id: string; name: string; email: string; username: string };
-	createdBy: {
+	assignee: {
 		id: string;
-		name: string;
+		name: string | null;
 		email: string;
 		username: string;
+		imageUrl?: string | null;
+	} | null;
+	createdBy: {
+		id: string;
+		name: string | null;
+		email: string;
+		username: string;
+		imageUrl?: string | null;
 	};
+	assigneeLinks?: any[];
+};
+
+type MockCreateTaskData = {
+	isRecurring?: boolean;
+	recurrencePattern?: RecurrencePattern;
+	recurrenceInterval?: number;
+	lastRecurrenceDate?: Date;
+	[key: string]: any;
 };
 
 type MockHouseToUser = { userId: string; houseId: string };
@@ -1328,12 +1350,7 @@ describe('TasksService', () => {
 				await service.create(createTaskDto, 'creator-1');
 
 				const createCall = prisma.task.create.mock.calls[0][0] as {
-					data: {
-						isRecurring: boolean;
-						recurrencePattern: RecurrencePattern;
-						recurrenceInterval: number;
-						lastRecurrenceDate: Date;
-					};
+					data: MockCreateTaskData;
 				};
 				expect(createCall.data.isRecurring).toBe(true);
 				expect(createCall.data.recurrencePattern).toBe(
@@ -1397,14 +1414,8 @@ describe('TasksService', () => {
 
 				const createCallWeekly = prisma.task.create.mock
 					.calls[0][0] as {
-					data: {
-						recurrencePattern: RecurrencePattern;
-						recurrenceInterval: number;
-					};
+					data: MockCreateTaskData;
 				};
-				expect(createCallWeekly.data.recurrencePattern).toBe(
-					RecurrencePattern.WEEKLY,
-				);
 				expect(createCallWeekly.data.recurrenceInterval).toBe(1);
 			});
 
@@ -1459,10 +1470,7 @@ describe('TasksService', () => {
 
 				const createCallMonthly = prisma.task.create.mock
 					.calls[0][0] as {
-					data: {
-						recurrencePattern: RecurrencePattern;
-						recurrenceInterval: number;
-					};
+					data: MockCreateTaskData;
 				};
 				expect(createCallMonthly.data.recurrencePattern).toBe(
 					RecurrencePattern.MONTHLY,

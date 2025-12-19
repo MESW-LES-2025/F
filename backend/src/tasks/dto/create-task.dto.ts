@@ -11,6 +11,7 @@ import {
 	IsInt,
 	Min,
 } from 'class-validator';
+import { RecurrencePattern } from '@prisma/client';
 
 export enum TaskSize {
 	SMALL = 'SMALL',
@@ -23,12 +24,6 @@ export enum TaskStatus {
 	TODO = 'todo',
 	DOING = 'doing',
 	DONE = 'done',
-}
-
-export enum RecurrencePattern {
-	DAILY = 'DAILY',
-	WEEKLY = 'WEEKLY',
-	MONTHLY = 'MONTHLY',
 }
 
 export class CreateTaskDto {
