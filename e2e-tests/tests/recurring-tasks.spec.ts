@@ -196,11 +196,11 @@ test.describe("Recurring Tasks", () => {
     // Wait for edit dialog to open
     await page.waitForTimeout(500);
 
-    // Verify recurring info is shown
-    await expect(page.locator('text="This is a recurring task"')).toBeVisible();
+    const dialog = page.getByRole('dialog', { name: 'Edit Task' });
+    await expect(dialog.getByText('• Recurring task')).toBeVisible();
 
     // Click "Stop Recurrence" button
-    await page.click('button:has-text("Stop Recurrence")');
+    await page.click('button:has-text("Stop recurrence")');
 
     // Wait for the action to complete
     await page.waitForTimeout(1000);
