@@ -3,7 +3,7 @@
 import { HouseList } from "@/components/house/house-list";
 import { JoinHouseForm } from "@/components/house/house-join-form";
 import { CreateHouseForm } from "@/components/house/house-create-form";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export default function SettingsPage() {
   return (

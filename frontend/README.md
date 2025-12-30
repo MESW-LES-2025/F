@@ -29,8 +29,8 @@ pnpm run build
 pnpm run start
 ```
 
-## Linting
+## Format
 
 ```bash
-pnpm run lint
+pnpm run format
 ```

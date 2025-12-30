@@ -1,8 +1,8 @@
 "use client";
 
-import { DashboardHeader } from "@/components/dashboard-header";
-import { MetricsCards } from "@/components/metrics-cards";
-import { ActivitiesBoard } from "@/components/activities-board";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { MetricsCards } from "@/components/dashboard/metrics-cards";
+import { ActivitiesBoard } from "@/components/activities/activities-board";
 
 export default function HomePage() {
   return (

@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import PantryContainer from "@/components/pantry-container";
+import PantryContainer from "@/components/pantry/pantry-container";
 import type { PantryItem } from "@/lib/types";
 import { getPantryItems } from "@/lib/pantry-service";
 import { useHouse } from "@/lib/house-context";

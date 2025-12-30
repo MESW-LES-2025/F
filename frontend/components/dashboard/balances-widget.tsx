@@ -16,8 +16,8 @@ import {
   type Settlement,
 } from "@/lib/expense-service";
 import { Separator } from "@/components/ui/separator";
-import { SettlementDialog } from "@/components/settlement-dialog";
-import { ManualSettlementDialog } from "@/components/manual-settlement-dialog";
+import { SettlementDialog } from "@/components/expenses/settlement-dialog";
+import { ManualSettlementDialog } from "@/components/expenses/manual-settlement-dialog";
 
 interface BalancesWidgetProps {
   houseId: string;

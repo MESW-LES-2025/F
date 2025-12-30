@@ -21,9 +21,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/lib/auth-context";
 import { profileService, UserDashboard } from "@/lib/profile-service";
 import type { User as UserType } from "@/lib/types";
-import SettingsSecurity from "./settings/settings-security";
-import SettingsDangerArea from "./settings/settings-danger-area";
-import { ProfileActivityOverview } from "./profile/activity-overview";
+import SettingsSecurity from "@/components/settings/settings-security";
+import SettingsDangerArea from "@/components/settings/settings-danger-area";
 
 export function ProfileContent() {
   const [user, setUser] = useState<UserType | null>(null);

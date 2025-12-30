@@ -1,6 +1,6 @@
 import { MessageSquare } from "lucide-react";
 import { HouseSelector } from "@/components/house/house-selector";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 interface ChatHeaderProps {
   houseName?: string;

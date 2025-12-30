@@ -1,7 +1,7 @@
 "use client";
 
 import { GetStartedSectionCard } from "@/components/get-started/section-card";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import {
   Calendar,
   Glasses,

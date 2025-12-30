@@ -1,8 +1,8 @@
 "use client";
 
 import PantryAddItem from "./pantry-add-item";
-import { HouseSelector } from "./house/house-selector";
-import { NotificationsBell } from "./notifications-bell";
+import { HouseSelector } from "@/components/house/house-selector";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import {
   Select,
   SelectContent,

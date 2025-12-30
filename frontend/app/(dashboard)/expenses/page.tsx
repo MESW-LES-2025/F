@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { ExpensesHeader } from "@/components/expenses-header";
-import { ExpenseQuickStats } from "@/components/expense-quick-stats";
-import { ExpensesList } from "@/components/expenses-list";
-import { BalancesWidget } from "@/components/balances-widget";
-import { SpendingTrendsChart } from "@/components/spending-trends-chart";
-import { CategoryBreakdownChart } from "@/components/category-breakdown-chart";
+import { ExpensesHeader } from "@/components/expenses/expenses-header";
+import { ExpenseQuickStats } from "@/components/expenses/expense-quick-stats";
+import { ExpensesList } from "@/components/expenses/expenses-list";
+import { BalancesWidget } from "@/components/dashboard/balances-widget";
+import { SpendingTrendsChart } from "@/components/dashboard/spending-trends-chart";
+import { CategoryBreakdownChart } from "@/components/dashboard/category-breakdown-chart";
 import { useHouse } from "@/lib/house-context";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {

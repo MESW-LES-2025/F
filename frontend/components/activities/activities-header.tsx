@@ -1,8 +1,8 @@
 "use client";
 
-import { CreateTaskDialog } from "@/components/create-task-dialog";
+import { CreateTaskDialog } from "@/components/tasks/create-task-dialog";
 import { HouseSelector } from "@/components/house/house-selector";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import {
   Select,
   SelectContent,
