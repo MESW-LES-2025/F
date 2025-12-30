@@ -7,9 +7,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { CreateExpenseDialog } from "@/components/create-expense-dialog";
+import { CreateExpenseDialog } from "@/components/expenses/create-expense-dialog";
 import { HouseSelector } from "@/components/house/house-selector";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 

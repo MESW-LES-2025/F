@@ -17,7 +17,7 @@ import { useHouse } from "@/lib/house-context";
 import { getTasks } from "@/lib/tasks-service";
 import { getPantryItems } from "@/lib/pantry-service";
 import { apiGet } from "@/lib/api-client";
-import { ExpensesList } from "@/components/expenses-list";
+import { ExpensesList } from "@/components/expenses/expenses-list";
 import type { Task, PantryItem } from "@/lib/types";
 
 export function HomeFeatureColumns() {

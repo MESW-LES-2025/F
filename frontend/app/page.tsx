@@ -3,10 +3,10 @@
 import { useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/lib/auth-context";
 import { useEffect, useState, Suspense } from "react";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { ProfileScroll } from "@/components/profile-scroll";
-import { HomeFeatureColumns } from "@/components/home-feature-columns";
-import { AppSidebar } from "@/components/app-sidebar";
+import { DashboardHeader } from "@/components/dashboard/dashboard-header";
+import { ProfileScroll } from "@/components/profile/profile-scroll";
+import { HomeFeatureColumns } from "@/components/home/home-feature-columns";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { HouseProvider } from "@/lib/house-context";
 import { HouseRedirect } from "@/components/house/house-redirect";
 

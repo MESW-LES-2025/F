@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { notificationService } from "@/lib/notification-service";
 import { UserNotification, NotificationCategory } from "@/lib/types";
-import { NotificationsBell } from "@/components/notifications-bell";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";

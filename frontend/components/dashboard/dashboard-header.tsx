@@ -1,6 +1,5 @@
 "use client";
 
-import { Button } from "@/components/ui/button";
 import {
   Select,
   SelectContent,
@@ -9,8 +8,8 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useHouse } from "@/lib/house-context";
-import { HouseSelector } from "./house/house-selector";
-import { NotificationsBell } from "./notifications-bell";
+import { HouseSelector } from "@/components/house/house-selector";
+import { NotificationsBell } from "@/components/notifications/notifications-bell";
 
 export function DashboardHeader() {
   const { selectedHouse } = useHouse();

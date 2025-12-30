@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { AppSidebar } from "@/components/app-sidebar";
+import { AppSidebar } from "@/components/layout/app-sidebar";
 import { ProtectedRoute } from "@/lib/protected-route";
 import { HouseProvider } from "@/lib/house-context";
 

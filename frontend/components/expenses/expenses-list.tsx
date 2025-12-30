@@ -9,7 +9,7 @@ import { getExpenses } from "@/lib/expense-service";
 import type { Expense } from "@/lib/types";
 import { Spinner } from "@/components/ui/spinner";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { DeleteExpenseDialog } from "@/components/delete-expense-dialog";
+import { DeleteExpenseDialog } from "@/components/expenses/delete-expense-dialog";
 import { Trash2 } from "lucide-react";
 
 interface ExpensesListProps {

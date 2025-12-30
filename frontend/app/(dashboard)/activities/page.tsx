@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { ActivitiesHeader } from "@/components/activities-header";
-import { ActivitiesStats } from "@/components/activities-stats";
-import { ActivitiesKanban } from "@/components/activities-kanban";
-import { EditTaskDialog } from "@/components/edit-task-dialog";
-import { DeleteTaskDialog } from "@/components/delete-task-dialog";
+import { ActivitiesHeader } from "@/components/activities/activities-header";
+import { ActivitiesStats } from "@/components/activities/activities-stats";
+import { ActivitiesKanban } from "@/components/activities/activities-kanban";
+import { EditTaskDialog } from "@/components/tasks/edit-task-dialog";
+import { DeleteTaskDialog } from "@/components/tasks/delete-task-dialog";
 import { getTasks, updateTask } from "@/lib/tasks-service";
 import { toast } from "@/hooks/use-toast";
 import type { Task } from "@/lib/types";
