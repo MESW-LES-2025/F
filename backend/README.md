@@ -5,6 +5,7 @@ A modern NestJS REST API with JWT Authentication, Prisma ORM, and PostgreSQL dat
 ## 🚀 Features
 
 - **JWT Authentication** with access & refresh tokens
+- **Google Login** support (Normal and Single Tap)
 - **Token Revocation** with logout endpoints
 - **Refresh Token Rotation** for enhanced security
 - **Database-backed Token Management** (tracks and revokes tokens)
@@ -127,6 +128,18 @@ All endpoints are prefixed with `/api/v1`
 - **Database Validation**: Refresh tokens validated against database
 - **Automatic Cleanup**: Expired tokens cleaned up on new token creation
 - **Cascade Delete**: All user tokens deleted when user is deleted
+
+## 🌐 Google Login
+
+The backend supports two methods for Google Authentication, ensuring flexibility for different frontend implementations:
+
+### 1. Standard OAuth2 Flow (Server-Side)
+- **Endpoint**: `/auth/google`
+- **Flow**: Redirects the user to Google's login page. After authentication, Google redirects back to the backend, which then redirects to the frontend with a temporary authorization code. The frontend exchanges this code for JWT tokens via `/auth/google/exchange`.
+
+### 2. Google One Tap / ID Token (Client-Side)
+- **Endpoint**: `/auth/google/verify`
+- **Flow**: The frontend authenticates directly with Google (using the Google One Tap widget) and receives an ID token. This token is sent to the backend endpoint, which verifies it and issues the JWT access and refresh tokens.
 
 ## 🗄️ Database Management
 
