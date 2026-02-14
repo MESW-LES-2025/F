@@ -4,9 +4,10 @@ import type { NextRequest } from "next/server";
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Check if user is authenticated by looking for JWT token
+  // Check if user is authenticated by looking for JWT tokens
   const accessToken = request.cookies.get("access_token")?.value;
-  const isAuthenticated = !!accessToken;
+  const refreshToken = request.cookies.get("refresh_token")?.value;
+  const isAuthenticated = !!accessToken || !!refreshToken;
 
   // Public routes that don't require authentication
   const isPublicRoute =

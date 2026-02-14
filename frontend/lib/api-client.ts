@@ -297,9 +297,15 @@ async function request<T = unknown>(
 
     // Add authorization if required
     if (requiresAuth) {
-      const token = getAccessToken();
+      let token = getAccessToken();
       if (!token) {
-        throw new ApiError(401, "Authentication required. Please log in.");
+        // Try to refresh token
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          token = newToken;
+        } else {
+          throw new ApiError(401, "Authentication required. Please log in.");
+        }
       }
       requestHeaders["Authorization"] = `Bearer ${token}`;
     }
@@ -444,9 +450,14 @@ export async function apiUpload<T = unknown>(
 
     // Add authorization if required
     if (requiresAuth) {
-      const token = getAccessToken();
+      let token = getAccessToken();
       if (!token) {
-        throw new ApiError(401, "Authentication required. Please log in.");
+        const newToken = await refreshAccessToken();
+        if (newToken) {
+          token = newToken;
+        } else {
+          throw new ApiError(401, "Authentication required. Please log in.");
+        }
       }
       requestHeaders["Authorization"] = `Bearer ${token}`;
     }
