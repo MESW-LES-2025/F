@@ -85,6 +85,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               sessionStorage.removeItem("user");
             }
           }
+        } else if (authService.getRefreshToken()) {
+          // Access token missing but refresh token exists — try to refresh
+          try {
+            await authService.refreshAccessToken();
+            const { apiGet } = await import("./api-client");
+            const profileData = await apiGet("/user", { requiresAuth: true });
+            setUser(profileData as User);
+            setIsAuthenticated(true);
+            sessionStorage.setItem("user", JSON.stringify(profileData));
+          } catch {
+            setIsAuthenticated(false);
+            sessionStorage.removeItem("user");
+          }
         } else {
           setIsAuthenticated(false);
         }
